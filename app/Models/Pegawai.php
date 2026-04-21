@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'ptj_id',
     'jawatan_id',
     'gred_id',
+    'sesi_majlis_id',
     'rsvp',
     'no_kerusi',
     'no_meja',
@@ -54,5 +55,10 @@ class Pegawai extends Model
     public function gred(): BelongsTo
     {
         return $this->belongsTo(Gred::class);
+    }
+
+    public function sesiMajlis(): BelongsTo
+    {
+        return $this->belongsTo(SesiMajlis::class);
     }
 }

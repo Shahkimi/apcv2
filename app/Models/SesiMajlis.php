@@ -7,6 +7,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable(['sesi', 'is_active', 'is_late', 'countdown_start_late'])]
 class SesiMajlis extends Model
@@ -22,5 +23,10 @@ class SesiMajlis extends Model
             'is_late' => 'boolean',
             'countdown_start_late' => 'integer',
         ];
+    }
+
+    public function pegawais(): HasMany
+    {
+        return $this->hasMany(Pegawai::class);
     }
 }

@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Meja;
 use App\Models\Pegawai;
+use App\Models\SesiMajlis;
 use App\Services\Kehadiran\KehadiranCallingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
@@ -25,12 +26,18 @@ class KehadiranController extends Controller
             'totalRsvp' => Pegawai::where('rsvp', true)->count(),
             'totalHadir' => Pegawai::where('is_attend', true)->count(),
             'lateSessionOnAir' => $this->callingService->lateSessionOnAirExists(),
+            'allSesis' => SesiMajlis::query()->orderBy('id')->get(),
         ]);
     }
 
     public function datatable()
     {
-        $query = Pegawai::query()->with('ptj');
+        $query = Pegawai::query()->with(['ptj', 'sesiMajlis']);
+
+        if (request()->filled('sesi_majlis_id')) {
+            $query->where('sesi_majlis_id', request()->integer('sesi_majlis_id'));
+        }
+
         $this->callingService->applyDefaultCallingOrder($query);
 
         return DataTables::of($query)
@@ -55,13 +62,14 @@ class KehadiranController extends Controller
 
                 return '<span class="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-rose-100 to-fuchsia-100 px-2.5 py-1 text-xs font-semibold text-rose-800 shadow-sm shadow-rose-100 dark:from-rose-900/40 dark:to-fuchsia-900/40 dark:text-rose-200 dark:shadow-rose-900/30"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-rose-500/75 dark:bg-rose-300/80"></span>'.e(__('Tidak')).'</span>';
             })
-            ->addColumn('ptj_name', fn (Pegawai $pegawai) => e((string) ($pegawai->ptj?->nama_ptj ?? '-')))
+            ->addColumn('sesi_name', fn (Pegawai $pegawai) => e((string) ($pegawai->sesiMajlis?->sesi ?? '—')))
             ->addColumn('no_kerusi', fn (Pegawai $pegawai) => e((string) ($pegawai->no_kerusi ?? '-')))
             ->addColumn('no_panggilan_lewat', function (Pegawai $pegawai) {
                 return $pegawai->no_panggilan_lewat !== null
                     ? e((string) $pegawai->no_panggilan_lewat)
                     : '—';
             })
+            ->addColumn('ptj_name', fn (Pegawai $pegawai) => e((string) ($pegawai->ptj?->nama_ptj ?? '-')))
             ->addColumn('action', fn (Pegawai $pegawai) => view('admin::kehadiran.actions', ['pegawai' => $pegawai])->render())
             ->rawColumns(['nama', 'rsvp_label', 'action'])
             ->make(true);
@@ -69,7 +77,7 @@ class KehadiranController extends Controller
 
     public function getDetails(Pegawai $pegawai): JsonResponse
     {
-        $pegawai->loadMissing('ptj');
+        $pegawai->loadMissing(['ptj', 'sesiMajlis']);
 
         return response()->json([
             'success' => true,
@@ -77,6 +85,7 @@ class KehadiranController extends Controller
                 'id' => $pegawai->id,
                 'nama' => $pegawai->nama,
                 'no_kp' => $pegawai->no_kp,
+                'sesi_name' => $pegawai->sesiMajlis?->sesi ?? '—',
                 'ptj_name' => $pegawai->ptj?->nama_ptj ?? '-',
                 'no_kerusi' => $pegawai->no_kerusi ?? '-',
                 'no_meja' => $this->resolveTableNumber($pegawai->no_kerusi) ?? '-',
@@ -88,11 +97,30 @@ class KehadiranController extends Controller
 
     public function verify(Pegawai $pegawai): JsonResponse
     {
-        $pegawai->is_attend = ! $pegawai->is_attend;
+        $willAttend = ! $pegawai->is_attend;
+        $activeSesi = null;
 
-        if ($pegawai->is_attend) {
+        if ($willAttend) {
+            $activeSesi = $this->callingService->activeOnAirSesi();
+            if ($activeSesi === null) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('Tiada sesi aktif. Sila aktifkan sesi terlebih dahulu.'),
+                ], 422);
+            }
+        }
+
+        $pegawai->is_attend = $willAttend;
+
+        if ($pegawai->is_attend && $activeSesi !== null) {
+            $pegawai->sesi_majlis_id = $activeSesi->id;
             $pegawai->no_meja = $this->resolveTableNumber($pegawai->no_kerusi);
-            $this->callingService->assignLateCallingNumberIfApplicable($pegawai);
+            if ($activeSesi->is_late) {
+                $this->callingService->assignLateCallingNumberIfApplicable($pegawai, $activeSesi);
+            } else {
+                $pegawai->is_late = false;
+                $pegawai->no_panggilan_lewat = null;
+            }
         } else {
             $this->callingService->clearLateCallingOnCancel($pegawai);
         }

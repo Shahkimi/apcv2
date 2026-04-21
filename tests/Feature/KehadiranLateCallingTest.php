@@ -16,6 +16,16 @@ beforeEach(function (): void {
     Meja::query()->create(['sizing' => 10]);
 });
 
+function activeSesiForKehadiran(array $overrides = []): SesiMajlis
+{
+    return SesiMajlis::query()->create(array_merge([
+        'sesi' => 'Sesi Ujian',
+        'is_active' => true,
+        'is_late' => false,
+        'countdown_start_late' => null,
+    ], $overrides));
+}
+
 function createPegawaiForTest(): Pegawai
 {
     $ptj = Ptj::query()->create(['nama_ptj' => 'PTJ Ujian']);
@@ -58,9 +68,8 @@ it('assigns late calling number when late session is on air', function (): void 
     $admin = adminUser();
     $pegawai = createPegawaiForTest();
 
-    SesiMajlis::query()->create([
+    $sesi = activeSesiForKehadiran([
         'sesi' => 'Pagi Lewat',
-        'is_active' => false,
         'is_late' => true,
         'countdown_start_late' => 60,
     ]);
@@ -74,15 +83,15 @@ it('assigns late calling number when late session is on air', function (): void 
 
     expect($pegawai->fresh()->no_panggilan_lewat)->toBe(60);
     expect($pegawai->fresh()->is_late)->toBeTrue();
+    expect($pegawai->fresh()->sesi_majlis_id)->toBe($sesi->id);
 });
 
 it('assigns late calling number when session is still active but is_late is true', function (): void {
     $admin = adminUser();
     $pegawai = createPegawaiForTest();
 
-    SesiMajlis::query()->create([
+    activeSesiForKehadiran([
         'sesi' => 'Pagi — fasa lewat',
-        'is_active' => true,
         'is_late' => true,
         'countdown_start_late' => 1600,
     ]);
@@ -100,9 +109,8 @@ it('does not assign late calling number for regular active session', function ()
     $admin = adminUser();
     $pegawai = createPegawaiForTest();
 
-    SesiMajlis::query()->create([
+    activeSesiForKehadiran([
         'sesi' => 'Pagi',
-        'is_active' => true,
         'is_late' => false,
         'countdown_start_late' => null,
     ]);
@@ -119,9 +127,8 @@ it('clears late calling number when attendance is cancelled', function (): void 
     $admin = adminUser();
     $pegawai = createPegawaiForTest();
 
-    SesiMajlis::query()->create([
+    $sesi = activeSesiForKehadiran([
         'sesi' => 'Pagi Lewat',
-        'is_active' => false,
         'is_late' => true,
         'countdown_start_late' => 60,
     ]);
@@ -131,6 +138,7 @@ it('clears late calling number when attendance is cancelled', function (): void 
         'no_panggilan_lewat' => 3,
         'no_meja' => 1,
         'is_late' => true,
+        'sesi_majlis_id' => $sesi->id,
     ])->save();
 
     $this->actingAs($admin)
@@ -140,6 +148,7 @@ it('clears late calling number when attendance is cancelled', function (): void 
 
     expect($pegawai->fresh()->no_panggilan_lewat)->toBeNull();
     expect($pegawai->fresh()->is_late)->toBeFalse();
+    expect($pegawai->fresh()->sesi_majlis_id)->toBeNull();
 });
 
 it('batch assigns late numbers when session becomes inactive late', function (): void {
@@ -147,7 +156,14 @@ it('batch assigns late numbers when session becomes inactive late', function ():
     $jawatan = Jawatan::query()->create(['desc_jawatan' => 'Pegawai']);
     $gred = Gred::query()->create(['desc_gred' => 'Gred Ujian']);
 
-    $makePegawai = function (string $noKp, int $seat) use ($ptj, $jawatan, $gred): Pegawai {
+    $sesi = SesiMajlis::query()->create([
+        'sesi' => 'Pagi',
+        'is_active' => true,
+        'is_late' => false,
+        'countdown_start_late' => 100,
+    ]);
+
+    $makePegawai = function (string $noKp, int $seat) use ($ptj, $jawatan, $gred, $sesi): Pegawai {
         return Pegawai::query()->create([
             'nama' => 'Pegawai '.$noKp,
             'no_kp' => $noKp,
@@ -157,19 +173,13 @@ it('batch assigns late numbers when session becomes inactive late', function ():
             'rsvp' => true,
             'no_kerusi' => $seat,
             'is_attend' => true,
+            'sesi_majlis_id' => $sesi->id,
         ]);
     };
 
     $p1 = $makePegawai('911111011111', 5);
     $p2 = $makePegawai('922222022222', 3);
     $p3 = $makePegawai('933333033333', 10);
-
-    $sesi = SesiMajlis::query()->create([
-        'sesi' => 'Pagi',
-        'is_active' => true,
-        'is_late' => false,
-        'countdown_start_late' => 100,
-    ]);
 
     $sesi->update([
         'is_active' => false,
@@ -226,6 +236,38 @@ it('orders paparan display on-time by no_kerusi then late by no_panggilan_lewat'
     $ordered = app(KehadiranCallingService::class)->attendedPegawaiForDisplay()->pluck('nama')->all();
 
     expect($ordered)->toBe(['Ali', 'Abu', 'Liza', 'Aina', 'Zara']);
+});
+
+it('rejects attendance verification when no session is active', function (): void {
+    $admin = adminUser();
+    $pegawai = createPegawaiForTest();
+
+    SesiMajlis::query()->create([
+        'sesi' => 'Tidak aktif',
+        'is_active' => false,
+        'is_late' => false,
+        'countdown_start_late' => null,
+    ]);
+
+    $this->actingAs($admin)
+        ->putJson(route('admin.kehadiran.verify', $pegawai))
+        ->assertStatus(422)
+        ->assertJsonPath('success', false);
+
+    expect($pegawai->fresh()->is_attend)->toBeFalse();
+});
+
+it('stores sesi_majlis_id when attendance is verified', function (): void {
+    $admin = adminUser();
+    $pegawai = createPegawaiForTest();
+    $sesi = activeSesiForKehadiran(['sesi' => 'Pagi']);
+
+    $this->actingAs($admin)
+        ->putJson(route('admin.kehadiran.verify', $pegawai))
+        ->assertOk();
+
+    expect($pegawai->fresh()->sesi_majlis_id)->toBe($sesi->id);
+    expect($pegawai->fresh()->is_late)->toBeFalse();
 });
 
 it('allows admin and media to view paparan', function (): void {

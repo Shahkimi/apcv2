@@ -1,5 +1,6 @@
 @php
     $role = $layoutRole ?? 'admin';
+    $paparanIndexUrl = $role === 'media' ? route('media.paparan.index') : route('admin.paparan.index');
 @endphp
 <x-dashboard-layout :title="__('Paparan kehadiran')" :role="$role">
     <div class="paparan-kehadiran min-h-[calc(100dvh-8rem)] rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 p-6 text-slate-100 shadow-inner sm:p-10 dark:from-slate-950 dark:to-slate-900">
@@ -7,17 +8,49 @@
             <h1 class="text-4xl font-bold tracking-tight text-white sm:text-5xl">
                 {{ __('Senarai kehadiran pegawai') }}
             </h1>
-            @if ($activeSesi)
+
+            <form method="get" action="{{ $paparanIndexUrl }}" class="mx-auto mt-6 max-w-xl" id="paparan-sesi-form">
+                <label class="mb-2 block text-sm font-medium text-slate-300" for="paparan-sesi-select">
+                    {{ __('Pilih sesi') }}
+                </label>
+                <select
+                    id="paparan-sesi-select"
+                    name="sesi_id"
+                    class="w-full rounded-lg border border-slate-600 bg-slate-800/80 px-4 py-3 text-lg text-white focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400/40"
+                    onchange="this.form.submit()"
+                >
+                    <option value="" @selected($selectedSesi === null)>{{ __('Semua sesi') }}</option>
+                    @foreach ($allSesis as $sesi)
+                        <option value="{{ $sesi->id }}" @selected($selectedSesi?->id === $sesi->id)>
+                            {{ $sesi->sesi }}
+                        </option>
+                    @endforeach
+                </select>
+            </form>
+
+            @if ($selectedSesi)
                 <p class="mt-4 text-2xl text-slate-300">
-                    {{ __('Sesi') }}: {{ $activeSesi->sesi }}
+                    {{ __('Sesi') }}: {{ $selectedSesi->sesi }}
                     @if ($isLateSesi)
                         <span class="font-semibold text-amber-400">({{ __('Lewat') }})</span>
                     @endif
                 </p>
             @endif
-            <p class="mt-3 text-xl tabular-nums text-slate-400">
-                {{ __('Jumlah hadir') }}: {{ number_format($pegawais->count()) }}
-            </p>
+
+            <div class="mx-auto mt-6 grid max-w-2xl grid-cols-1 gap-4 sm:grid-cols-3">
+                <div class="rounded-xl border border-slate-600/80 bg-slate-800/50 px-4 py-3">
+                    <p class="text-sm font-medium text-slate-400">{{ __('Jumlah hadir') }}</p>
+                    <p class="mt-1 text-3xl font-bold tabular-nums text-white">{{ number_format($pegawais->count()) }}</p>
+                </div>
+                <div class="rounded-xl border border-emerald-700/50 bg-emerald-950/40 px-4 py-3">
+                    <p class="text-sm font-medium text-emerald-300/90">{{ __('Tepat masa') }}</p>
+                    <p class="mt-1 text-3xl font-bold tabular-nums text-emerald-200">{{ number_format($ontimeCount) }}</p>
+                </div>
+                <div class="rounded-xl border border-amber-700/50 bg-amber-950/40 px-4 py-3">
+                    <p class="text-sm font-medium text-amber-300/90">{{ __('Lewat') }}</p>
+                    <p class="mt-1 text-3xl font-bold tabular-nums text-amber-200">{{ number_format($lateCount) }}</p>
+                </div>
+            </div>
         </header>
 
         <div class="mx-auto max-w-[1600px] overflow-x-auto rounded-xl border border-slate-700/80 bg-slate-900/40">

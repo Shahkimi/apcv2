@@ -74,9 +74,26 @@
                 </p>
             </div>
 
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                <div class="space-y-1.5">
+                    <label class="text-sm font-medium leading-none text-foreground" for="sesi-filter">
+                        {{ __('Tapis mengikut sesi') }}
+                    </label>
+                    <select
+                        id="sesi-filter"
+                        class="flex h-10 max-w-md rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                        <option value="">{{ __('Semua sesi') }}</option>
+                        @foreach ($allSesis as $sesi)
+                            <option value="{{ $sesi->id }}">{{ $sesi->sesi }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+
             <x-data-table
                 table-id="kehadiran-table"
-                :columns="['ID', __('Pegawai'), __('No. Kerusi'), __('No. panggilan lewat'), __('RSVP'), __('PTJ'), __('Tindakan')]"
+                :columns="['ID', __('Pegawai'), __('Sesi'), __('No. Kerusi'), __('No. panggilan lewat'), __('RSVP'), __('PTJ'), __('Tindakan')]"
                 class="shadow-sm ring-1 ring-border/30"
             />
         </section>
@@ -90,7 +107,12 @@
                     processing: true,
                     serverSide: true,
                     ordering: false,
-                    ajax: '{{ route('admin.kehadiran.datatable') }}',
+                    ajax: {
+                        url: '{{ route('admin.kehadiran.datatable') }}',
+                        data: function(d) {
+                            d.sesi_majlis_id = $('#sesi-filter').val() || '';
+                        },
+                    },
                     columnDefs: [{
                             targets: 1,
                             className: 'align-top py-3',
@@ -98,7 +120,7 @@
                         },
                         {
                             targets: 2,
-                            className: 'text-muted-foreground tabular-nums align-top'
+                            className: 'text-muted-foreground align-top max-w-[10rem]'
                         },
                         {
                             targets: 3,
@@ -106,10 +128,14 @@
                         },
                         {
                             targets: 4,
-                            className: 'min-w-[7rem] align-top'
+                            className: 'text-muted-foreground tabular-nums align-top'
                         },
                         {
                             targets: 5,
+                            className: 'min-w-[7rem] align-top'
+                        },
+                        {
+                            targets: 6,
                             className: 'text-muted-foreground align-top max-w-[12rem]'
                         },
                         {
@@ -124,6 +150,12 @@
                         {
                             data: 'nama',
                             name: 'nama'
+                        },
+                        {
+                            data: 'sesi_name',
+                            name: 'sesiMajlis.sesi',
+                            defaultContent: '—',
+                            searchable: false,
                         },
                         {
                             data: 'no_kerusi',
@@ -152,6 +184,10 @@
                             searchable: false
                         },
                     ],
+                });
+
+                $('#sesi-filter').on('change', function() {
+                    table.ajax.reload();
                 });
 
                 $('#kehadiran-table').on('click', '.js-verify-kehadiran', function() {
@@ -216,6 +252,15 @@
                                                 <div class="min-w-0 flex-1">
                                                     <p class="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{{ __('PTJ') }}</p>
                                                     <p class="truncate text-sm font-semibold text-foreground">${pegawai.ptj_name ?? '-'}</p>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-3 px-4 py-3">
+                                                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                                                    <i class="ri-time-line text-sm"></i>
+                                                </span>
+                                                <div class="min-w-0 flex-1">
+                                                    <p class="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{{ __('Sesi') }}</p>
+                                                    <p class="truncate text-sm font-semibold text-foreground">${pegawai.sesi_name ?? '—'}</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -321,8 +366,9 @@
                                             table.ajax.reload(null, false);
                                         });
                                     })
-                                    .fail(function() {
-                                        alert('{{ __('Ralat') }}');
+                                    .fail(function(xhr) {
+                                        const msg = xhr?.responseJSON?.message;
+                                        alert(msg || '{{ __('Ralat') }}');
                                     });
                             });
                         })
