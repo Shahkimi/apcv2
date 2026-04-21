@@ -69,15 +69,24 @@
                 <div
                     class="flex items-start gap-3 rounded-xl border border-border/60 bg-muted/20 px-4 py-3 dark:bg-muted/10"
                 >
-                    <span class="mt-0.5 text-primary" aria-hidden="true"><i class="ri-layout-grid-line text-lg"></i></span>
-                    <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-foreground">
-                            {{ __('Senarai di bawah') }}
+                    <span class="mt-0.5 text-primary" aria-hidden="true"><i class="ri-table-line text-lg"></i></span>
+                    <div class="min-w-0 flex-1">
+                        <p id="display-settings-heading" class="text-xs font-semibold uppercase tracking-wide text-foreground">
+                            {{ __('Tetapan paparan') }}
                         </p>
                         <p class="mt-0.5 text-xs leading-snug text-muted-foreground">
-                            {{ __('Urus semua meja dalam jadual — cari, susun, dan edit pantas.') }}
+                            {{ __('Papar no. meja dalam dialog pengesahan kehadiran.') }}
                         </p>
                     </div>
+                    <label class="relative mt-0.5 inline-flex cursor-pointer items-center">
+                        <input
+                            type="checkbox"
+                            id="toggle-table-display"
+                            class="peer sr-only"
+                            @checked($showTableNumber)
+                        >
+                        <div class="peer h-5 w-9 rounded-full bg-muted ring-1 ring-border/60 transition-all after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-background after:shadow-sm after:transition-all peer-checked:bg-primary peer-checked:after:translate-x-4 peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2"></div>
+                    </label>
                 </div>
             </aside>
         </div>
@@ -289,6 +298,39 @@
                                 alert('{{ __('Ralat') }}');
                             });
                     });
+                });
+
+                $('#toggle-table-display').on('change', function () {
+                    const $toggle = $(this);
+                    const show = $toggle.prop('checked');
+
+                    $.ajax({
+                        url: '{{ route('admin.kawalan.meja.toggle-display') }}',
+                        method: 'POST',
+                        data: {
+                            _token: '{{ csrf_token() }}',
+                            show: show ? 1 : 0,
+                        },
+                        headers: { Accept: 'application/json' },
+                    })
+                        .done(function () {
+                            const msg = show
+                                ? '{{ __('No. meja akan dipaparkan') }}'
+                                : '{{ __('No. meja disembunyikan') }}';
+
+                            window.Swal?.fire({
+                                toast: true,
+                                position: 'top-end',
+                                icon: 'success',
+                                title: msg,
+                                showConfirmButton: false,
+                                timer: 2000,
+                            });
+                        })
+                        .fail(function () {
+                            $toggle.prop('checked', !show);
+                            alert('{{ __('Ralat mengemaskini tetapan') }}');
+                        });
                 });
             });
         </script>

@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Admin\Kawalan;
 
 use App\Http\Controllers\Controller;
 use App\Models\Meja;
+use App\Services\SettingsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -13,9 +14,15 @@ use Yajra\DataTables\Facades\DataTables;
 
 class MejaController extends Controller
 {
+    public function __construct(
+        private readonly SettingsService $settings,
+    ) {}
+
     public function index(): View
     {
-        return view('admin::kawalan.meja.index');
+        return view('admin::kawalan.meja.index', [
+            'showTableNumber' => $this->settings->showTableNumberInDialog(),
+        ]);
     }
 
     public function datatable()
@@ -77,5 +84,16 @@ class MejaController extends Controller
         $meja->delete();
 
         return response()->json(['success' => true]);
+    }
+
+    public function toggleTableDisplay(Request $request): JsonResponse
+    {
+        $show = $request->boolean('show');
+        $this->settings->set('display.show_table_number_in_dialog', $show);
+
+        return response()->json([
+            'success' => true,
+            'show' => $show,
+        ]);
     }
 }

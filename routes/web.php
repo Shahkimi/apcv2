@@ -87,6 +87,7 @@ Route::middleware('auth')->group(function () {
                 Route::get('meja', [KawalanMejaController::class, 'index'])->name('meja.index');
                 Route::get('meja/datatable', [KawalanMejaController::class, 'datatable'])->name('meja.datatable');
                 Route::post('meja', [KawalanMejaController::class, 'store'])->name('meja.store');
+                Route::post('meja/toggle-display', [KawalanMejaController::class, 'toggleTableDisplay'])->name('meja.toggle-display');
                 Route::put('meja/{meja}', [KawalanMejaController::class, 'update'])->name('meja.update');
                 Route::delete('meja/{meja}', [KawalanMejaController::class, 'destroy'])->name('meja.destroy');
 

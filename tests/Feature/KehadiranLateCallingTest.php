@@ -8,6 +8,7 @@ use App\Models\Meja;
 use App\Models\Pegawai;
 use App\Models\Ptj;
 use App\Models\SesiMajlis;
+use App\Services\SettingsService;
 use App\Models\User;
 use App\Services\Kehadiran\KehadiranCallingService;
 use Illuminate\Support\Facades\Hash;
@@ -354,6 +355,32 @@ it('shows table preview in details based on active session offset', function ():
 
     // seat 5 with offset 4 => relative seat 1 => table 1
     expect($response['no_meja'])->toBe(1);
+});
+
+it('hides table number in details when setting is disabled', function (): void {
+    $admin = adminUser();
+    app(SettingsService::class)->set('display.show_table_number_in_dialog', false);
+
+    $pegawai = createPegawaiForTest();
+    activeSesiForKehadiran();
+
+    $response = $this->actingAs($admin)
+        ->getJson(route('admin.kehadiran.details', $pegawai))
+        ->assertOk()
+        ->json();
+
+    expect($response['show_table_number'])->toBeFalse();
+});
+
+it('admin can toggle table number display setting', function (): void {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+
+    $this->actingAs($admin)
+        ->postJson(route('admin.kawalan.meja.toggle-display'), ['show' => false])
+        ->assertOk()
+        ->assertJsonPath('show', false);
+
+    expect(app(SettingsService::class)->showTableNumberInDialog())->toBeFalse();
 });
 
 it('allows admin and media to view paparan', function (): void {

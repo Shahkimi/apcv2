@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Pegawai;
 use App\Models\SesiMajlis;
 use App\Services\Kehadiran\KehadiranCallingService;
+use App\Services\SettingsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
 use Yajra\DataTables\Facades\DataTables;
@@ -16,6 +17,7 @@ class KehadiranController extends Controller
 {
     public function __construct(
         private readonly KehadiranCallingService $callingService,
+        private readonly SettingsService $settings,
     ) {}
 
     public function index(): View
@@ -84,6 +86,7 @@ class KehadiranController extends Controller
 
         return response()->json([
             'success' => true,
+            'show_table_number' => $this->settings->showTableNumberInDialog(),
             'pegawai' => [
                 'id' => $pegawai->id,
                 'nama' => $pegawai->nama,

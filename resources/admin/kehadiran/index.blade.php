@@ -205,6 +205,7 @@
                         })
                         .done(function(response) {
                             const pegawai = response.pegawai;
+                            const showTableNumber = Boolean(response?.show_table_number);
                             const confirmLabel = isAttend ? '{{ __('Batalkan') }}' :
                                 '{{ __('Sahkan') }}';
                             const title = isAttend ?
@@ -275,7 +276,7 @@
 
                                     <div>
                                         <p class="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{{ __('Ringkasan Penempatan') }}</p>
-                                        <div class="grid grid-cols-2 gap-3">
+                                        <div class="${showTableNumber ? 'grid grid-cols-2 gap-3' : ''}">
                                             <div class="relative overflow-hidden rounded-xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-3.5 dark:border-emerald-800/40 dark:from-emerald-950/40 dark:to-emerald-900/20">
                                                 <div class="absolute right-2.5 top-2.5 opacity-10">
                                                     <i class="ri-armchair-line text-3xl text-emerald-600"></i>
@@ -287,6 +288,7 @@
                                                     <span class="text-[10px] text-emerald-600/70 dark:text-emerald-400/70">{{ __('Tempat Duduk') }}</span>
                                                 </div>
                                             </div>
+                                            ${showTableNumber ? `
                                             <div class="relative overflow-hidden rounded-xl border border-indigo-200/70 bg-gradient-to-br from-indigo-50 to-indigo-100/50 p-3.5 dark:border-indigo-800/40 dark:from-indigo-950/40 dark:to-indigo-900/20">
                                                 <div class="absolute right-2.5 top-2.5 opacity-10">
                                                     <i class="ri-table-line text-3xl text-indigo-600"></i>
@@ -298,6 +300,7 @@
                                                     <span class="text-[10px] text-indigo-600/70 dark:text-indigo-400/70">{{ __('Jadual') }}</span>
                                                 </div>
                                             </div>
+                                            ` : ''}
                                         </div>
                                     </div>
                                 </div>
