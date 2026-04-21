@@ -13,9 +13,13 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (! Schema::hasTable('sesi_majlis') || Schema::hasColumn('sesi_majlis', 'is_late')) {
+            return;
+        }
+
         Schema::table('sesi_majlis', function (Blueprint $table) {
             $table->boolean('is_late')->default(false)->after('is_active');
-            $table->unsignedInteger('countdown_start')->nullable()->after('is_late');
+            $table->unsignedInteger('countdown_start_late')->nullable()->after('is_late');
         });
     }
 
@@ -24,8 +28,12 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (! Schema::hasTable('sesi_majlis') || ! Schema::hasColumn('sesi_majlis', 'is_late')) {
+            return;
+        }
+
         Schema::table('sesi_majlis', function (Blueprint $table) {
-            $table->dropColumn(['is_late', 'countdown_start']);
+            $table->dropColumn(['is_late', 'countdown_start_late']);
         });
     }
 };

@@ -5,6 +5,7 @@
         'admin' => [
             ['label' => __('Dashboard'), 'route' => 'admin.dashboard', 'icon' => 'ri-dashboard-line'],
             ['label' => __('Kehadiran'), 'route' => 'admin.kehadiran.index', 'icon' => 'ri-user-follow-line'],
+            ['label' => __('Paparan'), 'route' => 'admin.paparan.index', 'icon' => 'ri-tv-2-line'],
             [
                 'label' => __('Kawalan'),
                 'icon' => 'ri-settings-3-line',
@@ -20,6 +21,7 @@
         ],
         'media' => [
             ['label' => __('Dashboard'), 'route' => 'media.dashboard', 'icon' => 'ri-dashboard-line'],
+            ['label' => __('Paparan'), 'route' => 'media.paparan.index', 'icon' => 'ri-tv-2-line'],
         ],
         default => [
             ['label' => __('Dashboard'), 'route' => 'user.dashboard', 'icon' => 'ri-dashboard-line'],

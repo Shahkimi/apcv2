@@ -8,31 +8,17 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        if (Schema::hasColumn('pegawais', 'no_meja')) {
-            return;
-        }
-
         Schema::table('pegawais', function (Blueprint $table) {
-            $table->unsignedInteger('no_meja')->nullable()->after('no_kerusi');
+            $table->boolean('is_late')->default(false)->after('is_attend');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        if (! Schema::hasColumn('pegawais', 'no_meja')) {
-            return;
-        }
-
         Schema::table('pegawais', function (Blueprint $table) {
-            $table->dropColumn('no_meja');
+            $table->dropColumn('is_late');
         });
     }
 };

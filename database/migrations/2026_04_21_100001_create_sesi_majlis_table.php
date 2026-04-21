@@ -14,6 +14,8 @@ return new class extends Migration
             $table->id();
             $table->string('sesi');
             $table->boolean('is_active')->default(false);
+            $table->boolean('is_late')->default(false);
+            $table->unsignedInteger('countdown_start_late')->nullable();
             $table->timestamps();
         });
     }

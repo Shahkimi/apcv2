@@ -7,24 +7,33 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Meja;
 use App\Models\Pegawai;
+use App\Services\Kehadiran\KehadiranCallingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
 use Yajra\DataTables\Facades\DataTables;
 
 class KehadiranController extends Controller
 {
+    public function __construct(
+        private readonly KehadiranCallingService $callingService,
+    ) {}
+
     public function index(): View
     {
         return view('admin::kehadiran.index', [
             'totalPegawai' => Pegawai::count(),
             'totalRsvp' => Pegawai::where('rsvp', true)->count(),
             'totalHadir' => Pegawai::where('is_attend', true)->count(),
+            'lateSessionOnAir' => $this->callingService->lateSessionOnAirExists(),
         ]);
     }
 
     public function datatable()
     {
-        return DataTables::of(Pegawai::query()->with('ptj'))
+        $query = Pegawai::query()->with('ptj');
+        $this->callingService->applyDefaultCallingOrder($query);
+
+        return DataTables::of($query)
             ->filterColumn('nama', function ($query, $keyword) {
                 if (trim((string) $keyword) === '') {
                     return;
@@ -48,6 +57,11 @@ class KehadiranController extends Controller
             })
             ->addColumn('ptj_name', fn (Pegawai $pegawai) => e((string) ($pegawai->ptj?->nama_ptj ?? '-')))
             ->addColumn('no_kerusi', fn (Pegawai $pegawai) => e((string) ($pegawai->no_kerusi ?? '-')))
+            ->addColumn('no_panggilan_lewat', function (Pegawai $pegawai) {
+                return $pegawai->no_panggilan_lewat !== null
+                    ? e((string) $pegawai->no_panggilan_lewat)
+                    : '—';
+            })
             ->addColumn('action', fn (Pegawai $pegawai) => view('admin::kehadiran.actions', ['pegawai' => $pegawai])->render())
             ->rawColumns(['nama', 'rsvp_label', 'action'])
             ->make(true);
@@ -66,6 +80,7 @@ class KehadiranController extends Controller
                 'ptj_name' => $pegawai->ptj?->nama_ptj ?? '-',
                 'no_kerusi' => $pegawai->no_kerusi ?? '-',
                 'no_meja' => $this->resolveTableNumber($pegawai->no_kerusi) ?? '-',
+                'no_panggilan_lewat' => $pegawai->no_panggilan_lewat ?? '-',
                 'is_attend' => (bool) $pegawai->is_attend,
             ],
         ]);
@@ -77,6 +92,9 @@ class KehadiranController extends Controller
 
         if ($pegawai->is_attend) {
             $pegawai->no_meja = $this->resolveTableNumber($pegawai->no_kerusi);
+            $this->callingService->assignLateCallingNumberIfApplicable($pegawai);
+        } else {
+            $this->callingService->clearLateCallingOnCancel($pegawai);
         }
 
         $pegawai->save();
@@ -85,6 +103,7 @@ class KehadiranController extends Controller
             'success' => true,
             'is_attend' => (bool) $pegawai->is_attend,
             'no_meja' => $pegawai->no_meja,
+            'no_panggilan_lewat' => $pegawai->no_panggilan_lewat ?? '-',
             'message' => $pegawai->is_attend ? __('Kehadiran disahkan.') : __('Kehadiran dibatalkan.'),
         ]);
     }

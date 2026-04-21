@@ -18,8 +18,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'rsvp',
     'no_kerusi',
     'no_meja',
+    'no_panggilan_lewat',
     'no_sijil',
     'is_attend',
+    'is_late',
 ])]
 class Pegawai extends Model
 {
@@ -32,8 +34,10 @@ class Pegawai extends Model
         return [
             'rsvp' => 'boolean',
             'is_attend' => 'boolean',
+            'is_late' => 'boolean',
             'no_kerusi' => 'integer',
             'no_meja' => 'integer',
+            'no_panggilan_lewat' => 'integer',
         ];
     }
 

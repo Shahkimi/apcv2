@@ -3,14 +3,16 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
-use App\Http\Controllers\Admin\KehadiranController as AdminKehadiranController;
 use App\Http\Controllers\Admin\Kawalan\GredController as KawalanGredController;
 use App\Http\Controllers\Admin\Kawalan\JawatanController as KawalanJawatanController;
 use App\Http\Controllers\Admin\Kawalan\MejaController as KawalanMejaController;
 use App\Http\Controllers\Admin\Kawalan\PtjController as KawalanPtjController;
 use App\Http\Controllers\Admin\Kawalan\SesiMajlisController as KawalanSesiMajlisController;
 use App\Http\Controllers\Admin\Kawalan\UserManagementController as KawalanUserManagementController;
+use App\Http\Controllers\Admin\KehadiranController as AdminKehadiranController;
+use App\Http\Controllers\Admin\PaparanController as AdminPaparanController;
 use App\Http\Controllers\Media\DashboardController as MediaDashboardController;
+use App\Http\Controllers\Media\PaparanController as MediaPaparanController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\User\DashboardController as UserDashboardController;
 use App\Models\User;
@@ -45,6 +47,7 @@ Route::middleware('auth')->group(function () {
         ->name('media.')
         ->group(function () {
             Route::get('/dashboard', [MediaDashboardController::class, 'index'])->name('dashboard');
+            Route::get('/paparan', [MediaPaparanController::class, 'index'])->name('paparan.index');
         });
 
     Route::middleware('role.admin')
@@ -59,6 +62,8 @@ Route::middleware('auth')->group(function () {
                 Route::get('/{pegawai}/details', [AdminKehadiranController::class, 'getDetails'])->name('details');
                 Route::put('/{pegawai}/verify', [AdminKehadiranController::class, 'verify'])->name('verify');
             });
+
+            Route::get('paparan', [AdminPaparanController::class, 'index'])->name('paparan.index');
 
             Route::prefix('kawalan')->name('kawalan.')->group(function () {
                 Route::get('ptj', [KawalanPtjController::class, 'index'])->name('ptj.index');

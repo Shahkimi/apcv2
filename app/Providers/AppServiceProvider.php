@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Models\SesiMajlis;
+use App\Observers\SesiMajlisObserver;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -22,6 +24,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        SesiMajlis::observe(SesiMajlisObserver::class);
+
         View::addNamespace('user', resource_path('user'));
         View::addNamespace('media', resource_path('media'));
         View::addNamespace('admin', resource_path('admin'));

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-#[Fillable(['sesi', 'is_active', 'is_on_air', 'is_late', 'countdown_start'])]
+#[Fillable(['sesi', 'is_active', 'is_late', 'countdown_start_late'])]
 class SesiMajlis extends Model
 {
     use HasFactory;
@@ -19,9 +19,8 @@ class SesiMajlis extends Model
     {
         return [
             'is_active' => 'boolean',
-            'is_on_air' => 'boolean',
             'is_late' => 'boolean',
-            'countdown_start' => 'integer',
+            'countdown_start_late' => 'integer',
         ];
     }
 }

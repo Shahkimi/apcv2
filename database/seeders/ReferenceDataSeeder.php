@@ -8,6 +8,7 @@ use App\Models\Gred;
 use App\Models\Jawatan;
 use App\Models\Pegawai;
 use App\Models\Ptj;
+use Illuminate\Database\Eloquent\Factories\Sequence;
 use Illuminate\Database\Seeder;
 
 class ReferenceDataSeeder extends Seeder
@@ -25,41 +26,31 @@ class ReferenceDataSeeder extends Seeder
         $g2 = Gred::query()->create(['desc_gred' => 'N29']);
         $g3 = Gred::query()->create(['desc_gred' => 'N22']);
 
-        Pegawai::query()->create([
-            'nama' => 'Ahmad bin Abdullah',
-            'no_kp' => '800101015555',
-            'ptj_id' => $ptj1->id,
-            'jawatan_id' => $j1->id,
-            'gred_id' => $g1->id,
-            'rsvp' => true,
-            'no_kerusi' => 1,
-            'no_sijil' => '10',
-            'is_attend' => true,
-        ]);
+        $ptjIds = [$ptj1->id, $ptj2->id];
+        $jawatanIds = [$j1->id, $j2->id, $j3->id];
+        $gredIds = [$g1->id, $g2->id, $g3->id];
 
-        Pegawai::query()->create([
-            'nama' => 'Siti binti Hassan',
-            'no_kp' => '850505106666',
-            'ptj_id' => $ptj2->id,
-            'jawatan_id' => $j3->id,
-            'gred_id' => $g3->id,
-            'rsvp' => false,
-            'no_kerusi' => 2,
-            'no_sijil' => '20',
-            'is_attend' => false,
-        ]);
+        Pegawai::factory()
+            ->count(30)
+            ->sequence(function (Sequence $sequence): array {
+                $seat = $sequence->index + 1;
 
-        Pegawai::query()->create([
-            'nama' => 'Lim Wei Ming',
-            'no_kp' => '900909077777',
-            'ptj_id' => $ptj1->id,
-            'jawatan_id' => $j2->id,
-            'gred_id' => $g2->id,
-            'rsvp' => false,
-            'no_kerusi' => null,
-            'no_sijil' => null,
-            'is_attend' => false,
-        ]);
+                return [
+                    'no_kerusi' => $seat,
+                    'no_sijil' => (string) $seat,
+                    'rsvp' => $sequence->index < 25,
+                    'no_panggilan_lewat' => null,
+                    'no_meja' => null,
+                    'is_attend' => false,
+                    'is_late' => false,
+                ];
+            })
+            ->state(fn () => [
+                'ptj_id' => fake()->randomElement($ptjIds),
+                'jawatan_id' => fake()->randomElement($jawatanIds),
+                'gred_id' => fake()->randomElement($gredIds),
+            ])
+            ->create();
 
     }
 }

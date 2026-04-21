@@ -2,6 +2,21 @@
     <x-kawalan-shell>
         <x-crud-header :title="__('Kehadiran pegawai')" :description="__('Semak maklumat pegawai dan sahkan kehadiran terus daripada jadual.')" :show-create="false" />
 
+        @if ($lateSessionOnAir)
+            <div
+                class="mb-6 flex items-start gap-3 rounded-xl border border-amber-200/80 bg-amber-50/90 px-4 py-3 text-amber-950 shadow-sm dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-100"
+                role="status"
+            >
+                <i class="ri-alarm-warning-line mt-0.5 text-xl text-amber-600 dark:text-amber-400" aria-hidden="true"></i>
+                <div class="min-w-0">
+                    <p class="text-sm font-semibold">{{ __('Sesi lewat sedang on air') }}</p>
+                    <p class="mt-1 text-sm text-amber-900/85 dark:text-amber-100/85">
+                        {{ __('Pegawai yang disahkan kini akan diberi nombor panggilan lewat mengikut turutan ketibaan. Pegawai yang hadir awal kekal mengikut no. kerusi.') }}
+                    </p>
+                </div>
+            </div>
+        @endif
+
         <div class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_min(19rem,100%)] lg:gap-6">
             <div
                 class="relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-card via-card to-indigo/[0.06] p-5 shadow-sm ring-1 ring-border/40 sm:p-6 dark:to-indigo/[0.12]">
@@ -61,7 +76,7 @@
 
             <x-data-table
                 table-id="kehadiran-table"
-                :columns="['ID', __('Pegawai'), __('No. Kerusi'), __('RSVP'), __('PTJ'), __('Tindakan')]"
+                :columns="['ID', __('Pegawai'), __('No. Kerusi'), __('No. panggilan lewat'), __('RSVP'), __('PTJ'), __('Tindakan')]"
                 class="shadow-sm ring-1 ring-border/30"
             />
         </section>
@@ -74,6 +89,7 @@
                     ...(window.kawalanDataTableDefaults || {}),
                     processing: true,
                     serverSide: true,
+                    ordering: false,
                     ajax: '{{ route('admin.kehadiran.datatable') }}',
                     columnDefs: [{
                             targets: 1,
@@ -86,10 +102,14 @@
                         },
                         {
                             targets: 3,
-                            className: 'min-w-[7rem] align-top'
+                            className: 'text-muted-foreground tabular-nums align-top'
                         },
                         {
                             targets: 4,
+                            className: 'min-w-[7rem] align-top'
+                        },
+                        {
+                            targets: 5,
                             className: 'text-muted-foreground align-top max-w-[12rem]'
                         },
                         {
@@ -109,6 +129,11 @@
                             data: 'no_kerusi',
                             name: 'no_kerusi',
                             defaultContent: '-'
+                        },
+                        {
+                            data: 'no_panggilan_lewat',
+                            name: 'no_panggilan_lewat',
+                            defaultContent: '—'
                         },
                         {
                             data: 'rsvp_label',
@@ -195,6 +220,13 @@
                                             </div>
                                         </div>
                                     </div>
+
+                                    ${pegawai.no_panggilan_lewat && pegawai.no_panggilan_lewat !== '-' ? `
+                                    <div class="rounded-lg border border-amber-200/70 bg-amber-50/80 px-3 py-2 dark:border-amber-800/50 dark:bg-amber-950/30">
+                                        <p class="text-[10px] font-semibold uppercase tracking-widest text-amber-800 dark:text-amber-200">{{ __('No. panggilan lewat') }}</p>
+                                        <p class="mt-1 text-lg font-bold tabular-nums text-amber-900 dark:text-amber-100">${pegawai.no_panggilan_lewat}</p>
+                                    </div>
+                                    ` : ''}
 
                                     <div>
                                         <p class="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{{ __('Ringkasan Penempatan') }}</p>

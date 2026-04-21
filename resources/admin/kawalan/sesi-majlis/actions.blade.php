@@ -5,9 +5,8 @@
         data-id="{{ $sesiMajlis->id }}"
         data-sesi="{{ $sesiMajlis->sesi }}"
         data-is_active="{{ $sesiMajlis->is_active ? 1 : 0 }}"
-        data-is_on_air="{{ $sesiMajlis->is_on_air ? 1 : 0 }}"
         data-is_late="{{ $sesiMajlis->is_late ? 1 : 0 }}"
-        data-countdown_start="{{ $sesiMajlis->countdown_start }}"
+        data-countdown-start-late="{{ $sesiMajlis->countdown_start_late }}"
         title="{{ __('Edit') }}"
     >
         <i class="ri-edit-line"></i>

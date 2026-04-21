@@ -21,34 +21,16 @@ class SesiMajlisController extends Controller
     public function datatable()
     {
         return DataTables::of(SesiMajlis::query())
-        ->addColumn('is_active_label', function (SesiMajlis $sesi) {
-            $label = e($sesi->is_active ? __('Ya') : __('Tidak'));
-        
-            if ($sesi->is_active) {
-                $pillClasses  = 'bg-gradient-to-r from-emerald-100 to-cyan-100 text-emerald-800 shadow-sm shadow-emerald-100 dark:from-emerald-900/40 dark:to-cyan-900/40 dark:text-emerald-200 dark:shadow-emerald-900/30';
-                $dotClasses   = 'bg-emerald-500/75 dark:bg-emerald-300/80';
-                $dotAnimation = 'animate-pulse';
-            } else {
-                $pillClasses  = 'bg-gradient-to-r from-rose-100 to-fuchsia-100 text-rose-800 shadow-sm shadow-rose-100 dark:from-rose-900/40 dark:to-fuchsia-900/40 dark:text-rose-200 dark:shadow-rose-900/30';
-                $dotClasses   = 'bg-rose-500/75 dark:bg-rose-300/80';
-                $dotAnimation = '';
-            }
-        
-            return '<span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ' . $pillClasses . '">'
-                .   '<span class="h-1.5 w-1.5 shrink-0 rounded-full ' . $dotClasses . ' ' . $dotAnimation . '"></span>'
-                .   $label
-                . '</span>';
-        })
-            ->addColumn('is_on_air_label', function (SesiMajlis $sesi) {
-                $label = e($sesi->is_on_air ? __('Ya') : __('Tidak'));
+            ->addColumn('is_active_label', function (SesiMajlis $sesi) {
+                $label = e($sesi->is_active ? __('Ya') : __('Tidak'));
 
-                if ($sesi->is_on_air) {
-                    $pillClasses = 'bg-sky-100 text-sky-800 shadow-sm dark:bg-sky-900/40 dark:text-sky-200';
-                    $dotClasses = 'bg-sky-500/80 dark:bg-sky-300/80';
+                if ($sesi->is_active) {
+                    $pillClasses = 'bg-gradient-to-r from-emerald-100 to-cyan-100 text-emerald-800 shadow-sm shadow-emerald-100 dark:from-emerald-900/40 dark:to-cyan-900/40 dark:text-emerald-200 dark:shadow-emerald-900/30';
+                    $dotClasses = 'bg-emerald-500/75 dark:bg-emerald-300/80';
                     $dotAnimation = 'animate-pulse';
                 } else {
-                    $pillClasses = 'bg-slate-100 text-slate-700 shadow-sm dark:bg-slate-800/50 dark:text-slate-200';
-                    $dotClasses = 'bg-slate-400/80 dark:bg-slate-300/80';
+                    $pillClasses = 'bg-gradient-to-r from-rose-100 to-fuchsia-100 text-rose-800 shadow-sm shadow-rose-100 dark:from-rose-900/40 dark:to-fuchsia-900/40 dark:text-rose-200 dark:shadow-rose-900/30';
+                    $dotClasses = 'bg-rose-500/75 dark:bg-rose-300/80';
                     $dotAnimation = '';
                 }
 
@@ -73,10 +55,10 @@ class SesiMajlisController extends Controller
                     .$label
                     .'</span>';
             })
-            ->addColumn('countdown_start', fn (SesiMajlis $sesi) => $sesi->countdown_start ?? '-')
+            ->addColumn('countdown_start_late', fn (SesiMajlis $sesi) => $sesi->countdown_start_late ?? '-')
             ->addColumn('created_at', fn (SesiMajlis $sesi) => $sesi->created_at?->format('d M Y') ?? '')
             ->addColumn('action', fn (SesiMajlis $sesi) => view('admin::kawalan.sesi-majlis.actions', ['sesiMajlis' => $sesi])->render())
-            ->rawColumns(['action', 'is_active_label', 'is_on_air_label', 'is_late_label'])
+            ->rawColumns(['action', 'is_active_label', 'is_late_label'])
             ->make(true);
     }
 
@@ -85,17 +67,15 @@ class SesiMajlisController extends Controller
         $validated = $request->validate([
             'sesi' => ['required', 'string', 'max:255'],
             'is_active' => ['required', 'boolean'],
-            'is_on_air' => ['required', 'boolean'],
             'is_late' => ['required', 'boolean'],
-            'countdown_start' => ['nullable', 'integer', 'min:0'],
+            'countdown_start_late' => ['nullable', 'integer', 'min:0'],
         ]);
 
         SesiMajlis::create([
             'sesi' => $validated['sesi'],
             'is_active' => $request->boolean('is_active'),
-            'is_on_air' => $request->boolean('is_on_air'),
             'is_late' => $request->boolean('is_late'),
-            'countdown_start' => $validated['countdown_start'] ?? null,
+            'countdown_start_late' => $validated['countdown_start_late'] ?? null,
         ]);
 
         return response()->json(['success' => true]);
@@ -106,17 +86,15 @@ class SesiMajlisController extends Controller
         $validated = $request->validate([
             'sesi' => ['required', 'string', 'max:255'],
             'is_active' => ['required', 'boolean'],
-            'is_on_air' => ['required', 'boolean'],
             'is_late' => ['required', 'boolean'],
-            'countdown_start' => ['nullable', 'integer', 'min:0'],
+            'countdown_start_late' => ['nullable', 'integer', 'min:0'],
         ]);
 
         $sesi_majlis->update([
             'sesi' => $validated['sesi'],
             'is_active' => $request->boolean('is_active'),
-            'is_on_air' => $request->boolean('is_on_air'),
             'is_late' => $request->boolean('is_late'),
-            'countdown_start' => $validated['countdown_start'] ?? null,
+            'countdown_start_late' => $validated['countdown_start_late'] ?? null,
         ]);
 
         return response()->json(['success' => true]);

@@ -6,13 +6,13 @@
 <x-dashboard-layout :title="__('Sesi Majlis')" role="admin">
     <x-crud-header
         :title="__('Sesi Majlis')"
-        :description="__('Urus sesi majlis dan status aktif.')"
+        :description="__('Urus sesi majlis: aktif, lewat, dan mula kira detik.')"
         :create-label="__('Tambah sesi')"
     />
 
     <x-data-table
         table-id="sesi-majlis-table"
-        :columns="['ID', __('Sesi'), __('Aktif'), __('On Air'), __('Lewat'), __('Mula kira detik'), __('Dicipta'), __('Tindakan')]"
+        :columns="['ID', __('Sesi'), __('Aktif'), __('Lewat'), __('Mula kira detik'), __('Dicipta'), __('Tindakan')]"
     />
 
     <div class="modal-backdrop"></div>
@@ -36,17 +36,6 @@
                 <label class="text-sm font-medium leading-none" for="create-is_active">{{ __('Aktif') }}</label>
             </div>
             <div class="flex items-center gap-2">
-                <input type="hidden" name="is_on_air" value="0" />
-                <input
-                    id="create-is_on_air"
-                    type="checkbox"
-                    name="is_on_air"
-                    value="1"
-                    class="h-4 w-4 rounded border-border text-primary focus:ring-primary"
-                />
-                <label class="text-sm font-medium leading-none" for="create-is_on_air">{{ __('On Air') }}</label>
-            </div>
-            <div class="flex items-center gap-2">
                 <input type="hidden" name="is_late" value="0" />
                 <input
                     id="create-is_late"
@@ -58,11 +47,11 @@
                 <label class="text-sm font-medium leading-none" for="create-is_late">{{ __('Lewat') }}</label>
             </div>
             <div class="space-y-2">
-                <label class="text-sm font-medium leading-none" for="create-countdown_start">{{ __('Mula kira detik') }}</label>
+                <label class="text-sm font-medium leading-none" for="create-countdown_start_late">{{ __('Mula kira detik') }}</label>
                 <input
-                    id="create-countdown_start"
+                    id="create-countdown_start_late"
                     type="number"
-                    name="countdown_start"
+                    name="countdown_start_late"
                     min="0"
                     step="1"
                     class="{{ $inputClass }}"
@@ -96,17 +85,6 @@
                 <label class="text-sm font-medium leading-none" for="edit-is_active">{{ __('Aktif') }}</label>
             </div>
             <div class="flex items-center gap-2">
-                <input type="hidden" name="is_on_air" value="0" />
-                <input
-                    id="edit-is_on_air"
-                    type="checkbox"
-                    name="is_on_air"
-                    value="1"
-                    class="h-4 w-4 rounded border-border text-primary focus:ring-primary"
-                />
-                <label class="text-sm font-medium leading-none" for="edit-is_on_air">{{ __('On Air') }}</label>
-            </div>
-            <div class="flex items-center gap-2">
                 <input type="hidden" name="is_late" value="0" />
                 <input
                     id="edit-is_late"
@@ -118,11 +96,11 @@
                 <label class="text-sm font-medium leading-none" for="edit-is_late">{{ __('Lewat') }}</label>
             </div>
             <div class="space-y-2">
-                <label class="text-sm font-medium leading-none" for="edit-countdown_start">{{ __('Mula kira detik') }}</label>
+                <label class="text-sm font-medium leading-none" for="edit-countdown_start_late">{{ __('Mula kira detik') }}</label>
                 <input
-                    id="edit-countdown_start"
+                    id="edit-countdown_start_late"
                     type="number"
-                    name="countdown_start"
+                    name="countdown_start_late"
                     min="0"
                     step="1"
                     class="{{ $inputClass }}"
@@ -144,7 +122,7 @@
                     serverSide: true,
                     ajax: '{{ route('admin.kawalan.sesi-majlis.datatable') }}',
                     columnDefs: [
-                        { targets: 5, className: 'text-muted-foreground tabular-nums' },
+                        { targets: 4, className: 'text-muted-foreground tabular-nums' },
                         { targets: -1, className: 'text-right' },
                     ],
                     columns: [
@@ -157,18 +135,12 @@
                             searchable: false,
                         },
                         {
-                            data: 'is_on_air_label',
-                            name: 'is_on_air',
-                            orderable: false,
-                            searchable: false,
-                        },
-                        {
                             data: 'is_late_label',
                             name: 'is_late',
                             orderable: false,
                             searchable: false,
                         },
-                        { data: 'countdown_start', name: 'countdown_start' },
+                        { data: 'countdown_start_late', name: 'countdown_start_late' },
                         { data: 'created_at', name: 'created_at', orderable: false, searchable: false },
                         { data: 'action', name: 'action', orderable: false, searchable: false },
                     ],
@@ -187,7 +159,6 @@
                             closeModal('create-modal');
                             $form.trigger('reset');
                             $('#create-is_active').prop('checked', false);
-                            $('#create-is_on_air').prop('checked', false);
                             $('#create-is_late').prop('checked', false);
                             table.ajax.reload(null, false);
                         })
@@ -205,9 +176,8 @@
                     $('#edit-sesi-majlis-id').val($btn.data('id'));
                     $('#edit-sesi').val($btn.data('sesi'));
                     $('#edit-is_active').prop('checked', String($btn.data('is_active')) === '1');
-                    $('#edit-is_on_air').prop('checked', String($btn.data('is_on_air')) === '1');
                     $('#edit-is_late').prop('checked', String($btn.data('is_late')) === '1');
-                    $('#edit-countdown_start').val($btn.data('countdown_start') ?? '');
+                    $('#edit-countdown_start_late').val($btn.attr('data-countdown-start-late') ?? '');
                     openModal('edit-modal');
                 });
 

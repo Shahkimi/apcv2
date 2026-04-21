@@ -12,6 +12,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            return;
+        }
+
         DB::statement("UPDATE `pegawais` SET `no_kerusi` = NULL WHERE `no_kerusi` IS NOT NULL AND `no_kerusi` NOT REGEXP '^[0-9]+$'");
         DB::statement('ALTER TABLE `pegawais` MODIFY `no_kerusi` INT UNSIGNED NULL');
     }
@@ -21,6 +25,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            return;
+        }
+
         DB::statement('ALTER TABLE `pegawais` MODIFY `no_kerusi` VARCHAR(255) NULL');
     }
 };
