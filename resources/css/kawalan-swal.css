@@ -1,0 +1,177 @@
+/* SweetAlert2 — align with Cleopatra / dashboard tokens */
+.kawalan-swal2-popup {
+    border: 1px solid var(--border);
+    border-radius: calc(var(--radius) + 0.25rem);
+}
+
+.kawalan-swal2-text {
+    color: var(--muted-foreground);
+}
+
+.kawalan-swal2-actions {
+    gap: 0.625rem;
+}
+
+/* Batal — outline style (readable on light + dark; avoids pale secondary + wrong text) */
+.kawalan-swal2-cancel {
+    margin: 0;
+    border-radius: var(--radius);
+    border: 1px solid var(--border) !important;
+    background: var(--background) !important;
+    color: var(--foreground) !important;
+    padding: 0.5rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.25;
+    box-shadow: none !important;
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease,
+        color 0.15s ease;
+}
+
+.kawalan-swal2-cancel:hover {
+    background: var(--muted) !important;
+    border-color: var(--ring) !important;
+    color: var(--foreground) !important;
+}
+
+.kawalan-swal2-cancel:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+}
+
+/* Padam — destructive */
+.kawalan-swal2-confirm {
+    margin: 0;
+    border-radius: var(--radius);
+    border: 1px solid transparent !important;
+    background: var(--destructive) !important;
+    color: var(--destructive-foreground) !important;
+    padding: 0.5rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.25;
+    box-shadow: none !important;
+    transition: filter 0.15s ease;
+}
+
+.kawalan-swal2-confirm:hover {
+    filter: brightness(1.06);
+    color: var(--destructive-foreground) !important;
+}
+
+.kawalan-swal2-confirm:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+}
+
+.kawalan-swal2-confirm-success,
+.kawalan-swal2-confirm-warning {
+    margin: 0;
+    border-radius: var(--radius);
+    border: 1px solid transparent !important;
+    padding: 0.5rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.25;
+    box-shadow: none !important;
+    transition: filter 0.15s ease;
+}
+
+.kawalan-swal2-confirm-success {
+    background: oklch(0.68 0.18 155) !important;
+    color: white !important;
+}
+
+.kawalan-swal2-confirm-success:hover {
+    filter: brightness(1.06);
+}
+
+.kawalan-swal2-confirm-warning {
+    background: oklch(0.74 0.16 76) !important;
+    color: oklch(0.26 0.02 82) !important;
+}
+
+.kawalan-swal2-confirm-warning:hover {
+    filter: brightness(1.04);
+}
+
+.kawalan-swal2-confirm-success:focus-visible,
+.kawalan-swal2-confirm-warning:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+}
+
+/* Wide modal for detailed attendance confirmation */
+.kawalan-swal2-wide.kawalan-swal2-popup {
+    max-width: 28rem;
+    padding: 1.1rem;
+}
+
+.kawalan-swal2-wide .swal2-title {
+    margin-top: 0.15rem;
+    margin-bottom: 0.4rem;
+    font-size: 1.95rem;
+}
+
+.kawalan-swal2-wide .swal2-icon {
+    width: 4.2rem;
+    height: 4.2rem;
+    margin: 0.3rem auto 0.75rem;
+}
+
+.kawalan-swal2-html {
+    margin: 0.7rem 0 0.2rem;
+}
+
+@media (max-width: 640px) {
+    .kawalan-swal2-wide.kawalan-swal2-popup {
+        max-width: calc(100vw - 2rem);
+    }
+}
+
+@keyframes kawalanApprovePop {
+    0% {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+    70% {
+        transform: scale(1.02);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes kawalanApproveIcon {
+    0% {
+        transform: scale(0.7) rotate(-8deg);
+    }
+    60% {
+        transform: scale(1.08) rotate(2deg);
+    }
+    100% {
+        transform: scale(1) rotate(0deg);
+    }
+}
+
+.kawalan-swal2-approve {
+    animation: kawalanApprovePop 0.28s ease-out;
+}
+
+.kawalan-swal2-approve .swal2-title {
+    font-size: 1.1rem;
+    margin-bottom: 0.25rem;
+}
+
+.kawalan-swal2-approve .swal2-html-container {
+    margin-top: 0.35rem;
+    font-size: 0.875rem;
+}
+
+.kawalan-swal2-approve-icon {
+    animation: kawalanApproveIcon 0.42s ease-out;
+}
