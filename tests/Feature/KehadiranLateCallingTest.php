@@ -23,6 +23,7 @@ function activeSesiForKehadiran(array $overrides = []): SesiMajlis
         'is_active' => true,
         'is_late' => false,
         'countdown_start_late' => null,
+        'seat_offset' => 0,
     ], $overrides));
 }
 
@@ -161,6 +162,7 @@ it('batch assigns late numbers when session becomes inactive late', function ():
         'is_active' => true,
         'is_late' => false,
         'countdown_start_late' => 100,
+        'seat_offset' => 0,
     ]);
 
     $makePegawai = function (string $noKp, int $seat) use ($ptj, $jawatan, $gred, $sesi): Pegawai {
@@ -247,6 +249,7 @@ it('rejects attendance verification when no session is active', function (): voi
         'is_active' => false,
         'is_late' => false,
         'countdown_start_late' => null,
+        'seat_offset' => 0,
     ]);
 
     $this->actingAs($admin)
@@ -268,6 +271,89 @@ it('stores sesi_majlis_id when attendance is verified', function (): void {
 
     expect($pegawai->fresh()->sesi_majlis_id)->toBe($sesi->id);
     expect($pegawai->fresh()->is_late)->toBeFalse();
+});
+
+it('calculates table number with seat offset on verify', function (): void {
+    $admin = adminUser();
+    activeSesiForKehadiran([
+        'sesi' => 'Petang',
+        'seat_offset' => 700,
+    ]);
+    $pegawai = createPegawaiForTest();
+    $pegawai->no_kerusi = 705;
+    $pegawai->save();
+
+    $this->actingAs($admin)
+        ->putJson(route('admin.kehadiran.verify', $pegawai))
+        ->assertOk();
+
+    expect($pegawai->fresh()->no_meja)->toBe(1);
+});
+
+it('maps same relative seat to same table across sessions with different offsets', function (): void {
+    $ptj = Ptj::query()->create(['nama_ptj' => 'PTJ Ujian']);
+    $jawatan = Jawatan::query()->create(['desc_jawatan' => 'Pegawai']);
+    $gred = Gred::query()->create(['desc_gred' => 'Gred Ujian']);
+    $service = app(KehadiranCallingService::class);
+
+    $sesi1 = activeSesiForKehadiran(['sesi' => 'Pagi', 'seat_offset' => 0]);
+    $sesi1->update(['is_active' => false]);
+
+    Pegawai::query()->create([
+        'nama' => 'Officer 1',
+        'no_kp' => '111111111111',
+        'ptj_id' => $ptj->id,
+        'jawatan_id' => $jawatan->id,
+        'gred_id' => $gred->id,
+        'no_kerusi' => 15,
+        'is_attend' => true,
+        'sesi_majlis_id' => $sesi1->id,
+        'no_meja' => $service->calculateTableNumber(15, $sesi1),
+    ]);
+
+    $sesi2 = activeSesiForKehadiran(['sesi' => 'Petang', 'seat_offset' => 700]);
+
+    Pegawai::query()->create([
+        'nama' => 'Officer 2',
+        'no_kp' => '222222222222',
+        'ptj_id' => $ptj->id,
+        'jawatan_id' => $jawatan->id,
+        'gred_id' => $gred->id,
+        'no_kerusi' => 715,
+        'is_attend' => true,
+        'sesi_majlis_id' => $sesi2->id,
+        'no_meja' => $service->calculateTableNumber(715, $sesi2),
+    ]);
+
+    expect($service->calculateTableNumber(15, $sesi1))->toBe(2);
+    expect($service->calculateTableNumber(715, $sesi2))->toBe(2);
+});
+
+it('shows table preview in details based on active session offset', function (): void {
+    $admin = adminUser();
+    $pegawai = createPegawaiForTest();
+    $pegawai->forceFill([
+        'is_attend' => true,
+        'sesi_majlis_id' => activeSesiForKehadiran([
+            'sesi' => 'Sesi Lama',
+            'seat_offset' => 0,
+        ])->id,
+        'no_meja' => 2,
+    ])->save();
+
+    SesiMajlis::query()->where('id', $pegawai->sesi_majlis_id)->update(['is_active' => false]);
+    activeSesiForKehadiran([
+        'sesi' => 'Sesi Baru',
+        'seat_offset' => 4,
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->getJson(route('admin.kehadiran.details', $pegawai))
+        ->assertOk()
+        ->json('pegawai');
+
+    // seat 5 with offset 4 => relative seat 1 => table 1
+    expect($response['no_meja'])->toBe(1);
 });
 
 it('allows admin and media to view paparan', function (): void {

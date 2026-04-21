@@ -6,13 +6,13 @@
 <x-dashboard-layout :title="__('Sesi Majlis')" role="admin">
     <x-crud-header
         :title="__('Sesi Majlis')"
-        :description="__('Urus sesi majlis: aktif, lewat, dan mula kira detik.')"
+        :description="__('Urus sesi majlis: aktif, lewat, mula kira detik, dan offset kerusi untuk pengiraan no. meja.')"
         :create-label="__('Tambah sesi')"
     />
 
     <x-data-table
         table-id="sesi-majlis-table"
-        :columns="['ID', __('Sesi'), __('Aktif'), __('Lewat'), __('Mula kira detik'), __('Dicipta'), __('Tindakan')]"
+        :columns="['ID', __('Sesi'), __('Aktif'), __('Lewat'), __('Mula kira detik'), __('Offset kerusi'), __('Dicipta'), __('Tindakan')]"
     />
 
     <div class="modal-backdrop"></div>
@@ -56,6 +56,22 @@
                     step="1"
                     class="{{ $inputClass }}"
                 />
+            </div>
+            <div class="space-y-2">
+                <label class="text-sm font-medium leading-none" for="create-seat_offset">{{ __('Offset kerusi') }}</label>
+                <input
+                    id="create-seat_offset"
+                    type="number"
+                    name="seat_offset"
+                    min="0"
+                    step="1"
+                    value="0"
+                    required
+                    class="{{ $inputClass }}"
+                />
+                <p class="text-xs text-muted-foreground">
+                    {{ __('Nombor asas untuk sesi ini: 0 bermaksud kerusi bermula 1; 700 bermaksud kerusi 701+ dikira meja 1, 2, …') }}
+                </p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline" data-modal-close>{{ __('Batal') }}</button>
@@ -106,6 +122,21 @@
                     class="{{ $inputClass }}"
                 />
             </div>
+            <div class="space-y-2">
+                <label class="text-sm font-medium leading-none" for="edit-seat_offset">{{ __('Offset kerusi') }}</label>
+                <input
+                    id="edit-seat_offset"
+                    type="number"
+                    name="seat_offset"
+                    min="0"
+                    step="1"
+                    required
+                    class="{{ $inputClass }}"
+                />
+                <p class="text-xs text-muted-foreground">
+                    {{ __('Nombor asas untuk sesi ini: 0 bermaksud kerusi bermula 1; 700 bermaksud kerusi 701+ dikira meja 1, 2, …') }}
+                </p>
+            </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline" data-modal-close>{{ __('Batal') }}</button>
                 <button type="submit" class="btn">{{ __('Kemas kini') }}</button>
@@ -122,7 +153,7 @@
                     serverSide: true,
                     ajax: '{{ route('admin.kawalan.sesi-majlis.datatable') }}',
                     columnDefs: [
-                        { targets: 4, className: 'text-muted-foreground tabular-nums' },
+                        { targets: [4, 5], className: 'text-muted-foreground tabular-nums' },
                         { targets: -1, className: 'text-right' },
                     ],
                     columns: [
@@ -141,6 +172,7 @@
                             searchable: false,
                         },
                         { data: 'countdown_start_late', name: 'countdown_start_late' },
+                        { data: 'seat_offset', name: 'seat_offset', defaultContent: '0' },
                         { data: 'created_at', name: 'created_at', orderable: false, searchable: false },
                         { data: 'action', name: 'action', orderable: false, searchable: false },
                     ],
@@ -160,6 +192,7 @@
                             $form.trigger('reset');
                             $('#create-is_active').prop('checked', false);
                             $('#create-is_late').prop('checked', false);
+                            $('#create-seat_offset').val('0');
                             table.ajax.reload(null, false);
                         })
                         .fail(function (xhr) {
@@ -178,6 +211,7 @@
                     $('#edit-is_active').prop('checked', String($btn.data('is_active')) === '1');
                     $('#edit-is_late').prop('checked', String($btn.data('is_late')) === '1');
                     $('#edit-countdown_start_late').val($btn.attr('data-countdown-start-late') ?? '');
+                    $('#edit-seat_offset').val($btn.attr('data-seat-offset') ?? '0');
                     openModal('edit-modal');
                 });
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Kehadiran;
 
+use App\Models\Meja;
 use App\Models\Pegawai;
 use App\Models\SesiMajlis;
 use Illuminate\Database\Eloquent\Builder;
@@ -25,6 +26,37 @@ final class KehadiranCallingService
             ->where('is_active', true)
             ->orderBy('id')
             ->first();
+    }
+
+    /**
+     * Table number from seat, relative to session seat_offset (0 = seats start at 1).
+     */
+    public function calculateTableNumber(int|string|null $seatNumber, ?SesiMajlis $session): ?int
+    {
+        if ($seatNumber === null || $seatNumber === '' || ! is_numeric((string) $seatNumber)) {
+            return null;
+        }
+
+        $seat = (int) $seatNumber;
+
+        if ($seat < 1) {
+            return null;
+        }
+
+        $capacity = Meja::query()->orderBy('id')->value('sizing');
+
+        if (! is_numeric($capacity) || (int) $capacity < 1) {
+            return null;
+        }
+
+        $offset = $session?->seat_offset ?? 0;
+        $relativeSeat = $seat - $offset;
+
+        if ($relativeSeat < 1) {
+            return null;
+        }
+
+        return (int) floor(($relativeSeat - 1) / (int) $capacity) + 1;
     }
 
     /**

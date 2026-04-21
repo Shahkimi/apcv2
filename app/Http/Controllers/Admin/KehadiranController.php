@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Meja;
 use App\Models\Pegawai;
 use App\Models\SesiMajlis;
 use App\Services\Kehadiran\KehadiranCallingService;
@@ -78,6 +77,10 @@ class KehadiranController extends Controller
     public function getDetails(Pegawai $pegawai): JsonResponse
     {
         $pegawai->loadMissing(['ptj', 'sesiMajlis']);
+        $activeSesi = $this->callingService->activeOnAirSesi();
+        $previewNoMeja = $activeSesi !== null
+            ? ($this->callingService->calculateTableNumber($pegawai->no_kerusi, $activeSesi) ?? '-')
+            : ($pegawai->no_meja ?? '-');
 
         return response()->json([
             'success' => true,
@@ -88,7 +91,7 @@ class KehadiranController extends Controller
                 'sesi_name' => $pegawai->sesiMajlis?->sesi ?? '—',
                 'ptj_name' => $pegawai->ptj?->nama_ptj ?? '-',
                 'no_kerusi' => $pegawai->no_kerusi ?? '-',
-                'no_meja' => $this->resolveTableNumber($pegawai->no_kerusi) ?? '-',
+                'no_meja' => $previewNoMeja,
                 'no_panggilan_lewat' => $pegawai->no_panggilan_lewat ?? '-',
                 'is_attend' => (bool) $pegawai->is_attend,
             ],
@@ -114,7 +117,7 @@ class KehadiranController extends Controller
 
         if ($pegawai->is_attend && $activeSesi !== null) {
             $pegawai->sesi_majlis_id = $activeSesi->id;
-            $pegawai->no_meja = $this->resolveTableNumber($pegawai->no_kerusi);
+            $pegawai->no_meja = $this->callingService->calculateTableNumber($pegawai->no_kerusi, $activeSesi);
             if ($activeSesi->is_late) {
                 $this->callingService->assignLateCallingNumberIfApplicable($pegawai, $activeSesi);
             } else {
@@ -171,26 +174,5 @@ class KehadiranController extends Controller
         }
 
         return mb_strtoupper(mb_substr($trimmed, 0, min(2, mb_strlen($trimmed))), 'UTF-8');
-    }
-
-    private function resolveTableNumber(int|string|null $seat): ?int
-    {
-        if ($seat === null || $seat === '' || ! is_numeric((string) $seat)) {
-            return null;
-        }
-
-        $capacity = Meja::query()->orderBy('id')->value('sizing');
-
-        if (! is_numeric($capacity) || (int) $capacity < 1) {
-            return null;
-        }
-
-        $seatNumber = (int) $seat;
-
-        if ($seatNumber < 1) {
-            return null;
-        }
-
-        return (int) floor(($seatNumber - 1) / (int) $capacity) + 1;
     }
 }

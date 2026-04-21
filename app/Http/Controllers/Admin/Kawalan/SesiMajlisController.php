@@ -56,6 +56,7 @@ class SesiMajlisController extends Controller
                     .'</span>';
             })
             ->addColumn('countdown_start_late', fn (SesiMajlis $sesi) => $sesi->countdown_start_late ?? '-')
+            ->addColumn('seat_offset', fn (SesiMajlis $sesi) => e((string) ($sesi->seat_offset ?? 0)))
             ->addColumn('created_at', fn (SesiMajlis $sesi) => $sesi->created_at?->format('d M Y') ?? '')
             ->addColumn('action', fn (SesiMajlis $sesi) => view('admin::kawalan.sesi-majlis.actions', ['sesiMajlis' => $sesi])->render())
             ->rawColumns(['action', 'is_active_label', 'is_late_label'])
@@ -69,6 +70,7 @@ class SesiMajlisController extends Controller
             'is_active' => ['required', 'boolean'],
             'is_late' => ['required', 'boolean'],
             'countdown_start_late' => ['nullable', 'integer', 'min:0'],
+            'seat_offset' => ['required', 'integer', 'min:0'],
         ]);
 
         SesiMajlis::create([
@@ -76,6 +78,7 @@ class SesiMajlisController extends Controller
             'is_active' => $request->boolean('is_active'),
             'is_late' => $request->boolean('is_late'),
             'countdown_start_late' => $validated['countdown_start_late'] ?? null,
+            'seat_offset' => (int) $validated['seat_offset'],
         ]);
 
         return response()->json(['success' => true]);
@@ -88,6 +91,7 @@ class SesiMajlisController extends Controller
             'is_active' => ['required', 'boolean'],
             'is_late' => ['required', 'boolean'],
             'countdown_start_late' => ['nullable', 'integer', 'min:0'],
+            'seat_offset' => ['required', 'integer', 'min:0'],
         ]);
 
         $sesi_majlis->update([
@@ -95,6 +99,7 @@ class SesiMajlisController extends Controller
             'is_active' => $request->boolean('is_active'),
             'is_late' => $request->boolean('is_late'),
             'countdown_start_late' => $validated['countdown_start_late'] ?? null,
+            'seat_offset' => (int) $validated['seat_offset'],
         ]);
 
         return response()->json(['success' => true]);
