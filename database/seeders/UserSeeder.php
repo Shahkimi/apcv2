@@ -16,7 +16,6 @@ class UserSeeder extends Seeder
             ['username' => 'user'],
             [
                 'name' => 'Test User',
-                'email' => 'user@example.com',
                 'password' => Hash::make('password'),
                 'role' => User::ROLE_USER,
             ]
@@ -26,7 +25,6 @@ class UserSeeder extends Seeder
             ['username' => 'media'],
             [
                 'name' => 'Test Media',
-                'email' => 'media@example.com',
                 'password' => Hash::make('password'),
                 'role' => User::ROLE_MEDIA,
             ]
@@ -36,7 +34,6 @@ class UserSeeder extends Seeder
             ['username' => 'admin'],
             [
                 'name' => 'Test Admin',
-                'email' => 'admin@example.com',
                 'password' => Hash::make('password'),
                 'role' => User::ROLE_ADMIN,
             ]

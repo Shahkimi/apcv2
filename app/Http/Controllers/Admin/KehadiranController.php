@@ -33,7 +33,7 @@ class KehadiranController extends Controller
 
     public function datatable()
     {
-        $query = Pegawai::query()->with(['ptj', 'sesiMajlis']);
+        $query = Pegawai::query()->with(['ptj']);
 
         if (request()->filled('sesi_majlis_id')) {
             $query->where('sesi_majlis_id', request()->integer('sesi_majlis_id'));
@@ -63,14 +63,16 @@ class KehadiranController extends Controller
 
                 return '<span class="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-rose-100 to-fuchsia-100 px-2.5 py-1 text-xs font-semibold text-rose-800 shadow-sm shadow-rose-100 dark:from-rose-900/40 dark:to-fuchsia-900/40 dark:text-rose-200 dark:shadow-rose-900/30"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-rose-500/75 dark:bg-rose-300/80"></span>'.e(__('Tidak')).'</span>';
             })
-            ->addColumn('sesi_name', fn (Pegawai $pegawai) => e((string) ($pegawai->sesiMajlis?->sesi ?? '—')))
-            ->addColumn('no_kerusi', fn (Pegawai $pegawai) => e((string) ($pegawai->no_kerusi ?? '-')))
-            ->addColumn('no_panggilan_lewat', function (Pegawai $pegawai) {
-                return $pegawai->no_panggilan_lewat !== null
-                    ? e((string) $pegawai->no_panggilan_lewat)
-                    : '—';
+            ->addColumn('sesi_name', function (Pegawai $pegawai) {
+                $label = (int) $pegawai->s_kehadiran === Pegawai::S_KEHADIRAN_PETANG
+                    ? __('Petang')
+                    : __('Pagi');
+
+                return e($label);
             })
+            ->addColumn('no_kerusi', fn (Pegawai $pegawai) => e((string) ($pegawai->no_kerusi ?? '-')))
             ->addColumn('ptj_name', fn (Pegawai $pegawai) => e((string) ($pegawai->ptj?->nama_ptj ?? '-')))
+            ->removeColumn('no_panggilan_lewat')
             ->addColumn('action', fn (Pegawai $pegawai) => view('admin::kehadiran.actions', ['pegawai' => $pegawai])->render())
             ->rawColumns(['nama', 'rsvp_label', 'action'])
             ->make(true);
@@ -87,10 +89,13 @@ class KehadiranController extends Controller
         return response()->json([
             'success' => true,
             'show_table_number' => $this->settings->showTableNumberInDialog(),
+            'active_sesi_s_kehadiran' => $activeSesi !== null ? (int) $activeSesi->s_kehadiran : null,
+            'active_sesi_name' => $activeSesi?->sesi,
             'pegawai' => [
                 'id' => $pegawai->id,
                 'nama' => $pegawai->nama,
                 'no_kp' => $pegawai->no_kp,
+                's_kehadiran' => (int) $pegawai->s_kehadiran,
                 'sesi_name' => $pegawai->sesiMajlis?->sesi ?? '—',
                 'ptj_name' => $pegawai->ptj?->nama_ptj ?? '-',
                 'no_kerusi' => $pegawai->no_kerusi ?? '-',
@@ -112,6 +117,23 @@ class KehadiranController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => __('Tiada sesi aktif. Sila aktifkan sesi terlebih dahulu.'),
+                ], 422);
+            }
+
+            if ((int) $pegawai->s_kehadiran !== (int) $activeSesi->s_kehadiran) {
+                $pegawaiType = (int) $pegawai->s_kehadiran === Pegawai::S_KEHADIRAN_PAGI
+                    ? __('pagi')
+                    : __('petang');
+                $sesiType = (int) $activeSesi->s_kehadiran === SesiMajlis::S_KEHADIRAN_PAGI
+                    ? __('pagi')
+                    : __('petang');
+
+                return response()->json([
+                    'success' => false,
+                    'message' => __('Pegawai ini berdaftar untuk sesi :pegawai_type tetapi sesi semasa adalah :sesi_type.', [
+                        'pegawai_type' => $pegawaiType,
+                        'sesi_type' => $sesiType,
+                    ]),
                 ], 422);
             }
         }

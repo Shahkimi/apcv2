@@ -3,7 +3,7 @@
     $isAttended = (bool) $pegawai->is_attend;
 @endphp
 
-<div class="flex items-center justify-end">
+<div class="flex w-full items-center justify-center">
     <button
         type="button"
         class="{{ $isAttended

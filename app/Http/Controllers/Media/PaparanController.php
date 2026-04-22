@@ -37,14 +37,13 @@ class PaparanController extends Controller
         $ontimeCount = $pegawais->where('is_late', false)->count();
         $lateCount = $pegawais->where('is_late', true)->count();
 
-        return view('admin::paparan.index', [
+        return view('media::paparan.index', [
             'pegawais' => $pegawais,
             'selectedSesi' => $selectedSesi,
             'allSesis' => SesiMajlis::query()->orderBy('id')->get(),
             'isLateSesi' => (bool) ($selectedSesi?->is_late),
             'ontimeCount' => $ontimeCount,
             'lateCount' => $lateCount,
-            'layoutRole' => 'media',
         ]);
     }
 }

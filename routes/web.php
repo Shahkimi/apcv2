@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\Kawalan\BackdropController as KawalanBackdropController;
 use App\Http\Controllers\Admin\Kawalan\GredController as KawalanGredController;
 use App\Http\Controllers\Admin\Kawalan\JawatanController as KawalanJawatanController;
 use App\Http\Controllers\Admin\Kawalan\MejaController as KawalanMejaController;
@@ -96,6 +97,13 @@ Route::middleware('auth')->group(function () {
                 Route::post('sesi-majlis', [KawalanSesiMajlisController::class, 'store'])->name('sesi-majlis.store');
                 Route::put('sesi-majlis/{sesi_majlis}', [KawalanSesiMajlisController::class, 'update'])->name('sesi-majlis.update');
                 Route::delete('sesi-majlis/{sesi_majlis}', [KawalanSesiMajlisController::class, 'destroy'])->name('sesi-majlis.destroy');
+
+                Route::get('backdrop', [KawalanBackdropController::class, 'index'])->name('backdrop.index');
+                Route::get('backdrop/datatable', [KawalanBackdropController::class, 'datatable'])->name('backdrop.datatable');
+                Route::post('backdrop', [KawalanBackdropController::class, 'store'])->name('backdrop.store');
+                Route::put('backdrop/{backdrop}', [KawalanBackdropController::class, 'update'])->name('backdrop.update');
+                Route::delete('backdrop/{backdrop}', [KawalanBackdropController::class, 'destroy'])->name('backdrop.destroy');
+                Route::post('backdrop/{backdrop}/toggle-active', [KawalanBackdropController::class, 'toggleActive'])->name('backdrop.toggle-active');
 
                 Route::get('user', [KawalanUserManagementController::class, 'index'])->name('user.index');
                 Route::get('user/datatable', [KawalanUserManagementController::class, 'datatable'])->name('user.datatable');

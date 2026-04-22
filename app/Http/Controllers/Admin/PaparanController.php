@@ -44,7 +44,6 @@ class PaparanController extends Controller
             'isLateSesi' => (bool) ($selectedSesi?->is_late),
             'ontimeCount' => $ontimeCount,
             'lateCount' => $lateCount,
-            'layoutRole' => 'admin',
         ]);
     }
 }

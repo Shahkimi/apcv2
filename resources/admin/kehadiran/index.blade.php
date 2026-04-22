@@ -93,7 +93,8 @@
 
             <x-data-table
                 table-id="kehadiran-table"
-                :columns="['ID', __('Pegawai'), __('Sesi'), __('No. Kerusi'), __('No. panggilan lewat'), __('RSVP'), __('PTJ'), __('Tindakan')]"
+                :columns="['ID', __('Pegawai'), __('Sesi'), __('No. Kerusi'), __('PTJ'), __('RSVP'), __('Tindakan')]"
+                :column-header-classes="[6 => 'text-center']"
                 class="shadow-sm ring-1 ring-border/30"
             />
         </section>
@@ -128,19 +129,15 @@
                         },
                         {
                             targets: 4,
-                            className: 'text-muted-foreground tabular-nums align-top'
+                            className: 'text-muted-foreground align-top max-w-[12rem]'
                         },
                         {
                             targets: 5,
                             className: 'min-w-[7rem] align-top'
                         },
                         {
-                            targets: 6,
-                            className: 'text-muted-foreground align-top max-w-[12rem]'
-                        },
-                        {
                             targets: -1,
-                            className: 'min-w-[10rem] text-right align-top'
+                            className: 'min-w-[10rem] text-center align-top'
                         },
                     ],
                     columns: [{
@@ -153,7 +150,7 @@
                         },
                         {
                             data: 'sesi_name',
-                            name: 'sesiMajlis.sesi',
+                            name: 's_kehadiran',
                             defaultContent: '—',
                             searchable: false,
                         },
@@ -163,19 +160,14 @@
                             defaultContent: '-'
                         },
                         {
-                            data: 'no_panggilan_lewat',
-                            name: 'no_panggilan_lewat',
-                            defaultContent: '—'
+                            data: 'ptj_name',
+                            name: 'ptj.nama_ptj'
                         },
                         {
                             data: 'rsvp_label',
                             name: 'rsvp',
                             orderable: false,
                             searchable: false
-                        },
-                        {
-                            data: 'ptj_name',
-                            name: 'ptj.nama_ptj'
                         },
                         {
                             data: 'action',
@@ -206,6 +198,44 @@
                         .done(function(response) {
                             const pegawai = response.pegawai;
                             const showTableNumber = Boolean(response?.show_table_number);
+                            const activeSesiSKehadiran = response.active_sesi_s_kehadiran;
+
+                            if (
+                                !isAttend &&
+                                activeSesiSKehadiran !== null &&
+                                activeSesiSKehadiran !== undefined
+                            ) {
+                                if (Number(pegawai.s_kehadiran) !== Number(activeSesiSKehadiran)) {
+                                    const pegawaiType =
+                                        Number(pegawai.s_kehadiran) === 0 ?
+                                        '{{ __('pagi') }}' :
+                                        '{{ __('petang') }}';
+                                    const sesiType =
+                                        Number(activeSesiSKehadiran) === 0 ?
+                                        '{{ __('pagi') }}' :
+                                        '{{ __('petang') }}';
+
+                                    window.Swal.fire({
+                                        icon: 'error',
+                                        title: '{{ __('Jenis sesi tidak sepadan') }}',
+                                        text: '{{ __('Pegawai ini berdaftar untuk sesi') }} ' +
+                                            pegawaiType +
+                                            ' {{ __('tetapi sesi semasa adalah') }} ' +
+                                            sesiType +
+                                            '.',
+                                        confirmButtonText: '{{ __('Tutup') }}',
+                                        background: 'var(--popover)',
+                                        color: 'var(--popover-foreground)',
+                                        buttonsStyling: false,
+                                        customClass: {
+                                            popup: 'kawalan-swal2-popup',
+                                            confirmButton: 'kawalan-swal2-confirm-danger',
+                                        },
+                                    });
+                                    return;
+                                }
+                            }
+
                             const confirmLabel = isAttend ? '{{ __('Batalkan') }}' :
                                 '{{ __('Sahkan') }}';
                             const title = isAttend ?

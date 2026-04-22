@@ -23,10 +23,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'no_sijil',
     'is_attend',
     'is_late',
+    's_kehadiran',
 ])]
 class Pegawai extends Model
 {
     use HasFactory;
+
+    public const S_KEHADIRAN_PAGI = 0;
+
+    public const S_KEHADIRAN_PETANG = 1;
 
     protected $table = 'pegawais';
 
@@ -39,6 +44,7 @@ class Pegawai extends Model
             'no_kerusi' => 'integer',
             'no_meja' => 'integer',
             'no_panggilan_lewat' => 'integer',
+            's_kehadiran' => 'integer',
         ];
     }
 

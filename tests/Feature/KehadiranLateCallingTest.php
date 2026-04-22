@@ -8,9 +8,9 @@ use App\Models\Meja;
 use App\Models\Pegawai;
 use App\Models\Ptj;
 use App\Models\SesiMajlis;
-use App\Services\SettingsService;
 use App\Models\User;
 use App\Services\Kehadiran\KehadiranCallingService;
+use App\Services\SettingsService;
 use Illuminate\Support\Facades\Hash;
 
 beforeEach(function (): void {
@@ -25,6 +25,7 @@ function activeSesiForKehadiran(array $overrides = []): SesiMajlis
         'is_late' => false,
         'countdown_start_late' => null,
         'seat_offset' => 0,
+        's_kehadiran' => SesiMajlis::S_KEHADIRAN_PAGI,
     ], $overrides));
 }
 
@@ -43,6 +44,7 @@ function createPegawaiForTest(): Pegawai
         'rsvp' => true,
         'no_kerusi' => 5,
         'is_attend' => false,
+        's_kehadiran' => Pegawai::S_KEHADIRAN_PAGI,
     ]);
 }
 
@@ -164,6 +166,7 @@ it('batch assigns late numbers when session becomes inactive late', function ():
         'is_late' => false,
         'countdown_start_late' => 100,
         'seat_offset' => 0,
+        's_kehadiran' => SesiMajlis::S_KEHADIRAN_PAGI,
     ]);
 
     $makePegawai = function (string $noKp, int $seat) use ($ptj, $jawatan, $gred, $sesi): Pegawai {
@@ -251,6 +254,7 @@ it('rejects attendance verification when no session is active', function (): voi
         'is_late' => false,
         'countdown_start_late' => null,
         'seat_offset' => 0,
+        's_kehadiran' => SesiMajlis::S_KEHADIRAN_PAGI,
     ]);
 
     $this->actingAs($admin)
@@ -259,6 +263,41 @@ it('rejects attendance verification when no session is active', function (): voi
         ->assertJsonPath('success', false);
 
     expect($pegawai->fresh()->is_attend)->toBeFalse();
+});
+
+it('rejects verify when officer session type does not match active session', function (): void {
+    $admin = adminUser();
+    $pegawai = createPegawaiForTest();
+    $pegawai->update(['s_kehadiran' => Pegawai::S_KEHADIRAN_PAGI]);
+
+    activeSesiForKehadiran([
+        'sesi' => 'Petang',
+        's_kehadiran' => SesiMajlis::S_KEHADIRAN_PETANG,
+    ]);
+
+    $this->actingAs($admin)
+        ->putJson(route('admin.kehadiran.verify', $pegawai))
+        ->assertStatus(422)
+        ->assertJsonPath('success', false);
+
+    expect($pegawai->fresh()->is_attend)->toBeFalse();
+});
+
+it('allows verify when officer and active session s_kehadiran match petang', function (): void {
+    $admin = adminUser();
+    $pegawai = createPegawaiForTest();
+    $pegawai->update(['s_kehadiran' => Pegawai::S_KEHADIRAN_PETANG]);
+
+    $sesi = activeSesiForKehadiran([
+        'sesi' => 'Petang',
+        's_kehadiran' => SesiMajlis::S_KEHADIRAN_PETANG,
+    ]);
+
+    $this->actingAs($admin)
+        ->putJson(route('admin.kehadiran.verify', $pegawai))
+        ->assertOk();
+
+    expect($pegawai->fresh()->sesi_majlis_id)->toBe($sesi->id);
 });
 
 it('stores sesi_majlis_id when attendance is verified', function (): void {
@@ -312,7 +351,11 @@ it('maps same relative seat to same table across sessions with different offsets
         'no_meja' => $service->calculateTableNumber(15, $sesi1),
     ]);
 
-    $sesi2 = activeSesiForKehadiran(['sesi' => 'Petang', 'seat_offset' => 700]);
+    $sesi2 = activeSesiForKehadiran([
+        'sesi' => 'Petang',
+        'seat_offset' => 700,
+        's_kehadiran' => SesiMajlis::S_KEHADIRAN_PETANG,
+    ]);
 
     Pegawai::query()->create([
         'nama' => 'Officer 2',

@@ -1,11 +1,11 @@
-<x-dashboard-layout :title="__('Paparan kehadiran')" role="admin">
+<x-dashboard-layout :title="__('Paparan kehadiran')" role="media">
     <div class="paparan-kehadiran min-h-[calc(100dvh-8rem)] rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 p-6 text-slate-100 shadow-inner sm:p-10 dark:from-slate-950 dark:to-slate-900">
         <header class="mb-8 text-center">
             <h1 class="text-4xl font-bold tracking-tight text-white sm:text-5xl">
                 {{ __('Senarai kehadiran pegawai') }}
             </h1>
 
-            <form method="get" action="{{ route('admin.paparan.index') }}" class="mx-auto mt-6 max-w-xl" id="paparan-sesi-form">
+            <form method="get" action="{{ route('media.paparan.index') }}" class="mx-auto mt-6 max-w-xl" id="paparan-sesi-form">
                 <label class="mb-2 block text-sm font-medium text-slate-300" for="paparan-sesi-select">
                     {{ __('Pilih sesi') }}
                 </label>

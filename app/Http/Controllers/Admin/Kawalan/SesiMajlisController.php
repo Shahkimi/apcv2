@@ -57,6 +57,13 @@ class SesiMajlisController extends Controller
             })
             ->addColumn('countdown_start_late', fn (SesiMajlis $sesi) => $sesi->countdown_start_late ?? '-')
             ->addColumn('seat_offset', fn (SesiMajlis $sesi) => e((string) ($sesi->seat_offset ?? 0)))
+            ->addColumn('s_kehadiran_label', function (SesiMajlis $sesi) {
+                $label = (int) $sesi->s_kehadiran === SesiMajlis::S_KEHADIRAN_PAGI
+                    ? __('Pagi')
+                    : __('Petang');
+
+                return e($label);
+            })
             ->addColumn('created_at', fn (SesiMajlis $sesi) => $sesi->created_at?->format('d M Y') ?? '')
             ->addColumn('action', fn (SesiMajlis $sesi) => view('admin::kawalan.sesi-majlis.actions', ['sesiMajlis' => $sesi])->render())
             ->rawColumns(['action', 'is_active_label', 'is_late_label'])
@@ -71,6 +78,7 @@ class SesiMajlisController extends Controller
             'is_late' => ['required', 'boolean'],
             'countdown_start_late' => ['nullable', 'integer', 'min:0'],
             'seat_offset' => ['required', 'integer', 'min:0'],
+            's_kehadiran' => ['required', 'integer', 'in:0,1'],
         ]);
 
         SesiMajlis::create([
@@ -79,6 +87,7 @@ class SesiMajlisController extends Controller
             'is_late' => $request->boolean('is_late'),
             'countdown_start_late' => $validated['countdown_start_late'] ?? null,
             'seat_offset' => (int) $validated['seat_offset'],
+            's_kehadiran' => (int) $validated['s_kehadiran'],
         ]);
 
         return response()->json(['success' => true]);
@@ -92,6 +101,7 @@ class SesiMajlisController extends Controller
             'is_late' => ['required', 'boolean'],
             'countdown_start_late' => ['nullable', 'integer', 'min:0'],
             'seat_offset' => ['required', 'integer', 'min:0'],
+            's_kehadiran' => ['required', 'integer', 'in:0,1'],
         ]);
 
         $sesi_majlis->update([
@@ -100,6 +110,7 @@ class SesiMajlisController extends Controller
             'is_late' => $request->boolean('is_late'),
             'countdown_start_late' => $validated['countdown_start_late'] ?? null,
             'seat_offset' => (int) $validated['seat_offset'],
+            's_kehadiran' => (int) $validated['s_kehadiran'],
         ]);
 
         return response()->json(['success' => true]);

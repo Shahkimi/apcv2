@@ -150,6 +150,15 @@ html.dark .kawalan-dt-table.dataTable tbody tr:hover {
     font-weight: 500;
 }
 
+/*
+ * Kehadiran: DataTables adds dt-head-right / body alignment on some columns by type detection.
+ * Tailwind text-center on columnDefs loses to those rules — force center for Tindakan.
+ */
+#kehadiran-table.dataTable > thead > tr > th:last-child,
+#kehadiran-table.dataTable > tbody > tr > td:last-child {
+    text-align: center !important;
+}
+
 .kawalan-dt-table.dataTable.no-footer {
     border-bottom: none;
 }
