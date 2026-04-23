@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\KehadiranController as AdminKehadiranController;
 use App\Http\Controllers\Admin\PaparanController as AdminPaparanController;
 use App\Http\Controllers\Media\DashboardController as MediaDashboardController;
 use App\Http\Controllers\Media\PaparanController as MediaPaparanController;
+use App\Http\Controllers\Media\SenaraiController as MediaSenaraiController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\User\DashboardController as UserDashboardController;
 use App\Models\User;
@@ -49,6 +50,8 @@ Route::middleware('auth')->group(function () {
         ->group(function () {
             Route::get('/dashboard', [MediaDashboardController::class, 'index'])->name('dashboard');
             Route::get('/paparan', [MediaPaparanController::class, 'index'])->name('paparan.index');
+            Route::get('/senarai/present', [MediaSenaraiController::class, 'present'])->name('senarai.present');
+            Route::get('/senarai', [MediaSenaraiController::class, 'index'])->name('senarai.index');
         });
 
     Route::middleware('role.admin')

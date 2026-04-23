@@ -435,8 +435,19 @@ it('allows admin and media to view paparan', function (): void {
         ->assertOk()
         ->assertSee('Ahmad Ujian', false);
 
-    $this->actingAs(mediaUser())
+    $media = mediaUser();
+    $this->actingAs($media)
         ->get(route('media.paparan.index'))
+        ->assertOk()
+        ->assertSee('Ahmad Ujian', false);
+
+    $this->actingAs($media)
+        ->get(route('media.senarai.index'))
+        ->assertOk()
+        ->assertSee('Mula Presentasi', false);
+
+    $this->actingAs($media)
+        ->get(route('media.senarai.present'))
         ->assertOk()
         ->assertSee('Ahmad Ujian', false);
 });

@@ -96,7 +96,7 @@
         <script>
             setTimeout(function() {
                 window.location.reload();
-            }, 30000);
+            }, {{ (int) $refreshIntervalMs }});
         </script>
     @endpush
 </x-dashboard-layout>

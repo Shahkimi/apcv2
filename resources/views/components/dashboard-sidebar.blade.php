@@ -23,6 +23,7 @@
         'media' => [
             ['label' => __('Dashboard'), 'route' => 'media.dashboard', 'icon' => 'ri-dashboard-line'],
             ['label' => __('Paparan'), 'route' => 'media.paparan.index', 'icon' => 'ri-tv-2-line'],
+            ['label' => __('Senarai kehadiran'), 'route' => 'media.senarai.index', 'icon' => 'ri-list-check-2'],
         ],
         default => [
             ['label' => __('Dashboard'), 'route' => 'user.dashboard', 'icon' => 'ri-dashboard-line'],
