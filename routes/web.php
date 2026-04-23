@@ -12,9 +12,12 @@ use App\Http\Controllers\Admin\Kawalan\SesiMajlisController as KawalanSesiMajlis
 use App\Http\Controllers\Admin\Kawalan\UserManagementController as KawalanUserManagementController;
 use App\Http\Controllers\Admin\KehadiranController as AdminKehadiranController;
 use App\Http\Controllers\Admin\PaparanController as AdminPaparanController;
+use App\Http\Controllers\Admin\SenaraiAnalyticsController as AdminSenaraiAnalyticsController;
 use App\Http\Controllers\Media\DashboardController as MediaDashboardController;
 use App\Http\Controllers\Media\PaparanController as MediaPaparanController;
+use App\Http\Controllers\Media\SenaraiAnalyticsController as MediaSenaraiAnalyticsController;
 use App\Http\Controllers\Media\SenaraiController as MediaSenaraiController;
+use App\Http\Controllers\Media\SenaraiProgressController as MediaSenaraiProgressController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\User\DashboardController as UserDashboardController;
 use App\Models\User;
@@ -52,6 +55,10 @@ Route::middleware('auth')->group(function () {
             Route::get('/paparan', [MediaPaparanController::class, 'index'])->name('paparan.index');
             Route::get('/senarai/present', [MediaSenaraiController::class, 'present'])->name('senarai.present');
             Route::get('/senarai', [MediaSenaraiController::class, 'index'])->name('senarai.index');
+            Route::get('/senarai/analytics', [MediaSenaraiAnalyticsController::class, 'index'])->name('senarai.analytics');
+            Route::get('/senarai/progress', [MediaSenaraiProgressController::class, 'show'])->name('senarai.progress.show');
+            Route::post('/senarai/progress', [MediaSenaraiProgressController::class, 'update'])->name('senarai.progress.update');
+            Route::get('/senarai/progress/analytics', [MediaSenaraiProgressController::class, 'analytics'])->name('senarai.progress.analytics');
         });
 
     Route::middleware('role.admin')
@@ -59,6 +66,8 @@ Route::middleware('auth')->group(function () {
         ->name('admin.')
         ->group(function () {
             Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+            Route::get('/senarai/analytics', [AdminSenaraiAnalyticsController::class, 'index'])->name('senarai.analytics');
+            Route::get('/senarai/progress/analytics', [MediaSenaraiProgressController::class, 'analytics'])->name('senarai.progress.analytics');
 
             Route::prefix('kehadiran')->name('kehadiran.')->group(function () {
                 Route::get('/', [AdminKehadiranController::class, 'index'])->name('index');

@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ __('Presentasi Kehadiran') }}</title>
     @vite(['resources/css/app.css'])
     <style>
@@ -82,6 +83,11 @@
     <script>
         const officers = @json($officerSlides);
         const setupUrl = @json(route('media.senarai.index'));
+        const progressReadUrl = @json(route('media.senarai.progress.show'));
+        const progressUpdateUrl = @json(route('media.senarai.progress.update'));
+        const sesiId = @json($sesiId);
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+        const storageKey = `senarai_position_${sesiId ?? 'all'}`;
 
         let currentIndex = 0;
         const totalOfficers = officers.length;
@@ -94,39 +100,134 @@
         const jawatanEl = document.getElementById('officer-jawatan');
         const ptjEl = document.getElementById('officer-ptj');
 
-        function showOfficer(index) {
-            if (totalOfficers === 0) return;
-            if (index < 0) index = 0;
-            if (index >= totalOfficers) index = totalOfficers - 1;
+        function normalizeIndex(index) {
+            if (totalOfficers <= 0) {
+                return 0;
+            }
 
-            currentIndex = index;
+            return Math.max(0, Math.min(index, totalOfficers - 1));
+        }
+
+        async function saveProgress(index) {
+            const officer = officers[index];
+            if (!officer || officer.id == null) {
+                return;
+            }
+
+            localStorage.setItem(storageKey, String(index));
+
+            const payload = {
+                index,
+                pegawai_id: officer.id,
+            };
+
+            if (sesiId != null) {
+                payload.sesi_id = sesiId;
+            }
+
+            try {
+                await fetch(progressUpdateUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                    },
+                    body: JSON.stringify(payload),
+                });
+            } catch (err) {
+                /* localStorage still preserves position when network is unstable */
+            }
+        }
+
+        function showOfficer(index, options = {}) {
+            if (totalOfficers === 0) return;
+
+            const persist = options.persist ?? true;
+            const animate = options.animate ?? true;
+            const normalizedIndex = normalizeIndex(index);
+
+            currentIndex = normalizedIndex;
             const officer = officers[currentIndex];
 
-            nameEl.style.opacity = '0';
-            nameEl.style.transform = 'translateY(20px)';
-            jawatanEl.style.opacity = '0';
-            jawatanEl.style.transform = 'translateY(20px)';
-            ptjEl.style.opacity = '0';
-            ptjEl.style.transform = 'translateY(20px)';
-
-            setTimeout(function() {
+            if (!animate) {
                 nameEl.textContent = officer.nama;
                 jawatanEl.textContent = officer.jawatan;
                 ptjEl.textContent = officer.ptj;
-
                 nameEl.style.opacity = '1';
+                jawatanEl.style.opacity = '1';
+                ptjEl.style.opacity = '1';
                 nameEl.style.transform = 'translateY(0)';
+                jawatanEl.style.transform = 'translateY(0)';
+                ptjEl.style.transform = 'translateY(0)';
+            } else {
+                nameEl.style.opacity = '0';
+                nameEl.style.transform = 'translateY(20px)';
+                jawatanEl.style.opacity = '0';
+                jawatanEl.style.transform = 'translateY(20px)';
+                ptjEl.style.opacity = '0';
+                ptjEl.style.transform = 'translateY(20px)';
 
                 setTimeout(function() {
-                    jawatanEl.style.opacity = '1';
-                    jawatanEl.style.transform = 'translateY(0)';
-                }, 120);
+                    nameEl.textContent = officer.nama;
+                    jawatanEl.textContent = officer.jawatan;
+                    ptjEl.textContent = officer.ptj;
 
-                setTimeout(function() {
-                    ptjEl.style.opacity = '1';
-                    ptjEl.style.transform = 'translateY(0)';
-                }, 240);
-            }, 250);
+                    nameEl.style.opacity = '1';
+                    nameEl.style.transform = 'translateY(0)';
+
+                    setTimeout(function() {
+                        jawatanEl.style.opacity = '1';
+                        jawatanEl.style.transform = 'translateY(0)';
+                    }, 120);
+
+                    setTimeout(function() {
+                        ptjEl.style.opacity = '1';
+                        ptjEl.style.transform = 'translateY(0)';
+                    }, 240);
+                }, 250);
+            }
+
+            if (persist) {
+                saveProgress(currentIndex);
+            }
+        }
+
+        async function syncFromServer() {
+            const query = sesiId != null ? `?sesi_id=${encodeURIComponent(String(sesiId))}` : '';
+
+            try {
+                const response = await fetch(`${progressReadUrl}${query}`, {
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                });
+                if (!response.ok) {
+                    return;
+                }
+
+                const data = await response.json();
+                const serverIndex = normalizeIndex(Number(data.current_index ?? 0));
+                if (serverIndex !== currentIndex) {
+                    currentIndex = serverIndex;
+                    localStorage.setItem(storageKey, String(serverIndex));
+                    showOfficer(serverIndex, { persist: false, animate: true });
+                }
+            } catch (err) {
+                /* keep local progress when network fails */
+            }
+        }
+
+        async function loadInitialPosition() {
+            const storedValue = localStorage.getItem(storageKey);
+            if (storedValue !== null && storedValue !== '') {
+                showOfficer(normalizeIndex(Number(storedValue)), { persist: false, animate: false });
+            } else {
+                showOfficer(0, { persist: false, animate: false });
+            }
+
+            await syncFromServer();
+            saveProgress(currentIndex);
         }
 
         function exitFullscreenIfActive() {
@@ -248,9 +349,8 @@
             }
         });
 
-        if (totalOfficers > 0) {
-            showOfficer(0);
-        }
+        setInterval(syncFromServer, 5000);
+        loadInitialPosition();
     </script>
 </body>
 </html>

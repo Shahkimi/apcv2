@@ -23,9 +23,6 @@ class SenaraiController extends Controller
         return view('media::senarai.index', [
             'allSesis' => $viewData['allSesis'],
             'selectedSesi' => $viewData['selectedSesi'],
-            'pegawaiCount' => $viewData['pegawais']->count(),
-            'ontimeCount' => $viewData['ontimeCount'],
-            'lateCount' => $viewData['lateCount'],
         ]);
     }
 
@@ -43,11 +40,13 @@ class SenaraiController extends Controller
         return view('media::senarai.present', [
             'pegawais' => $pegawais,
             'officerSlides' => $pegawais->map(static fn ($o) => [
+                'id' => $o->id,
                 'nama' => $o->nama,
                 'jawatan' => $o->jawatan?->desc_jawatan ?? '—',
                 'ptj' => $o->ptj?->nama_ptj ?? '—',
             ])->values(),
             'backdrop' => $backdrop,
+            'sesiId' => $viewData['selectedSesi']?->id,
         ]);
     }
 }

@@ -6,6 +6,7 @@
             ['label' => __('Dashboard'), 'route' => 'admin.dashboard', 'icon' => 'ri-dashboard-line'],
             ['label' => __('Kehadiran'), 'route' => 'admin.kehadiran.index', 'icon' => 'ri-user-follow-line'],
             ['label' => __('Paparan'), 'route' => 'admin.paparan.index', 'icon' => 'ri-tv-2-line'],
+            ['label' => __('Analitik Senarai'), 'route' => 'admin.senarai.analytics', 'icon' => 'ri-bar-chart-line'],
             [
                 'label' => __('Kawalan'),
                 'icon' => 'ri-settings-3-line',
@@ -24,6 +25,7 @@
             ['label' => __('Dashboard'), 'route' => 'media.dashboard', 'icon' => 'ri-dashboard-line'],
             ['label' => __('Paparan'), 'route' => 'media.paparan.index', 'icon' => 'ri-tv-2-line'],
             ['label' => __('Senarai kehadiran'), 'route' => 'media.senarai.index', 'icon' => 'ri-list-check-2'],
+            ['label' => __('Analitik Senarai'), 'route' => 'media.senarai.analytics', 'icon' => 'ri-bar-chart-line'],
         ],
         default => [
             ['label' => __('Dashboard'), 'route' => 'user.dashboard', 'icon' => 'ri-dashboard-line'],
