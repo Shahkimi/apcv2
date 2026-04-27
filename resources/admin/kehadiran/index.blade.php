@@ -199,6 +199,7 @@
                             const pegawai = response.pegawai;
                             const showTableNumber = Boolean(response?.show_table_number);
                             const activeSesiSKehadiran = response.active_sesi_s_kehadiran;
+                            const activeSesiName = response.active_sesi_name;
 
                             if (
                                 !isAttend &&
@@ -236,11 +237,15 @@
                                 }
                             }
 
+                            const isRsvpYes = Number(pegawai.rsvp) === 1;
                             const confirmLabel = isAttend ? '{{ __('Batalkan') }}' :
                                 '{{ __('Sahkan') }}';
                             const title = isAttend ?
                                 '{{ __('Batalkan kehadiran?') }}' :
                                 '{{ __('Sahkan kehadiran?') }}';
+                            const sesiDisplayName = !isAttend && activeSesiName ?
+                                activeSesiName :
+                                (pegawai.sesi_name ?? '—');
 
                             const infoHtml = `
                                 <div class="space-y-3 text-left">
@@ -291,13 +296,13 @@
                                                 </span>
                                                 <div class="min-w-0 flex-1">
                                                     <p class="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{{ __('Sesi') }}</p>
-                                                    <p class="truncate text-sm font-semibold text-foreground">${pegawai.sesi_name ?? '—'}</p>
+                                                    <p class="truncate text-sm font-semibold text-foreground">${sesiDisplayName}</p>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
 
-                                    ${pegawai.no_panggilan_lewat && pegawai.no_panggilan_lewat !== '-' ? `
+                                    ${isRsvpYes && pegawai.no_panggilan_lewat && pegawai.no_panggilan_lewat !== '-' ? `
                                     <div class="rounded-lg border border-amber-200/70 bg-amber-50/80 px-3 py-2 dark:border-amber-800/50 dark:bg-amber-950/30">
                                         <p class="text-[10px] font-semibold uppercase tracking-widest text-amber-800 dark:text-amber-200">{{ __('No. panggilan lewat') }}</p>
                                         <p class="mt-1 text-lg font-bold tabular-nums text-amber-900 dark:text-amber-100">${pegawai.no_panggilan_lewat}</p>
@@ -306,6 +311,7 @@
 
                                     <div>
                                         <p class="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{{ __('Ringkasan Penempatan') }}</p>
+                                        ${isRsvpYes ? `
                                         <div class="${showTableNumber ? 'grid grid-cols-2 gap-3' : ''}">
                                             <div class="relative overflow-hidden rounded-xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-3.5 dark:border-emerald-800/40 dark:from-emerald-950/40 dark:to-emerald-900/20">
                                                 <div class="absolute right-2.5 top-2.5 opacity-10">
@@ -332,6 +338,19 @@
                                             </div>
                                             ` : ''}
                                         </div>
+                                        ` : `
+                                        <div class="relative overflow-hidden rounded-xl border border-amber-200/70 bg-gradient-to-br from-amber-50 to-amber-100/50 p-3.5 dark:border-amber-800/40 dark:from-amber-950/40 dark:to-amber-900/20">
+                                            <div class="absolute right-2.5 top-2.5 opacity-10">
+                                                <i class="ri-phone-line text-3xl text-amber-600"></i>
+                                            </div>
+                                            <p class="text-[10px] font-semibold uppercase tracking-widest text-amber-700/80 dark:text-amber-300/80">{{ __('No. Panggilan Lewat') }}</p>
+                                            <p class="mt-1.5 text-2xl font-black tabular-nums leading-none text-amber-700 dark:text-amber-200">${pegawai.no_panggilan_lewat ?? '-'}</p>
+                                            <div class="mt-1.5 flex items-center gap-1">
+                                                <i class="ri-phone-line text-xs text-amber-600/60 dark:text-amber-400/60"></i>
+                                                <span class="text-[10px] text-amber-600/70 dark:text-amber-400/70">{{ __('Turutan Lewat') }}</span>
+                                            </div>
+                                        </div>
+                                        `}
                                     </div>
                                 </div>
                             `;

@@ -134,7 +134,12 @@ final class KehadiranCallingService
             return;
         }
 
-        if ($activeSesi === null || ! $activeSesi->is_late) {
+        if ($activeSesi === null) {
+            return;
+        }
+
+        $requiresLateNumber = ! $pegawai->rsvp || $activeSesi->is_late;
+        if (! $requiresLateNumber) {
             return;
         }
 
@@ -144,10 +149,24 @@ final class KehadiranCallingService
                 ->lockForUpdate()
                 ->max('no_panggilan_lewat');
             $startNumber = max(1, (int) ($activeSesi->countdown_start_late ?? 1));
-            $nextNumber = $max > 0 ? ($max + 1) : $startNumber;
+            $nextNumber = max($startNumber, $max + 1);
             $pegawai->no_panggilan_lewat = $nextNumber;
             $pegawai->is_late = true;
         });
+    }
+
+    public function previewNextLateCallingNumber(?SesiMajlis $activeSesi): ?int
+    {
+        if ($activeSesi === null) {
+            return null;
+        }
+
+        $max = (int) Pegawai::query()
+            ->where('sesi_majlis_id', $activeSesi->id)
+            ->max('no_panggilan_lewat');
+        $startNumber = max(1, (int) ($activeSesi->countdown_start_late ?? 1));
+
+        return max($startNumber, $max + 1);
     }
 
     public function clearLateCallingOnCancel(Pegawai $pegawai): void

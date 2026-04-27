@@ -7,6 +7,7 @@
             ['label' => __('Kehadiran'), 'route' => 'admin.kehadiran.index', 'icon' => 'ri-user-follow-line'],
             ['label' => __('Paparan'), 'route' => 'admin.paparan.index', 'icon' => 'ri-tv-2-line'],
             ['label' => __('Analitik Senarai'), 'route' => 'admin.senarai.analytics', 'icon' => 'ri-bar-chart-line'],
+            ['label' => __('Laporan'), 'route' => 'admin.report.index', 'icon' => 'ri-file-pdf-line'],
             [
                 'label' => __('Kawalan'),
                 'icon' => 'ri-settings-3-line',

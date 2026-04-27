@@ -10,6 +10,7 @@ use App\Models\SesiMajlis;
 use App\Services\Kehadiran\KehadiranCallingService;
 use App\Services\SettingsService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Yajra\DataTables\Facades\DataTables;
 
@@ -82,9 +83,13 @@ class KehadiranController extends Controller
     {
         $pegawai->loadMissing(['ptj', 'sesiMajlis']);
         $activeSesi = $this->callingService->activeOnAirSesi();
+        $previewLateNumber = null;
         $previewNoMeja = $activeSesi !== null
             ? ($this->callingService->calculateTableNumber($pegawai->no_kerusi, $activeSesi) ?? '-')
             : ($pegawai->no_meja ?? '-');
+        if (! $pegawai->rsvp && ! $pegawai->is_attend && $activeSesi !== null) {
+            $previewLateNumber = $this->callingService->previewNextLateCallingNumber($activeSesi);
+        }
 
         return response()->json([
             'success' => true,
@@ -95,12 +100,13 @@ class KehadiranController extends Controller
                 'id' => $pegawai->id,
                 'nama' => $pegawai->nama,
                 'no_kp' => $pegawai->no_kp,
+                'rsvp' => (bool) $pegawai->rsvp,
                 's_kehadiran' => (int) $pegawai->s_kehadiran,
                 'sesi_name' => $pegawai->sesiMajlis?->sesi ?? '—',
                 'ptj_name' => $pegawai->ptj?->nama_ptj ?? '-',
                 'no_kerusi' => $pegawai->no_kerusi ?? '-',
                 'no_meja' => $previewNoMeja,
-                'no_panggilan_lewat' => $pegawai->no_panggilan_lewat ?? '-',
+                'no_panggilan_lewat' => $pegawai->no_panggilan_lewat ?? $previewLateNumber ?? '-',
                 'is_attend' => (bool) $pegawai->is_attend,
             ],
         ]);
@@ -138,22 +144,30 @@ class KehadiranController extends Controller
             }
         }
 
-        $pegawai->is_attend = $willAttend;
+        DB::transaction(function () use ($pegawai, $willAttend, $activeSesi): void {
+            $pegawai->is_attend = $willAttend;
 
-        if ($pegawai->is_attend && $activeSesi !== null) {
-            $pegawai->sesi_majlis_id = $activeSesi->id;
-            $pegawai->no_meja = $this->callingService->calculateTableNumber($pegawai->no_kerusi, $activeSesi);
-            if ($activeSesi->is_late) {
-                $this->callingService->assignLateCallingNumberIfApplicable($pegawai, $activeSesi);
+            if ($pegawai->is_attend && $activeSesi !== null) {
+                $pegawai->sesi_majlis_id = $activeSesi->id;
+                if (! $pegawai->rsvp) {
+                    $pegawai->no_kerusi = null;
+                    $pegawai->no_meja = null;
+                    $this->callingService->assignLateCallingNumberIfApplicable($pegawai, $activeSesi);
+                } else {
+                    $pegawai->no_meja = $this->callingService->calculateTableNumber($pegawai->no_kerusi, $activeSesi);
+                    if ($activeSesi->is_late) {
+                        $this->callingService->assignLateCallingNumberIfApplicable($pegawai, $activeSesi);
+                    } else {
+                        $pegawai->is_late = false;
+                        $pegawai->no_panggilan_lewat = null;
+                    }
+                }
             } else {
-                $pegawai->is_late = false;
-                $pegawai->no_panggilan_lewat = null;
+                $this->callingService->clearLateCallingOnCancel($pegawai);
             }
-        } else {
-            $this->callingService->clearLateCallingOnCancel($pegawai);
-        }
 
-        $pegawai->save();
+            $pegawai->save();
+        });
 
         return response()->json([
             'success' => true,

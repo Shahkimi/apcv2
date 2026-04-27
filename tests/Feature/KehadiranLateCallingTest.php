@@ -83,9 +83,9 @@ it('assigns late calling number when late session is on air', function (): void 
         ->assertOk()
         ->assertJsonPath('success', true)
         ->assertJsonPath('is_attend', true)
-        ->assertJsonPath('no_panggilan_lewat', 60);
+        ->assertJsonPath('no_panggilan_lewat', 1);
 
-    expect($pegawai->fresh()->no_panggilan_lewat)->toBe(60);
+    expect($pegawai->fresh()->no_panggilan_lewat)->toBe(1);
     expect($pegawai->fresh()->is_late)->toBeTrue();
     expect($pegawai->fresh()->sesi_majlis_id)->toBe($sesi->id);
 });
@@ -103,9 +103,9 @@ it('assigns late calling number when session is still active but is_late is true
     $this->actingAs($admin)
         ->putJson(route('admin.kehadiran.verify', $pegawai))
         ->assertOk()
-        ->assertJsonPath('no_panggilan_lewat', 1600);
+        ->assertJsonPath('no_panggilan_lewat', 1);
 
-    expect($pegawai->fresh()->no_panggilan_lewat)->toBe(1600);
+    expect($pegawai->fresh()->no_panggilan_lewat)->toBe(1);
     expect($pegawai->fresh()->is_late)->toBeTrue();
 });
 
@@ -125,6 +125,68 @@ it('does not assign late calling number for regular active session', function ()
 
     expect($pegawai->fresh()->no_panggilan_lewat)->toBeNull();
     expect($pegawai->fresh()->is_late)->toBeFalse();
+});
+
+it('treats rsvp no officer as late even when session is not late', function (): void {
+    $admin = adminUser();
+    $pegawai = createPegawaiForTest();
+    $pegawai->update([
+        'rsvp' => false,
+        'no_kerusi' => 99,
+    ]);
+
+    activeSesiForKehadiran([
+        'sesi' => 'Pagi',
+        'is_late' => false,
+        'seat_offset' => 700,
+    ]);
+
+    $this->actingAs($admin)
+        ->putJson(route('admin.kehadiran.verify', $pegawai))
+        ->assertOk()
+        ->assertJsonPath('is_attend', true);
+
+    $freshPegawai = $pegawai->fresh();
+    expect($freshPegawai->is_late)->toBeTrue();
+    expect($freshPegawai->no_panggilan_lewat)->toBe(700);
+    expect($freshPegawai->no_kerusi)->toBeNull();
+    expect($freshPegawai->no_meja)->toBeNull();
+});
+
+it('continues late calling sequence for rsvp no officer', function (): void {
+    $admin = adminUser();
+    $ptj = Ptj::query()->create(['nama_ptj' => 'PTJ Ujian']);
+    $jawatan = Jawatan::query()->create(['desc_jawatan' => 'Pegawai']);
+    $gred = Gred::query()->create(['desc_gred' => 'Gred Ujian']);
+
+    $sesi = activeSesiForKehadiran([
+        'sesi' => 'Sesi Aktif',
+        'is_late' => true,
+        'seat_offset' => 700,
+    ]);
+
+    Pegawai::query()->create([
+        'nama' => 'Pegawai Awal',
+        'no_kp' => '980101011111',
+        'ptj_id' => $ptj->id,
+        'jawatan_id' => $jawatan->id,
+        'gred_id' => $gred->id,
+        'rsvp' => true,
+        'no_kerusi' => 2,
+        'is_attend' => true,
+        'is_late' => true,
+        'no_panggilan_lewat' => 705,
+        'sesi_majlis_id' => $sesi->id,
+    ]);
+
+    $pegawai = createPegawaiForTest();
+    $pegawai->update(['rsvp' => false]);
+
+    $this->actingAs($admin)
+        ->putJson(route('admin.kehadiran.verify', $pegawai))
+        ->assertOk();
+
+    expect($pegawai->fresh()->no_panggilan_lewat)->toBe(706);
 });
 
 it('clears late calling number when attendance is cancelled', function (): void {
@@ -153,6 +215,98 @@ it('clears late calling number when attendance is cancelled', function (): void 
     expect($pegawai->fresh()->no_panggilan_lewat)->toBeNull();
     expect($pegawai->fresh()->is_late)->toBeFalse();
     expect($pegawai->fresh()->sesi_majlis_id)->toBeNull();
+});
+
+it('returns rsvp value in kehadiran details response', function (): void {
+    $admin = adminUser();
+    $pegawai = createPegawaiForTest();
+    $pegawai->update(['rsvp' => false]);
+    activeSesiForKehadiran();
+
+    $this->actingAs($admin)
+        ->getJson(route('admin.kehadiran.details', $pegawai))
+        ->assertOk()
+        ->assertJsonPath('pegawai.rsvp', false);
+});
+
+it('previews next late calling number in details for rsvp no officer', function (): void {
+    $admin = adminUser();
+    $pegawai = createPegawaiForTest();
+    $pegawai->update([
+        'rsvp' => false,
+        'is_attend' => false,
+    ]);
+
+    activeSesiForKehadiran([
+        'sesi' => 'Sesi Preview',
+        'is_late' => false,
+        'seat_offset' => 800,
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->getJson(route('admin.kehadiran.details', $pegawai))
+        ->assertOk()
+        ->json('pegawai');
+
+    expect($response['no_panggilan_lewat'])->toBe(800);
+});
+
+it('increments late number without duplicates for first come first serve rsvp no officers', function (): void {
+    $admin = adminUser();
+    $firstPegawai = createPegawaiForTest();
+    $firstPegawai->update([
+        'rsvp' => false,
+        'no_kp' => '900101011235',
+    ]);
+
+    $secondPegawai = createPegawaiForTest();
+    $secondPegawai->update([
+        'rsvp' => false,
+        'no_kp' => '900101011236',
+    ]);
+
+    activeSesiForKehadiran([
+        'sesi' => 'Sesi FCFS',
+        'is_late' => false,
+        'seat_offset' => 700,
+    ]);
+
+    $this->actingAs($admin)
+        ->putJson(route('admin.kehadiran.verify', $firstPegawai))
+        ->assertOk();
+
+    $this->actingAs($admin)
+        ->putJson(route('admin.kehadiran.verify', $secondPegawai))
+        ->assertOk();
+
+    expect($firstPegawai->fresh()->no_panggilan_lewat)->toBe(700);
+    expect($secondPegawai->fresh()->no_panggilan_lewat)->toBe(701);
+    expect($firstPegawai->fresh()->no_panggilan_lewat)
+        ->not->toBe($secondPegawai->fresh()->no_panggilan_lewat);
+});
+
+it('clears late calling number when rsvp no officer attendance is cancelled', function (): void {
+    $admin = adminUser();
+    $pegawai = createPegawaiForTest();
+    $pegawai->forceFill([
+        'rsvp' => false,
+        'is_attend' => true,
+        'is_late' => true,
+        'no_kerusi' => null,
+        'no_meja' => null,
+        'no_panggilan_lewat' => 701,
+        'sesi_majlis_id' => activeSesiForKehadiran(['seat_offset' => 700])->id,
+    ])->save();
+
+    $this->actingAs($admin)
+        ->putJson(route('admin.kehadiran.verify', $pegawai))
+        ->assertOk()
+        ->assertJsonPath('is_attend', false);
+
+    $freshPegawai = $pegawai->fresh();
+    expect($freshPegawai->no_panggilan_lewat)->toBeNull();
+    expect($freshPegawai->is_late)->toBeFalse();
+    expect($freshPegawai->sesi_majlis_id)->toBeNull();
 });
 
 it('batch assigns late numbers when session becomes inactive late', function (): void {

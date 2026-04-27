@@ -6,8 +6,10 @@ namespace Database\Seeders;
 
 use App\Models\Gred;
 use App\Models\Jawatan;
+use App\Models\Meja;
 use App\Models\Pegawai;
 use App\Models\Ptj;
+use App\Models\SesiMajlis;
 use Illuminate\Database\Eloquent\Factories\Sequence;
 use Illuminate\Database\Seeder;
 
@@ -15,6 +17,32 @@ class ReferenceDataSeeder extends Seeder
 {
     public function run(): void
     {
+        SesiMajlis::query()->updateOrCreate(
+            ['sesi' => 'Pagi'],
+            [
+                'is_active' => true,
+                'is_late' => false,
+                'countdown_start_late' => 1600,
+                'seat_offset' => 0,
+                's_kehadiran' => SesiMajlis::S_KEHADIRAN_PAGI,
+            ],
+        );
+
+        SesiMajlis::query()->updateOrCreate(
+            ['sesi' => 'Petang'],
+            [
+                'is_active' => false,
+                'is_late' => false,
+                'countdown_start_late' => 2600,
+                'seat_offset' => 10,
+                's_kehadiran' => SesiMajlis::S_KEHADIRAN_PETANG,
+            ],
+        );
+
+        Meja::query()->firstOrCreate(
+            ['sizing' => 10],
+        );
+
         $ptj1 = Ptj::query()->create(['nama_ptj' => 'Pejabat Pentadbiran']);
         $ptj2 = Ptj::query()->create(['nama_ptj' => 'Bahagian Teknologi Maklumat']);
 
@@ -31,18 +59,22 @@ class ReferenceDataSeeder extends Seeder
         $gredIds = [$g1->id, $g2->id, $g3->id];
 
         Pegawai::factory()
-            ->count(30)
+            ->count(100)
             ->sequence(function (Sequence $sequence): array {
                 $seat = $sequence->index + 1;
 
                 return [
+                    'sesi_majlis_id' => null,
                     'no_kerusi' => $seat,
                     'no_sijil' => (string) $seat,
-                    'rsvp' => $sequence->index < 25,
+                    'rsvp' => $sequence->index < 90,
                     'no_panggilan_lewat' => null,
                     'no_meja' => null,
                     'is_attend' => false,
                     'is_late' => false,
+                    's_kehadiran' => $sequence->index < 50
+                        ? Pegawai::S_KEHADIRAN_PAGI
+                        : Pegawai::S_KEHADIRAN_PETANG,
                 ];
             })
             ->state(fn () => [
