@@ -181,9 +181,6 @@
                                 @foreach ($allSesis as $sesi)
                                     <option value="{{ $sesi->id }}" @selected($selectedSesi?->id === $sesi->id)>
                                         {{ $sesi->sesi }}
-                                        @if ($sesi->is_late)
-                                            ({{ __("Lewat") }})
-                                        @endif
                                     </option>
                                 @endforeach
                             </select>

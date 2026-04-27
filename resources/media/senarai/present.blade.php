@@ -71,7 +71,7 @@
          style="background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);"
     @endif
     >
-        <div class="relative z-10 mt-[30vh] w-full max-w-6xl px-4 text-center sm:mt-[34vh] sm:px-12 md:mt-[40vh]">
+        <div class="relative z-10 mt-[22vh] w-full max-w-6xl -translate-y-[6.5rem] px-4 text-center sm:mt-[26vh] sm:px-12 md:mt-[32vh]">
             <div id="officer-display" class="transition-content space-y-1 sm:space-y-2">
                 <h1 id="officer-name" class="transition-content"></h1>
                 <p id="officer-jawatan" class="transition-content"></p>
