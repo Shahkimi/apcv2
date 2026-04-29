@@ -16,15 +16,21 @@
          * - md:      from 768px width up
          */
         :root {
-            --officer-name-font-size: 36px;
-            --officer-name-font-size-sm: 44px;
-            --officer-name-font-size-md: 52px;
+            --officer-name-font-size: {{ (int) $displaySettings['fonts']['name_base'] }}px;
+            --officer-name-font-size-sm: {{ (int) $displaySettings['fonts']['name_sm'] }}px;
+            --officer-name-font-size-md: {{ (int) $displaySettings['fonts']['name_md'] }}px;
             /*
              * Jawatan line — same breakpoint idea as officer name; default 30px.
              */
-            --officer-jawatan-font-size: 30px;
-            --officer-jawatan-font-size-sm: 38px;
-            --officer-jawatan-font-size-md: 46px;
+            --officer-jawatan-font-size: {{ (int) $displaySettings['fonts']['jawatan_base'] }}px;
+            --officer-jawatan-font-size-sm: {{ (int) $displaySettings['fonts']['jawatan_sm'] }}px;
+            --officer-jawatan-font-size-md: {{ (int) $displaySettings['fonts']['jawatan_md'] }}px;
+            --officer-ptj-font-size: {{ (int) $displaySettings['fonts']['ptj_base_px'] }}px;
+            --officer-ptj-font-size-sm: {{ (int) $displaySettings['fonts']['ptj_sm_px'] }}px;
+            --officer-mt-base: {{ $displaySettings['position']['mt_base'] }};
+            --officer-mt-sm: {{ $displaySettings['position']['mt_sm'] }};
+            --officer-mt-md: {{ $displaySettings['position']['mt_md'] }};
+            --officer-translate-y: {{ $displaySettings['position']['translate_y'] }};
         }
 
         #officer-name {
@@ -41,6 +47,18 @@
             line-height: 1.2;
         }
 
+        #officer-ptj {
+            font-size: var(--officer-ptj-font-size);
+            font-weight: 500;
+            color: #fff;
+            line-height: 1.2;
+        }
+
+        .officer-display-wrap {
+            margin-top: var(--officer-mt-base);
+            transform: translateY(var(--officer-translate-y));
+        }
+
         @media (min-width: 640px) {
             #officer-name {
                 font-size: var(--officer-name-font-size-sm);
@@ -48,6 +66,14 @@
 
             #officer-jawatan {
                 font-size: var(--officer-jawatan-font-size-sm);
+            }
+
+            #officer-ptj {
+                font-size: var(--officer-ptj-font-size-sm);
+            }
+
+            .officer-display-wrap {
+                margin-top: var(--officer-mt-sm);
             }
         }
 
@@ -58,6 +84,10 @@
 
             #officer-jawatan {
                 font-size: var(--officer-jawatan-font-size-md);
+            }
+
+            .officer-display-wrap {
+                margin-top: var(--officer-mt-md);
             }
         }
     </style>
@@ -71,11 +101,11 @@
          style="background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);"
     @endif
     >
-        <div class="relative z-10 mt-[22vh] w-full max-w-6xl -translate-y-[6.5rem] px-4 text-center sm:mt-[26vh] sm:px-12 md:mt-[32vh]">
+        <div class="officer-display-wrap relative z-10 w-full max-w-6xl px-4 text-center sm:px-12">
             <div id="officer-display" class="transition-content space-y-1 sm:space-y-2">
                 <h1 id="officer-name" class="transition-content"></h1>
                 <p id="officer-jawatan" class="transition-content"></p>
-                <p id="officer-ptj" class="text-2xl font-medium text-white sm:text-4xl"></p>
+                <p id="officer-ptj"></p>
             </div>
         </div>
     </div>

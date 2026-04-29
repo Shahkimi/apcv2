@@ -215,6 +215,14 @@
                         </span>
                     </button>
 
+                    <a
+                        href="{{ route('media.kawalan.presentation.index') }}"
+                        class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-sky-300/60 bg-white/70 px-4 py-3 text-sm font-semibold text-sky-700 transition hover:border-sky-400 hover:bg-sky-50"
+                    >
+                        <i class="ri-settings-4-line"></i>
+                        {{ __('Kawalan Paparan Presentasi') }}
+                    </a>
+
                 </form>
             </div>
 

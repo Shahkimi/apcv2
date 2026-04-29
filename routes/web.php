@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\PaparanController as AdminPaparanController;
 use App\Http\Controllers\Admin\ReportController as AdminReportController;
 use App\Http\Controllers\Admin\SenaraiAnalyticsController as AdminSenaraiAnalyticsController;
 use App\Http\Controllers\Media\DashboardController as MediaDashboardController;
+use App\Http\Controllers\Media\Kawalan\PresentationSettingsController as MediaPresentationSettingsController;
 use App\Http\Controllers\Media\PaparanController as MediaPaparanController;
 use App\Http\Controllers\Media\SenaraiAnalyticsController as MediaSenaraiAnalyticsController;
 use App\Http\Controllers\Media\SenaraiController as MediaSenaraiController;
@@ -60,6 +61,11 @@ Route::middleware('auth')->group(function () {
             Route::get('/senarai/progress', [MediaSenaraiProgressController::class, 'show'])->name('senarai.progress.show');
             Route::post('/senarai/progress', [MediaSenaraiProgressController::class, 'update'])->name('senarai.progress.update');
             Route::get('/senarai/progress/analytics', [MediaSenaraiProgressController::class, 'analytics'])->name('senarai.progress.analytics');
+
+            Route::prefix('kawalan')->name('kawalan.')->group(function () {
+                Route::get('/presentation', [MediaPresentationSettingsController::class, 'index'])->name('presentation.index');
+                Route::put('/presentation', [MediaPresentationSettingsController::class, 'update'])->name('presentation.update');
+            });
         });
 
     Route::middleware('role.admin')
@@ -71,6 +77,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/senarai/progress/analytics', [MediaSenaraiProgressController::class, 'analytics'])->name('senarai.progress.analytics');
             Route::get('/report', [AdminReportController::class, 'index'])->name('report.index');
             Route::get('/report/preview', [AdminReportController::class, 'preview'])->name('report.preview');
+            Route::get('/report/datatable', [AdminReportController::class, 'datatable'])->name('report.datatable');
             Route::get('/report/download', [AdminReportController::class, 'download'])->name('report.download');
 
             Route::prefix('kehadiran')->name('kehadiran.')->group(function () {

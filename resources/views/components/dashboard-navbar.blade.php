@@ -14,6 +14,16 @@
         <h1 class="truncate text-lg font-semibold text-foreground">{{ $title }}</h1>
     </div>
 
+    @if (auth()->user()?->role === \App\Models\User::ROLE_MEDIA)
+        <a
+            href="{{ route('media.kawalan.presentation.index') }}"
+            class="hidden items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-muted sm:inline-flex"
+        >
+            <i class="ri-settings-4-line"></i>
+            {{ __('Kawalan Presentasi') }}
+        </a>
+    @endif
+
     <x-theme-toggle />
 
     <div class="hidden items-center gap-2 sm:flex">

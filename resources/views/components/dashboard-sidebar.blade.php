@@ -26,6 +26,7 @@
             ['label' => __('Dashboard'), 'route' => 'media.dashboard', 'icon' => 'ri-dashboard-line'],
             ['label' => __('Paparan'), 'route' => 'media.paparan.index', 'icon' => 'ri-tv-2-line'],
             ['label' => __('Senarai kehadiran'), 'route' => 'media.senarai.index', 'icon' => 'ri-list-check-2'],
+            ['label' => __('Kawalan Presentasi'), 'route' => 'media.kawalan.presentation.index', 'icon' => 'ri-settings-4-line'],
             ['label' => __('Analitik Senarai'), 'route' => 'media.senarai.analytics', 'icon' => 'ri-bar-chart-line'],
         ],
         default => [

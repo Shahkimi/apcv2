@@ -27,10 +27,14 @@
                                 {{ __('Jumlah sesi: :total', ['total' => number_format($sesiList->count())]) }}
                             </span>
                             @foreach ($sesiList->where('is_active', true)->take(2) as $activeSesi)
-                                <span class="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
+                                <a
+                                    href="{{ route('admin.report.preview', ['sesi_id' => $activeSesi->id]) }}"
+                                    class="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 transition hover:bg-emerald-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 dark:text-emerald-300 dark:hover:bg-emerald-500/15"
+                                    aria-label="{{ __('Buka pratonton laporan untuk :sesi', ['sesi' => $activeSesi->sesi]) }}"
+                                >
                                     <i class="ri-broadcast-line text-xs" aria-hidden="true"></i>
                                     {{ __('On Air: :sesi', ['sesi' => $activeSesi->sesi]) }}
-                                </span>
+                                </a>
                             @endforeach
                         </div>
 

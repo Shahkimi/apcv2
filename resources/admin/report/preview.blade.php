@@ -21,18 +21,22 @@
             </div>
         </div>
 
-        <section class="mb-6 grid gap-3 sm:grid-cols-3">
+        <section class="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div class="rounded-xl border border-border/70 bg-card px-4 py-3 shadow-sm">
                 <p class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{{ __('Jumlah Pegawai') }}</p>
-                <p class="mt-1 text-2xl font-semibold tabular-nums text-foreground">{{ number_format($onTime->count() + $late->count()) }}</p>
+                <p class="mt-1 text-2xl font-semibold tabular-nums text-foreground">{{ number_format($reportCounts['onTime'] + $reportCounts['late']) }}</p>
             </div>
             <div class="rounded-xl border border-emerald-200/70 bg-emerald-50/60 px-4 py-3 shadow-sm dark:border-emerald-900/60 dark:bg-emerald-950/25">
                 <p class="text-[11px] font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-200">{{ __('Tepat Masa') }}</p>
-                <p class="mt-1 text-2xl font-semibold tabular-nums text-emerald-800 dark:text-emerald-100">{{ number_format($onTime->count()) }}</p>
+                <p class="mt-1 text-2xl font-semibold tabular-nums text-emerald-800 dark:text-emerald-100">{{ number_format($reportCounts['onTime']) }}</p>
             </div>
             <div class="rounded-xl border border-amber-200/70 bg-amber-50/60 px-4 py-3 shadow-sm dark:border-amber-900/60 dark:bg-amber-950/25">
                 <p class="text-[11px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-200">{{ __('Lewat') }}</p>
-                <p class="mt-1 text-2xl font-semibold tabular-nums text-amber-800 dark:text-amber-100">{{ number_format($late->count()) }}</p>
+                <p class="mt-1 text-2xl font-semibold tabular-nums text-amber-800 dark:text-amber-100">{{ number_format($reportCounts['late']) }}</p>
+            </div>
+            <div class="rounded-xl border border-slate-200/70 bg-slate-50/60 px-4 py-3 shadow-sm dark:border-slate-700/60 dark:bg-slate-950/25">
+                <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-200">{{ __('Tidak Hadir (Slot)') }}</p>
+                <p class="mt-1 text-2xl font-semibold tabular-nums text-slate-800 dark:text-slate-100">{{ number_format($reportCounts['notAttend']) }}</p>
             </div>
         </section>
 
@@ -47,7 +51,7 @@
                         <input
                             id="report-search"
                             type="text"
-                            placeholder="{{ __('Cari nama, jawatan atau PTJ...') }}"
+                            placeholder="{{ __('Cari nama, no. KP atau PTJ...') }}"
                             class="h-10 w-full rounded-xl border border-input bg-background pl-9 pr-3 text-sm text-foreground shadow-sm outline-none transition focus-visible:ring-2 focus-visible:ring-ring"
                         >
                     </div>
@@ -63,6 +67,9 @@
                     <button type="button" class="js-section-filter rounded-full bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-700 dark:text-amber-300" data-filter="late">
                         {{ __('Lewat') }}
                     </button>
+                    <button type="button" class="js-section-filter rounded-full bg-slate-500/10 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300" data-filter="notattend">
+                        {{ __('Tidak Hadir (Slot)') }}
+                    </button>
                 </div>
             </div>
         </section>
@@ -75,7 +82,7 @@
                     </h2>
                     <div class="flex items-center gap-2">
                         <span class="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-100">
-                            {{ $onTime->count() }} {{ __('orang') }}
+                            {{ number_format($reportCounts['onTime']) }} {{ __('orang') }}
                         </span>
                         <a
                             href="{{ route('admin.report.download', ['sesi_id' => $sesi->id, 'export_type' => 'ontime']) }}"
@@ -86,7 +93,12 @@
                         </a>
                     </div>
                 </div>
-                @include('admin::report.partials.table', ['rows' => $onTime, 'emptyText' => __('Tiada pegawai tepat masa untuk sesi ini.'), 'tone' => 'ontime'])
+                <x-data-table
+                    table-id="report-ontime-table"
+                    :columns="['#', __('Nama'), __('PTJ'), __('No. Kerusi / No. Sijil'), __('No. Meja')]"
+                    :column-header-classes="[0 => 'text-center', 3 => 'text-center', 4 => 'text-center']"
+                    class="shadow-sm ring-1 ring-border/30"
+                />
             </section>
 
             <section data-section="late" class="rounded-2xl border border-amber-200/70 bg-amber-50/50 p-4 shadow-sm dark:border-amber-900/60 dark:bg-amber-950/25 sm:p-5">
@@ -96,7 +108,7 @@
                     </h2>
                     <div class="flex items-center gap-2">
                         <span class="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-900/50 dark:text-amber-100">
-                            {{ $late->count() }} {{ __('orang') }}
+                            {{ number_format($reportCounts['late']) }} {{ __('orang') }}
                         </span>
                         <a
                             href="{{ route('admin.report.download', ['sesi_id' => $sesi->id, 'export_type' => 'late']) }}"
@@ -107,52 +119,180 @@
                         </a>
                     </div>
                 </div>
-                @include('admin::report.partials.table', ['rows' => $late, 'emptyText' => __('Tiada pegawai lewat untuk sesi ini.'), 'tone' => 'late'])
+                <x-data-table
+                    table-id="report-late-table"
+                    :columns="['#', __('Nama'), __('PTJ'), __('No. Kerusi / No. Sijil'), __('No. Meja')]"
+                    :column-header-classes="[0 => 'text-center', 3 => 'text-center', 4 => 'text-center']"
+                    class="shadow-sm ring-1 ring-border/30"
+                />
+            </section>
+
+            <section data-section="notattend" class="rounded-2xl border border-slate-200/70 bg-slate-50/50 p-4 shadow-sm dark:border-slate-700/60 dark:bg-slate-950/25 sm:p-5">
+                <div class="mb-4 flex items-center justify-between">
+                    <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">
+                        {{ __('Pegawai Tidak Hadir (Slot Sesi)') }}
+                    </h2>
+                    <div class="flex items-center gap-2">
+                        <span class="rounded-full bg-slate-200/80 px-2.5 py-1 text-xs font-semibold text-slate-800 dark:bg-slate-800/50 dark:text-slate-100">
+                            {{ number_format($reportCounts['notAttend']) }} {{ __('orang') }}
+                        </span>
+                        <a
+                            href="{{ route('admin.report.download', ['sesi_id' => $sesi->id, 'export_type' => 'notattend']) }}"
+                            class="inline-flex items-center gap-1 rounded-lg bg-slate-700 px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-600 dark:bg-slate-600 dark:hover:bg-slate-500"
+                        >
+                            <i class="ri-download-2-line text-xs"></i>
+                            {{ __('Export PDF') }}
+                        </a>
+                    </div>
+                </div>
+                <x-data-table
+                    table-id="report-notattend-table"
+                    :columns="['#', __('Nama'), __('PTJ'), __('No. Kerusi / No. Sijil'), __('No. Meja')]"
+                    :column-header-classes="[0 => 'text-center', 3 => 'text-center', 4 => 'text-center']"
+                    class="shadow-sm ring-1 ring-border/30"
+                />
             </section>
         </div>
 
         @push('scripts')
             <script>
-                (() => {
+                $(function() {
+                    const datatableUrl = @json(route('admin.report.datatable'));
+                    const sesiId = {{ (int) $sesi->id }};
+
+                    const reportColumns = [{
+                            data: null,
+                            name: 'index',
+                            orderable: false,
+                            searchable: false,
+                            className: 'text-center tabular-nums text-muted-foreground',
+                            render: function(data, type, row, meta) {
+                                return meta.row + meta.settings._iDisplayStart + 1;
+                            },
+                        },
+                        {
+                            data: 'nama',
+                            name: 'nama',
+                        },
+                        {
+                            data: 'ptj_name',
+                            name: 'ptj_name',
+                        },
+                        {
+                            data: 'no_kerusi',
+                            name: 'no_kerusi',
+                            className: 'text-center tabular-nums',
+                        },
+                        {
+                            data: 'no_meja',
+                            name: 'no_meja',
+                            className: 'text-center tabular-nums',
+                        },
+                    ];
+
+                    const dtOntime = $('#report-ontime-table').DataTable({
+                        ...(window.kawalanDataTableDefaults || {}),
+                        processing: true,
+                        serverSide: true,
+                        ordering: false,
+                        pageLength: 5,
+                        lengthMenu: [
+                            [5, 10, 25],
+                            [5, 10, 25],
+                        ],
+                        ajax: {
+                            url: datatableUrl,
+                            data: function(d) {
+                                d.sesi_id = sesiId;
+                                d.section = 'ontime';
+                            },
+                        },
+                        columns: reportColumns,
+                    });
+
+                    const dtLate = $('#report-late-table').DataTable({
+                        ...(window.kawalanDataTableDefaults || {}),
+                        processing: true,
+                        serverSide: true,
+                        ordering: false,
+                        pageLength: 5,
+                        lengthMenu: [
+                            [5, 10, 25],
+                            [5, 10, 25],
+                        ],
+                        ajax: {
+                            url: datatableUrl,
+                            data: function(d) {
+                                d.sesi_id = sesiId;
+                                d.section = 'late';
+                            },
+                        },
+                        columns: reportColumns,
+                    });
+
+                    const dtNotattend = $('#report-notattend-table').DataTable({
+                        ...(window.kawalanDataTableDefaults || {}),
+                        processing: true,
+                        serverSide: true,
+                        ordering: false,
+                        pageLength: 5,
+                        lengthMenu: [
+                            [5, 10, 25],
+                            [5, 10, 25],
+                        ],
+                        ajax: {
+                            url: datatableUrl,
+                            data: function(d) {
+                                d.sesi_id = sesiId;
+                                d.section = 'notattend';
+                            },
+                        },
+                        columns: reportColumns,
+                    });
+
+                    const tables = [dtOntime, dtLate, dtNotattend];
                     const searchInput = document.getElementById('report-search');
                     const filterButtons = Array.from(document.querySelectorAll('.js-section-filter'));
                     const sections = Array.from(document.querySelectorAll('[data-section]'));
-                    const rows = Array.from(document.querySelectorAll('.js-report-row'));
 
-                    if (!searchInput || rows.length === 0) {
-                        return;
+                    if (searchInput) {
+                        searchInput.addEventListener('input', function() {
+                            const v = searchInput.value;
+                            tables.forEach(function(t) {
+                                t.search(v).draw();
+                            });
+                        });
                     }
 
-                    const applySearch = () => {
-                        const keyword = searchInput.value.trim().toLowerCase();
-
-                        rows.forEach((row) => {
-                            const haystack = (row.dataset.search || '').toLowerCase();
-                            row.classList.toggle('hidden', keyword !== '' && !haystack.includes(keyword));
-                        });
-                    };
-
-                    const applySectionFilter = (target) => {
-                        sections.forEach((section) => {
+                    const applySectionFilter = function(target) {
+                        sections.forEach(function(section) {
                             const shouldShow = target === 'all' || section.dataset.section === target;
                             section.classList.toggle('hidden', !shouldShow);
                         });
 
-                        filterButtons.forEach((button) => {
+                        filterButtons.forEach(function(button) {
                             const active = button.dataset.filter === target;
                             button.classList.toggle('ring-2', active);
                             button.classList.toggle('ring-offset-2', active);
                             button.classList.toggle('ring-ring', active);
                             button.setAttribute('aria-pressed', active ? 'true' : 'false');
                         });
+
+                        requestAnimationFrame(function() {
+                            tables.forEach(function(t) {
+                                t.columns.adjust();
+                            });
+                        });
                     };
 
-                    searchInput.addEventListener('input', applySearch);
-                    filterButtons.forEach((button) => {
-                        button.addEventListener('click', () => applySectionFilter(button.dataset.filter || 'all'));
+                    filterButtons.forEach(function(button) {
+                        button.addEventListener('click', function() {
+                            applySectionFilter(button.dataset.filter || 'all');
+                        });
                     });
+
                     applySectionFilter('all');
-                })();
+                });
             </script>
         @endpush
     </x-kawalan-shell>
