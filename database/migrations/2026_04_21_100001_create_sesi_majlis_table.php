@@ -10,6 +10,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('sesi_majlis')) {
+            return;
+        }
+
         Schema::create('sesi_majlis', function (Blueprint $table) {
             $table->id();
             $table->string('sesi');
@@ -22,6 +26,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('sesi_majlis');
+        // When created in 2026_04_19_120000, tear-down runs there (after pegawais).
     }
 };

@@ -28,6 +28,15 @@ return new class extends Migration
             $table->timestamps();
         });
 
+        Schema::create('sesi_majlis', function (Blueprint $table) {
+            $table->id();
+            $table->string('sesi');
+            $table->boolean('is_active')->default(false);
+            $table->boolean('is_late')->default(false);
+            $table->unsignedInteger('countdown_start_late')->nullable();
+            $table->timestamps();
+        });
+
         Schema::create('pegawais', function (Blueprint $table) {
             $table->id();
             $table->string('nama');
@@ -35,9 +44,20 @@ return new class extends Migration
             $table->foreignId('ptj_id')->constrained('ptjs')->cascadeOnDelete();
             $table->foreignId('jawatan_id')->constrained('jawatans')->cascadeOnDelete();
             $table->foreignId('gred_id')->constrained('greds')->cascadeOnDelete();
-            $table->boolean('confirmation_invitation')->default(false);
-            $table->string('no_kerusi')->nullable();
-            $table->string('no_meja')->nullable();
+            $table->foreignId('sesi_majlis_id')
+                ->nullable()
+                ->constrained('sesi_majlis')
+                ->nullOnDelete();
+            $table->boolean('rsvp')->default(false);
+            $table->unsignedInteger('no_kerusi')->nullable();
+            $table->unsignedInteger('no_sijil')->nullable();
+            $table->unsignedInteger('no_meja')->nullable();
+            $table->unsignedInteger('no_panggilan_lewat')->nullable();
+            $table->boolean('is_attend')->default(false);
+            $table->boolean('is_late')->default(false);
+            $table->unsignedTinyInteger('s_kehadiran')
+                ->default(0)
+                ->comment('0 = pagi, 1 = petang');
             $table->timestamps();
         });
     }
@@ -45,6 +65,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('pegawais');
+        Schema::dropIfExists('sesi_majlis');
         Schema::dropIfExists('greds');
         Schema::dropIfExists('jawatans');
         Schema::dropIfExists('ptjs');

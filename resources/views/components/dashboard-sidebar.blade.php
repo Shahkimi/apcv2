@@ -19,6 +19,7 @@
                     ['label' => __('Sesi Majlis'), 'route' => 'admin.kawalan.sesi-majlis.index', 'icon' => 'ri-calendar-event-line'],
                     ['label' => __('Backdrop'), 'route' => 'admin.kawalan.backdrop.index', 'icon' => 'ri-image-2-line'],
                     ['label' => __('Pengguna'), 'route' => 'admin.kawalan.user.index', 'icon' => 'ri-user-line'],
+                    ['label' => __('Import pangkalan'), 'route' => 'admin.kawalan.database.index', 'icon' => 'ri-database-2-line'],
                 ],
             ],
         ],

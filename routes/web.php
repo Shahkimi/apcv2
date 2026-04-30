@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\Kawalan\BackdropController as KawalanBackdropController;
+use App\Http\Controllers\Admin\Kawalan\DatabaseImportController as KawalanDatabaseImportController;
 use App\Http\Controllers\Admin\Kawalan\GredController as KawalanGredController;
 use App\Http\Controllers\Admin\Kawalan\JawatanController as KawalanJawatanController;
 use App\Http\Controllers\Admin\Kawalan\MejaController as KawalanMejaController;
@@ -141,6 +142,11 @@ Route::middleware('auth')->group(function () {
                 Route::post('user', [KawalanUserManagementController::class, 'store'])->name('user.store');
                 Route::put('user/{user}', [KawalanUserManagementController::class, 'update'])->name('user.update');
                 Route::delete('user/{user}', [KawalanUserManagementController::class, 'destroy'])->name('user.destroy');
+
+                Route::get('database', [KawalanDatabaseImportController::class, 'index'])->name('database.index');
+                Route::post('database/upload', [KawalanDatabaseImportController::class, 'upload'])->name('database.upload');
+                Route::post('database/preview', [KawalanDatabaseImportController::class, 'preview'])->name('database.preview');
+                Route::post('database/import', [KawalanDatabaseImportController::class, 'import'])->name('database.import');
             });
         });
 

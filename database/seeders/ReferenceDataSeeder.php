@@ -6,10 +6,8 @@ namespace Database\Seeders;
 
 use App\Models\Gred;
 use App\Models\Jawatan;
-use App\Models\Meja;
 use App\Models\Pegawai;
 use App\Models\Ptj;
-use App\Models\SesiMajlis;
 use Illuminate\Database\Eloquent\Factories\Sequence;
 use Illuminate\Database\Seeder;
 
@@ -17,31 +15,7 @@ class ReferenceDataSeeder extends Seeder
 {
     public function run(): void
     {
-        SesiMajlis::query()->updateOrCreate(
-            ['sesi' => 'Pagi'],
-            [
-                'is_active' => true,
-                'is_late' => false,
-                'countdown_start_late' => 1600,
-                'seat_offset' => 0,
-                's_kehadiran' => SesiMajlis::S_KEHADIRAN_PAGI,
-            ],
-        );
-
-        SesiMajlis::query()->updateOrCreate(
-            ['sesi' => 'Petang'],
-            [
-                'is_active' => false,
-                'is_late' => false,
-                'countdown_start_late' => 2600,
-                'seat_offset' => 10,
-                's_kehadiran' => SesiMajlis::S_KEHADIRAN_PETANG,
-            ],
-        );
-
-        Meja::query()->firstOrCreate(
-            ['sizing' => 10],
-        );
+        $this->call(SesiMajlisMejaSeeder::class);
 
         $ptj1 = Ptj::query()->create(['nama_ptj' => 'Pejabat Pentadbiran']);
         $ptj2 = Ptj::query()->create(['nama_ptj' => 'Bahagian Teknologi Maklumat']);

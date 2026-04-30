@@ -32,7 +32,7 @@ class PegawaiFactory extends Factory
                 ? fake()->numberBetween(1, 40)
                 : null,
             'no_panggilan_lewat' => null,
-            'no_sijil' => fake()->optional(0.55)->numerify('###'),
+            'no_sijil' => fake()->optional(0.55)->numberBetween(1, 999),
         ];
     }
 }
