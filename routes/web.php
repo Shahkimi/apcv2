@@ -22,6 +22,7 @@ use App\Http\Controllers\Media\SenaraiController as MediaSenaraiController;
 use App\Http\Controllers\Media\SenaraiProgressController as MediaSenaraiProgressController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\User\DashboardController as UserDashboardController;
+use App\Http\Controllers\User\KehadiranController as UserKehadiranController;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
@@ -47,6 +48,13 @@ Route::middleware('auth')->group(function () {
         ->name('user.')
         ->group(function () {
             Route::get('/dashboard', [UserDashboardController::class, 'index'])->name('dashboard');
+
+            Route::prefix('kehadiran')->name('kehadiran.')->group(function () {
+                Route::get('/', [UserKehadiranController::class, 'index'])->name('index');
+                Route::get('/datatable', [UserKehadiranController::class, 'datatable'])->name('datatable');
+                Route::get('/{pegawai}/details', [UserKehadiranController::class, 'getDetails'])->name('details');
+                Route::put('/{pegawai}/verify', [UserKehadiranController::class, 'verify'])->name('verify');
+            });
         });
 
     Route::middleware('role.media')

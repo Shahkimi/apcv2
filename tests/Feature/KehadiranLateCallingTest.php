@@ -68,6 +68,11 @@ function mediaUser(): User
     ]);
 }
 
+function plainUser(): User
+{
+    return User::factory()->create(['role' => User::ROLE_USER]);
+}
+
 it('assigns late calling number when late session is on air', function (): void {
     $admin = adminUser();
     $pegawai = createPegawaiForTest();
@@ -604,4 +609,38 @@ it('allows admin and media to view paparan', function (): void {
         ->get(route('media.senarai.present'))
         ->assertOk()
         ->assertSee('Ahmad Ujian', false);
+});
+
+it('user role can open kehadiran index', function (): void {
+    $user = plainUser();
+
+    $this->actingAs($user)
+        ->get(route('user.kehadiran.index'))
+        ->assertOk()
+        ->assertSee(__('Kehadiran pegawai'), false);
+});
+
+it('user role can verify attendance when session matches', function (): void {
+    $user = plainUser();
+    $pegawai = createPegawaiForTest();
+    activeSesiForKehadiran();
+
+    $this->actingAs($user)
+        ->putJson(route('user.kehadiran.verify', $pegawai))
+        ->assertOk()
+        ->assertJsonPath('success', true)
+        ->assertJsonPath('is_attend', true);
+});
+
+it('forbids media from user kehadiran routes', function (): void {
+    $media = mediaUser();
+
+    $this->actingAs($media)
+        ->get(route('user.kehadiran.index'))
+        ->assertForbidden();
+});
+
+it('redirects guests from user kehadiran', function (): void {
+    $this->get(route('user.kehadiran.index'))
+        ->assertRedirect(route('login'));
 });
