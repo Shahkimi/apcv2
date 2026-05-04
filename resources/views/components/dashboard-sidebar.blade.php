@@ -20,6 +20,7 @@
                     ['label' => __('Backdrop'), 'route' => 'admin.kawalan.backdrop.index', 'icon' => 'ri-image-2-line'],
                     ['label' => __('Pengguna'), 'route' => 'admin.kawalan.user.index', 'icon' => 'ri-user-line'],
                     ['label' => __('Import pangkalan'), 'route' => 'admin.kawalan.database.index', 'icon' => 'ri-database-2-line'],
+                    ['label' => __('Sistem'), 'route' => 'admin.kawalan.system.index', 'icon' => 'ri-restart-line'],
                 ],
             ],
         ],

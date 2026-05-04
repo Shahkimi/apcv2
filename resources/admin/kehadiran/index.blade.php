@@ -3,10 +3,8 @@
         <x-crud-header :title="__('Kehadiran pegawai')" :description="__('Semak maklumat pegawai dan sahkan kehadiran terus daripada jadual.')" :show-create="false" />
 
         @if ($lateSessionOnAir)
-            <div
-                class="mb-6 flex items-start gap-3 rounded-xl border border-amber-200/80 bg-amber-50/90 px-4 py-3 text-amber-950 shadow-sm dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-100"
-                role="status"
-            >
+            <div class="mb-6 flex items-start gap-3 rounded-xl border border-amber-200/80 bg-amber-50/90 px-4 py-3 text-amber-950 shadow-sm dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-100"
+                role="status">
                 <i class="ri-alarm-warning-line mt-0.5 text-xl text-amber-600 dark:text-amber-400" aria-hidden="true"></i>
                 <div class="min-w-0">
                     <p class="text-sm font-semibold">{{ __('Sesi lewat sedang on air') }}</p>
@@ -17,92 +15,83 @@
             </div>
         @endif
 
-        <div class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_min(19rem,100%)] lg:gap-6">
+        <section id="kehadiran-stats-region" class="mb-6" aria-label="{{ __('Ringkasan kehadiran') }}">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                <x-stats-card :label="__('Jumlah pegawai')" :value="number_format($totalPegawai)" stat-key="total_pegawai"
+                    icon="ri-team-line" />
+                <x-stats-card :label="__('RSVP Ya')" :value="number_format($totalRsvp)"
+                    :hint="__('Berdasarkan jemputan. Sahkan kehadiran fizikal melalui jadual di bawah.')"
+                    stat-key="total_rsvp" icon="ri-calendar-check-line" />
+                <x-stats-card :label="__('Telah hadir')" :value="number_format($totalHadir)"
+                    :hint="__('Pegawai yang telah disahkan hadir bagi sesi semasa.')" stat-key="total_hadir"
+                    icon="ri-user-follow-line" />
+            </div>
+        </section>
+
+        <section class="mt-8 space-y-4" aria-labelledby="kehadiran-table-heading">
             <div
-                class="relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-card via-card to-indigo/[0.06] p-5 shadow-sm ring-1 ring-border/40 sm:p-6 dark:to-indigo/[0.12]">
-                <div class="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-indigo-400/15 blur-2xl dark:bg-indigo-300/20"
-                    aria-hidden="true"></div>
-                <div class="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
-                    <span
-                        class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-indigo-500 text-white shadow-md shadow-indigo-500/25"
-                        aria-hidden="true">
-                        <i class="ri-clipboard-line text-2xl leading-none"></i>
-                    </span>
-                    <div class="min-w-0 space-y-2">
-                        <h2 class="text-base font-semibold tracking-tight text-foreground sm:text-lg">
-                            {{ __('Sahkan kehadiran pegawai') }}
-                        </h2>
-                        <p class="text-sm leading-relaxed text-muted-foreground">
-                            {{ __('Papar data pegawai berdasarkan RSVP. Gunakan butang Sahkan untuk menanda kehadiran fizikal semasa majlis.') }}
-                        </p>
+                class="flex flex-col gap-4 border-b border-border/60 pb-5 sm:flex-row sm:items-end sm:justify-between sm:gap-6 lg:gap-8">
+                <div class="min-w-0 flex-1">
+                    <h2 id="kehadiran-table-heading" class="text-lg font-semibold tracking-tight text-foreground">
+                        {{ __('Senarai pegawai') }}
+                    </h2>
+                    <p class="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                        {{ __('Cari mengikut nama atau no. KP. Sahkan atau batalkan kehadiran melalui lajur tindakan.') }}
+                    </p>
+                </div>
+                <div class="group/toolbar flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:min-w-[13rem] sm:items-end">
+                    <label class="text-xs font-semibold uppercase tracking-wide text-muted-foreground sm:text-right"
+                        for="sesi-filter">
+                        {{ __('Tapis mengikut sesi') }}
+                    </label>
+                    <div class="relative w-full sm:w-auto">
+                        <span
+                            class="pointer-events-none absolute left-3 top-1/2 z-[1] -translate-y-1/2 text-muted-foreground transition-colors group-focus-within/toolbar:text-primary"
+                            aria-hidden="true">
+                            <i class="ri-filter-3-line text-lg leading-none"></i>
+                        </span>
+                        <span
+                            class="pointer-events-none absolute right-3 top-1/2 z-[1] -translate-y-1/2 text-muted-foreground"
+                            aria-hidden="true">
+                            <i class="ri-arrow-down-s-line text-lg leading-none"></i>
+                        </span>
+                        <select id="sesi-filter"
+                            class="h-11 w-full min-w-0 cursor-pointer appearance-none rounded-lg border border-input bg-background py-2 pl-10 pr-10 text-sm font-medium text-foreground shadow-sm ring-offset-background transition-all duration-200 hover:border-primary/30 hover:bg-muted/40 hover:shadow-md focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/40 focus:ring-offset-2 dark:hover:bg-muted/20 sm:min-w-[14rem]">
+                            <option value="">{{ __('Semua sesi') }}</option>
+                            @foreach ($allSesis as $sesi)
+                                <option value="{{ $sesi->id }}">{{ $sesi->sesi }}</option>
+                            @endforeach
+                        </select>
                     </div>
                 </div>
             </div>
 
-            <aside class="flex flex-col gap-3" aria-label="{{ __('Ringkasan kehadiran') }}">
-                <div class="rounded-xl border border-border/60 bg-muted/20 px-4 py-3 dark:bg-muted/10">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        {{ __('Jumlah pegawai') }}</p>
-                    <p class="mt-1 text-2xl font-semibold tabular-nums text-foreground">
-                        {{ number_format($totalPegawai) }}</p>
-                </div>
-                <div
-                    class="rounded-xl border border-emerald-200/60 bg-emerald-50/70 px-4 py-3 dark:border-emerald-800/50 dark:bg-emerald-950/30">
-                    <p
-                        class="text-xs font-semibold uppercase tracking-wide text-emerald-700/90 dark:text-emerald-300/90">
-                        {{ __('RSVP Ya') }}</p>
-                    <p class="mt-1 text-2xl font-semibold tabular-nums text-emerald-800 dark:text-emerald-200">
-                        {{ number_format($totalRsvp) }}</p>
-                </div>
-                <div
-                    class="rounded-xl border border-indigo-200/60 bg-indigo-50/70 px-4 py-3 dark:border-indigo-800/50 dark:bg-indigo-950/30">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-indigo-700/90 dark:text-indigo-300/90">
-                        {{ __('Telah hadir') }}</p>
-                    <p class="mt-1 text-2xl font-semibold tabular-nums text-indigo-800 dark:text-indigo-200">
-                        {{ number_format($totalHadir) }}</p>
-                </div>
-            </aside>
-        </div>
-
-        <section class="mt-8 space-y-4" aria-labelledby="kehadiran-table-heading">
-            <div class="border-b border-border/60 pb-4">
-                <h2 id="kehadiran-table-heading" class="text-lg font-semibold tracking-tight text-foreground">
-                    {{ __('Senarai pegawai') }}
-                </h2>
-                <p class="mt-1 max-w-2xl text-sm text-muted-foreground">
-                    {{ __('Cari mengikut nama atau no. KP. Sahkan atau batalkan kehadiran melalui lajur tindakan.') }}
-                </p>
-            </div>
-
-            <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                <div class="space-y-1.5">
-                    <label class="text-sm font-medium leading-none text-foreground" for="sesi-filter">
-                        {{ __('Tapis mengikut sesi') }}
-                    </label>
-                    <select
-                        id="sesi-filter"
-                        class="flex h-10 max-w-md rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    >
-                        <option value="">{{ __('Semua sesi') }}</option>
-                        @foreach ($allSesis as $sesi)
-                            <option value="{{ $sesi->id }}">{{ $sesi->sesi }}</option>
-                        @endforeach
-                    </select>
-                </div>
-            </div>
-
-            <x-data-table
-                table-id="kehadiran-table"
-                :columns="['ID', __('Pegawai'), __('Sesi'), __('No. Kerusi'), __('PTJ'), __('RSVP'), __('Tindakan')]"
-                :column-header-classes="[6 => 'text-center']"
-                class="shadow-sm ring-1 ring-border/30"
-            />
+            <x-data-table table-id="kehadiran-table" :columns="['ID', __('Pegawai'), __('PTJ'), __('RSVP').' - '.__('Sesi'), __('No. Kerusi'), __('Tindakan')]" :column-header-classes="[3 => 'text-center', 4 => 'text-center', 5 => 'text-center']"
+                class="shadow-sm ring-1 ring-border/30" />
         </section>
     </x-kawalan-shell>
 
     @push('scripts')
         <script>
             $(function() {
+                const kehadiranStatsUrl = @json(route('admin.kehadiran.stats'));
+
+                function formatStatNumber(n) {
+                    return Number(n).toLocaleString('en-US');
+                }
+
+                function refreshKehadiranStats() {
+                    const $region = $('#kehadiran-stats-region');
+                    if (!$region.length) {
+                        return;
+                    }
+                    $.getJSON(kehadiranStatsUrl).done(function(d) {
+                        $region.find('[data-stat="total_pegawai"]').text(formatStatNumber(d.total_pegawai));
+                        $region.find('[data-stat="total_rsvp"]').text(formatStatNumber(d.total_rsvp));
+                        $region.find('[data-stat="total_hadir"]').text(formatStatNumber(d.total_hadir));
+                    });
+                }
+
                 const table = $('#kehadiran-table').DataTable({
                     ...(window.kawalanDataTableDefaults || {}),
                     processing: true,
@@ -115,29 +104,34 @@
                         },
                     },
                     columnDefs: [{
+                            targets: 0,
+                            className: 'tabular-nums text-muted-foreground align-top',
+                            width: '3.75rem',
+                        },
+                        {
                             targets: 1,
-                            className: 'align-top py-3',
-                            width: '22%'
+                            className: 'align-top py-3 min-w-0',
+                            width: '33%',
                         },
                         {
                             targets: 2,
-                            className: 'text-muted-foreground align-top max-w-[10rem]'
+                            className: 'text-muted-foreground align-top min-w-0',
+                            width: '32%',
                         },
                         {
                             targets: 3,
-                            className: 'text-muted-foreground tabular-nums align-top'
+                            className: 'text-center align-top min-w-0',
+                            width: '10%',
                         },
                         {
                             targets: 4,
-                            className: 'text-muted-foreground align-top max-w-[12rem]'
+                            className: 'text-muted-foreground tabular-nums text-center align-top min-w-0',
+                            width: '10%',
                         },
                         {
                             targets: 5,
-                            className: 'min-w-[7rem] align-top'
-                        },
-                        {
-                            targets: -1,
-                            className: 'min-w-[10rem] text-center align-top'
+                            className: 'min-w-0 text-center align-top',
+                            width: '10%',
                         },
                     ],
                     columns: [{
@@ -149,25 +143,20 @@
                             name: 'nama'
                         },
                         {
-                            data: 'sesi_name',
-                            name: 's_kehadiran',
+                            data: 'ptj_name',
+                            name: 'ptj.nama_ptj'
+                        },
+                        {
+                            data: 'rsvp_sesi_label',
+                            name: 'rsvp_sesi',
                             defaultContent: '—',
                             searchable: false,
+                            orderable: false,
                         },
                         {
                             data: 'no_kerusi',
                             name: 'no_kerusi',
                             defaultContent: '-'
-                        },
-                        {
-                            data: 'ptj_name',
-                            name: 'ptj.nama_ptj'
-                        },
-                        {
-                            data: 'rsvp_label',
-                            name: 'rsvp',
-                            orderable: false,
-                            searchable: false
                         },
                         {
                             data: 'action',
@@ -176,6 +165,21 @@
                             searchable: false
                         },
                     ],
+                });
+
+                queueMicrotask(function() {
+                    refreshKehadiranStats();
+                });
+
+                function onKehadiranStatsVisibility() {
+                    if (document.visibilityState === 'visible') {
+                        refreshKehadiranStats();
+                    }
+                }
+                document.addEventListener('visibilitychange', onKehadiranStatsVisibility);
+
+                $(window).on('beforeunload', function() {
+                    document.removeEventListener('visibilitychange', onKehadiranStatsVisibility);
                 });
 
                 $('#sesi-filter').on('change', function() {
@@ -302,29 +306,29 @@
                                         </div>
                                     </div>
 
-                                    ${isRsvpYes && pegawai.no_panggilan_lewat && pegawai.no_panggilan_lewat !== '-' ? `
-                                    <div class="rounded-lg border border-amber-200/70 bg-amber-50/80 px-3 py-2 dark:border-amber-800/50 dark:bg-amber-950/30">
-                                        <p class="text-[10px] font-semibold uppercase tracking-widest text-amber-800 dark:text-amber-200">{{ __('No. panggilan lewat') }}</p>
-                                        <p class="mt-1 text-lg font-bold tabular-nums text-amber-900 dark:text-amber-100">${pegawai.no_panggilan_lewat}</p>
-                                    </div>
-                                    ` : ''}
+                                    ${isRsvpYes && pegawai.no_panggilan_lewat !== '-' && Number(pegawai.no_panggilan_lewat) > 0 ? `
+                                            <div class="rounded-lg border border-amber-200/70 bg-amber-50/80 px-3 py-2 dark:border-amber-800/50 dark:bg-amber-950/30">
+                                                <p class="text-[10px] font-semibold uppercase tracking-widest text-amber-800 dark:text-amber-200">{{ __('No. panggilan lewat') }}</p>
+                                                <p class="mt-1 text-lg font-bold tabular-nums text-amber-900 dark:text-amber-100">${pegawai.no_panggilan_lewat}</p>
+                                            </div>
+                                            ` : ''}
 
                                     <div>
                                         <p class="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{{ __('Ringkasan Penempatan') }}</p>
                                         ${isRsvpYes ? `
-                                        <div class="${showTableNumber ? 'grid grid-cols-2 gap-3' : ''}">
-                                            <div class="relative overflow-hidden rounded-xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-3.5 dark:border-emerald-800/40 dark:from-emerald-950/40 dark:to-emerald-900/20">
-                                                <div class="absolute right-2.5 top-2.5 opacity-10">
-                                                    <i class="ri-armchair-line text-3xl text-emerald-600"></i>
-                                                </div>
-                                                <p class="text-[10px] font-semibold uppercase tracking-widest text-emerald-700/80 dark:text-emerald-400/80">{{ __('No. Kerusi') }}</p>
-                                                <p class="mt-1.5 text-2xl font-black tabular-nums leading-none text-emerald-700 dark:text-emerald-300">${pegawai.no_kerusi}</p>
-                                                <div class="mt-1.5 flex items-center gap-1">
-                                                    <i class="ri-armchair-line text-xs text-emerald-600/60 dark:text-emerald-400/60"></i>
-                                                    <span class="text-[10px] text-emerald-600/70 dark:text-emerald-400/70">{{ __('Tempat Duduk') }}</span>
-                                                </div>
-                                            </div>
-                                            ${showTableNumber ? `
+                                                <div class="${showTableNumber ? 'grid grid-cols-2 gap-3' : ''}">
+                                                    <div class="relative overflow-hidden rounded-xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-3.5 dark:border-emerald-800/40 dark:from-emerald-950/40 dark:to-emerald-900/20">
+                                                        <div class="absolute right-2.5 top-2.5 opacity-10">
+                                                            <i class="ri-armchair-line text-3xl text-emerald-600"></i>
+                                                        </div>
+                                                        <p class="text-[10px] font-semibold uppercase tracking-widest text-emerald-700/80 dark:text-emerald-400/80">{{ __('No. Kerusi') }}</p>
+                                                        <p class="mt-1.5 text-2xl font-black tabular-nums leading-none text-emerald-700 dark:text-emerald-300">${pegawai.no_kerusi}</p>
+                                                        <div class="mt-1.5 flex items-center gap-1">
+                                                            <i class="ri-armchair-line text-xs text-emerald-600/60 dark:text-emerald-400/60"></i>
+                                                            <span class="text-[10px] text-emerald-600/70 dark:text-emerald-400/70">{{ __('Tempat Duduk') }}</span>
+                                                        </div>
+                                                    </div>
+                                                    ${showTableNumber ? `
                                             <div class="relative overflow-hidden rounded-xl border border-indigo-200/70 bg-gradient-to-br from-indigo-50 to-indigo-100/50 p-3.5 dark:border-indigo-800/40 dark:from-indigo-950/40 dark:to-indigo-900/20">
                                                 <div class="absolute right-2.5 top-2.5 opacity-10">
                                                     <i class="ri-table-line text-3xl text-indigo-600"></i>
@@ -337,20 +341,20 @@
                                                 </div>
                                             </div>
                                             ` : ''}
-                                        </div>
-                                        ` : `
-                                        <div class="relative overflow-hidden rounded-xl border border-amber-200/70 bg-gradient-to-br from-amber-50 to-amber-100/50 p-3.5 dark:border-amber-800/40 dark:from-amber-950/40 dark:to-amber-900/20">
-                                            <div class="absolute right-2.5 top-2.5 opacity-10">
-                                                <i class="ri-phone-line text-3xl text-amber-600"></i>
-                                            </div>
-                                            <p class="text-[10px] font-semibold uppercase tracking-widest text-amber-700/80 dark:text-amber-300/80">{{ __('No. Panggilan Lewat') }}</p>
-                                            <p class="mt-1.5 text-2xl font-black tabular-nums leading-none text-amber-700 dark:text-amber-200">${pegawai.no_panggilan_lewat ?? '-'}</p>
-                                            <div class="mt-1.5 flex items-center gap-1">
-                                                <i class="ri-phone-line text-xs text-amber-600/60 dark:text-amber-400/60"></i>
-                                                <span class="text-[10px] text-amber-600/70 dark:text-amber-400/70">{{ __('Turutan Lewat') }}</span>
-                                            </div>
-                                        </div>
-                                        `}
+                                                </div>
+                                                ` : `
+                                                <div class="relative overflow-hidden rounded-xl border border-amber-200/70 bg-gradient-to-br from-amber-50 to-amber-100/50 p-3.5 dark:border-amber-800/40 dark:from-amber-950/40 dark:to-amber-900/20">
+                                                    <div class="absolute right-2.5 top-2.5 opacity-10">
+                                                        <i class="ri-phone-line text-3xl text-amber-600"></i>
+                                                    </div>
+                                                    <p class="text-[10px] font-semibold uppercase tracking-widest text-amber-700/80 dark:text-amber-300/80">{{ __('No. Panggilan Lewat') }}</p>
+                                                    <p class="mt-1.5 text-2xl font-black tabular-nums leading-none text-amber-700 dark:text-amber-200">${Number(pegawai.no_panggilan_lewat) > 0 ? pegawai.no_panggilan_lewat : '-'}</p>
+                                                    <div class="mt-1.5 flex items-center gap-1">
+                                                        <i class="ri-phone-line text-xs text-amber-600/60 dark:text-amber-400/60"></i>
+                                                        <span class="text-[10px] text-amber-600/70 dark:text-amber-400/70">{{ __('Turutan Lewat') }}</span>
+                                                    </div>
+                                                </div>
+                                                `}
                                     </div>
                                 </div>
                             `;
@@ -371,7 +375,8 @@
                                     popup: 'kawalan-swal2-popup kawalan-swal2-wide',
                                     htmlContainer: 'kawalan-swal2-html',
                                     actions: 'kawalan-swal2-actions',
-                                    confirmButton: isAttend ? 'kawalan-swal2-confirm-warning' : 'kawalan-swal2-confirm-success',
+                                    confirmButton: isAttend ? 'kawalan-swal2-confirm-warning' :
+                                        'kawalan-swal2-confirm-success',
                                     cancelButton: 'kawalan-swal2-cancel',
                                 },
                                 width: '28rem',
@@ -393,13 +398,14 @@
                                         },
                                     })
                                     .done(function(response) {
+                                        refreshKehadiranStats();
                                         const isApproved = Boolean(response?.is_attend);
-                                        const approveTitle = isApproved
-                                            ? '{{ __('Kehadiran disahkan') }}'
-                                            : '{{ __('Kehadiran dibatalkan') }}';
-                                        const approveText = isApproved
-                                            ? '{{ __('Pegawai telah berjaya ditanda sebagai hadir.') }}'
-                                            : '{{ __('Status kehadiran telah dikemaskini.') }}';
+                                        const approveTitle = isApproved ?
+                                            '{{ __('Kehadiran disahkan') }}' :
+                                            '{{ __('Kehadiran dibatalkan') }}';
+                                        const approveText = isApproved ?
+                                            '{{ __('Pegawai telah berjaya ditanda sebagai hadir.') }}' :
+                                            '{{ __('Status kehadiran telah dikemaskini.') }}';
 
                                         window.Swal.fire({
                                             title: approveTitle,
@@ -412,7 +418,8 @@
                                             color: 'var(--popover-foreground)',
                                             customClass: {
                                                 popup: 'kawalan-swal2-popup kawalan-swal2-approve',
-                                                icon: isApproved ? 'kawalan-swal2-approve-icon' : '',
+                                                icon: isApproved ?
+                                                    'kawalan-swal2-approve-icon' : '',
                                             },
                                         }).then(function() {
                                             table.ajax.reload(null, false);

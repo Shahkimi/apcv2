@@ -88,11 +88,31 @@ it('assigns late calling number when late session is on air', function (): void 
         ->assertOk()
         ->assertJsonPath('success', true)
         ->assertJsonPath('is_attend', true)
-        ->assertJsonPath('no_panggilan_lewat', 1);
+        ->assertJsonPath('no_panggilan_lewat', 60);
 
-    expect($pegawai->fresh()->no_panggilan_lewat)->toBe(1);
+    expect($pegawai->fresh()->no_panggilan_lewat)->toBe(60);
     expect($pegawai->fresh()->is_late)->toBeTrue();
     expect($pegawai->fresh()->sesi_majlis_id)->toBe($sesi->id);
+});
+
+it('assigns late calling number when no_panggilan_lewat placeholder is zero', function (): void {
+    $admin = adminUser();
+    $pegawai = createPegawaiForTest();
+    $pegawai->update(['no_panggilan_lewat' => 0]);
+
+    activeSesiForKehadiran([
+        'sesi' => 'Pagi — placeholder sifar',
+        'is_late' => true,
+        'countdown_start_late' => 55,
+    ]);
+
+    $this->actingAs($admin)
+        ->putJson(route('admin.kehadiran.verify', $pegawai))
+        ->assertOk()
+        ->assertJsonPath('no_panggilan_lewat', 55);
+
+    expect($pegawai->fresh()->no_panggilan_lewat)->toBe(55);
+    expect($pegawai->fresh()->is_late)->toBeTrue();
 });
 
 it('assigns late calling number when session is still active but is_late is true', function (): void {
@@ -108,9 +128,9 @@ it('assigns late calling number when session is still active but is_late is true
     $this->actingAs($admin)
         ->putJson(route('admin.kehadiran.verify', $pegawai))
         ->assertOk()
-        ->assertJsonPath('no_panggilan_lewat', 1);
+        ->assertJsonPath('no_panggilan_lewat', 1600);
 
-    expect($pegawai->fresh()->no_panggilan_lewat)->toBe(1);
+    expect($pegawai->fresh()->no_panggilan_lewat)->toBe(1600);
     expect($pegawai->fresh()->is_late)->toBeTrue();
 });
 
@@ -643,4 +663,92 @@ it('forbids media from user kehadiran routes', function (): void {
 it('redirects guests from user kehadiran', function (): void {
     $this->get(route('user.kehadiran.index'))
         ->assertRedirect(route('login'));
+});
+
+it('orders admin kehadiran datatable by is_attend then id', function (): void {
+    $admin = adminUser();
+    $ptj = Ptj::query()->create(['nama_ptj' => 'PTJ Susunan']);
+    $jawatan = Jawatan::query()->create(['desc_jawatan' => 'Pegawai']);
+    $gred = Gred::query()->create(['desc_gred' => 'Gred Ujian']);
+    $base = [
+        'ptj_id' => $ptj->id,
+        'jawatan_id' => $jawatan->id,
+        'gred_id' => $gred->id,
+        'rsvp' => true,
+        'no_kerusi' => 1,
+        's_kehadiran' => Pegawai::S_KEHADIRAN_PAGI,
+    ];
+
+    $attendedFirst = Pegawai::query()->create(array_merge($base, [
+        'nama' => 'Hadir Awal',
+        'no_kp' => '910101010001',
+        'is_attend' => true,
+    ]));
+    $notAttendLater = Pegawai::query()->create(array_merge($base, [
+        'nama' => 'Belum Lepas',
+        'no_kp' => '910101010002',
+        'is_attend' => false,
+    ]));
+    $notAttendEarlier = Pegawai::query()->create(array_merge($base, [
+        'nama' => 'Belum Awal',
+        'no_kp' => '910101010003',
+        'is_attend' => false,
+    ]));
+
+    $query = http_build_query([
+        'draw' => 1,
+        'start' => 0,
+        'length' => 50,
+        'search' => ['value' => '', 'regex' => false],
+        'columns' => [
+            ['data' => 'id', 'name' => 'id', 'searchable' => true, 'orderable' => true, 'search' => ['value' => '', 'regex' => false]],
+            ['data' => 'nama', 'name' => 'nama', 'searchable' => true, 'orderable' => true, 'search' => ['value' => '', 'regex' => false]],
+            ['data' => 'ptj_name', 'name' => 'ptj.nama_ptj', 'searchable' => true, 'orderable' => true, 'search' => ['value' => '', 'regex' => false]],
+            ['data' => 'rsvp_sesi_label', 'name' => 'rsvp_sesi', 'searchable' => false, 'orderable' => false, 'search' => ['value' => '', 'regex' => false]],
+            ['data' => 'no_kerusi', 'name' => 'no_kerusi', 'searchable' => true, 'orderable' => true, 'search' => ['value' => '', 'regex' => false]],
+            ['data' => 'action', 'name' => 'action', 'searchable' => false, 'orderable' => false, 'search' => ['value' => '', 'regex' => false]],
+        ],
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->getJson(route('admin.kehadiran.datatable').'?'.$query)
+        ->assertOk()
+        ->assertJsonPath('recordsTotal', 3);
+
+    $ids = array_map(
+        static fn (array $row): int => (int) $row['id'],
+        $response->json('data')
+    );
+
+    $expected = [
+        min($notAttendEarlier->id, $notAttendLater->id),
+        max($notAttendEarlier->id, $notAttendLater->id),
+        $attendedFirst->id,
+    ];
+    expect($ids)->toBe($expected);
+});
+
+it('returns kehadiran stats json for admin matching pegawai counts', function (): void {
+    $admin = adminUser();
+    createPegawaiForTest();
+
+    $this->actingAs($admin)
+        ->getJson(route('admin.kehadiran.stats'))
+        ->assertOk()
+        ->assertJsonStructure(['total_pegawai', 'total_rsvp', 'total_hadir'])
+        ->assertJsonPath('total_pegawai', 1)
+        ->assertJsonPath('total_rsvp', 1)
+        ->assertJsonPath('total_hadir', 0);
+});
+
+it('returns kehadiran stats json for user role', function (): void {
+    $user = plainUser();
+    createPegawaiForTest();
+
+    $this->actingAs($user)
+        ->getJson(route('user.kehadiran.stats'))
+        ->assertOk()
+        ->assertJsonPath('total_pegawai', 1)
+        ->assertJsonPath('total_rsvp', 1)
+        ->assertJsonPath('total_hadir', 0);
 });

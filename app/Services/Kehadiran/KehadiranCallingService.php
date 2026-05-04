@@ -72,6 +72,14 @@ final class KehadiranCallingService
     }
 
     /**
+     * Kehadiran checklist DataTable: belum hadir first (is_attend asc), then by id asc; hadir rows at bottom, by id asc.
+     */
+    public function applyKehadiranDataTableOrder(Builder $query): void
+    {
+        $query->orderBy('is_attend')->orderBy('id');
+    }
+
+    /**
      * Paparan: hadir only — on-time (is_late false) by no_kerusi ASC, then late by no_panggilan_lewat ASC.
      */
     public function applyPaparanDisplayOrder(Builder $query): void
@@ -106,14 +114,17 @@ final class KehadiranCallingService
      */
     public function batchAssignLateNumbersFromSession(SesiMajlis $sesiMajlis): void
     {
-        $startNumber = max(1, (int) ($sesiMajlis->countdown_start_late ?? 1));
+        $startNumber = $this->lateCallingStartNumber($sesiMajlis);
         $sesiId = $sesiMajlis->id;
 
         DB::transaction(function () use ($startNumber, $sesiId): void {
             $attendedOfficers = Pegawai::query()
                 ->where('is_attend', true)
                 ->where('sesi_majlis_id', $sesiId)
-                ->whereNull('no_panggilan_lewat')
+                ->where(function (Builder $q): void {
+                    $q->whereNull('no_panggilan_lewat')
+                        ->orWhere('no_panggilan_lewat', '<=', 0);
+                })
                 ->orderByRaw('no_kerusi + 0')
                 ->lockForUpdate()
                 ->get();
@@ -130,7 +141,7 @@ final class KehadiranCallingService
 
     public function assignLateCallingNumberIfApplicable(Pegawai $pegawai, ?SesiMajlis $activeSesi): void
     {
-        if (! $pegawai->is_attend || $pegawai->no_panggilan_lewat !== null) {
+        if (! $pegawai->is_attend || ((int) ($pegawai->no_panggilan_lewat ?? 0)) > 0) {
             return;
         }
 
@@ -146,9 +157,10 @@ final class KehadiranCallingService
         DB::transaction(function () use ($pegawai, $activeSesi): void {
             $max = (int) Pegawai::query()
                 ->where('sesi_majlis_id', $activeSesi->id)
+                ->where('no_panggilan_lewat', '>', 0)
                 ->lockForUpdate()
                 ->max('no_panggilan_lewat');
-            $startNumber = max(1, (int) ($activeSesi->countdown_start_late ?? 1));
+            $startNumber = $this->lateCallingStartNumber($activeSesi);
             $nextNumber = max($startNumber, $max + 1);
             $pegawai->no_panggilan_lewat = $nextNumber;
             $pegawai->is_late = true;
@@ -163,10 +175,25 @@ final class KehadiranCallingService
 
         $max = (int) Pegawai::query()
             ->where('sesi_majlis_id', $activeSesi->id)
+            ->where('no_panggilan_lewat', '>', 0)
             ->max('no_panggilan_lewat');
-        $startNumber = max(1, (int) ($activeSesi->countdown_start_late ?? 1));
+        $startNumber = $this->lateCallingStartNumber($activeSesi);
 
         return max($startNumber, $max + 1);
+    }
+
+    /**
+     * First late-calling number for the session: countdown_start_late when set, otherwise seat_offset if positive, else 1.
+     */
+    private function lateCallingStartNumber(SesiMajlis $sesi): int
+    {
+        if ($sesi->countdown_start_late !== null) {
+            return max(1, (int) $sesi->countdown_start_late);
+        }
+
+        $offset = (int) ($sesi->seat_offset ?? 0);
+
+        return $offset > 0 ? $offset : 1;
     }
 
     public function clearLateCallingOnCancel(Pegawai $pegawai): void

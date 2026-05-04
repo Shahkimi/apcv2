@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\Kawalan\JawatanController as KawalanJawatanContro
 use App\Http\Controllers\Admin\Kawalan\MejaController as KawalanMejaController;
 use App\Http\Controllers\Admin\Kawalan\PtjController as KawalanPtjController;
 use App\Http\Controllers\Admin\Kawalan\SesiMajlisController as KawalanSesiMajlisController;
+use App\Http\Controllers\Admin\Kawalan\SystemController as KawalanSystemController;
 use App\Http\Controllers\Admin\Kawalan\UserManagementController as KawalanUserManagementController;
 use App\Http\Controllers\Admin\KehadiranController as AdminKehadiranController;
 use App\Http\Controllers\Admin\PaparanController as AdminPaparanController;
@@ -53,6 +54,7 @@ Route::middleware('auth')->group(function () {
             Route::prefix('kehadiran')->name('kehadiran.')->group(function () {
                 Route::get('/', [UserKehadiranController::class, 'index'])->name('index');
                 Route::get('/datatable', [UserKehadiranController::class, 'datatable'])->name('datatable');
+                Route::get('/stats', [UserKehadiranController::class, 'stats'])->name('stats');
                 Route::get('/{pegawai}/details', [UserKehadiranController::class, 'getDetails'])->name('details');
                 Route::put('/{pegawai}/verify', [UserKehadiranController::class, 'verify'])->name('verify');
             });
@@ -92,6 +94,7 @@ Route::middleware('auth')->group(function () {
             Route::prefix('kehadiran')->name('kehadiran.')->group(function () {
                 Route::get('/', [AdminKehadiranController::class, 'index'])->name('index');
                 Route::get('/datatable', [AdminKehadiranController::class, 'datatable'])->name('datatable');
+                Route::get('/stats', [AdminKehadiranController::class, 'stats'])->name('stats');
                 Route::get('/{pegawai}/details', [AdminKehadiranController::class, 'getDetails'])->name('details');
                 Route::put('/{pegawai}/verify', [AdminKehadiranController::class, 'verify'])->name('verify');
             });
@@ -147,6 +150,11 @@ Route::middleware('auth')->group(function () {
                 Route::post('database/upload', [KawalanDatabaseImportController::class, 'upload'])->name('database.upload');
                 Route::post('database/preview', [KawalanDatabaseImportController::class, 'preview'])->name('database.preview');
                 Route::post('database/import', [KawalanDatabaseImportController::class, 'import'])->name('database.import');
+
+                Route::get('system', [KawalanSystemController::class, 'index'])->name('system.index');
+                Route::post('system/reset', [KawalanSystemController::class, 'reset'])
+                    ->middleware('throttle:10,1')
+                    ->name('system.reset');
             });
         });
 

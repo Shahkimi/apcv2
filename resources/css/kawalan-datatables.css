@@ -151,9 +151,38 @@ html.dark .kawalan-dt-table.dataTable tbody tr:hover {
 }
 
 /*
- * Kehadiran: DataTables adds dt-head-right / body alignment on some columns by type detection.
- * Tailwind text-center on columnDefs loses to those rules — force center for Tindakan.
+ * Kehadiran: fixed layout so column widths from DataTables columnDefs apply reliably.
+ * Pegawai + PTJ get more width; RSVP–Sesi / No. Kerusi / Tindakan share equal 10% slices.
  */
+#kehadiran-table.kawalan-dt-table.dataTable,
+#kehadiran-table.dataTable {
+    table-layout: fixed;
+    width: 100% !important;
+}
+
+/* Pegawai + PTJ: slightly wider cell padding than default */
+#kehadiran-table.dataTable > thead > tr > th:nth-child(2),
+#kehadiran-table.dataTable > tbody > tr > td:nth-child(2),
+#kehadiran-table.dataTable > thead > tr > th:nth-child(3),
+#kehadiran-table.dataTable > tbody > tr > td:nth-child(3) {
+    padding-left: 1.125rem;
+    padding-right: 1.125rem;
+}
+
+/*
+ * Kehadiran: DataTables adds dt-head-right / body alignment on some columns by type detection.
+ * Tailwind text-center on columnDefs / initial thead loses to those rules — force center.
+ */
+#kehadiran-table.dataTable > thead > tr > th:nth-child(4),
+#kehadiran-table.dataTable > tbody > tr > td:nth-child(4) {
+    text-align: center !important;
+}
+
+#kehadiran-table.dataTable > thead > tr > th:nth-child(5),
+#kehadiran-table.dataTable > tbody > tr > td:nth-child(5) {
+    text-align: center !important;
+}
+
 #kehadiran-table.dataTable > thead > tr > th:last-child,
 #kehadiran-table.dataTable > tbody > tr > td:last-child {
     text-align: center !important;

@@ -25,12 +25,25 @@ abstract class AbstractKehadiranController extends Controller
 
     public function index(): View
     {
+        $counts = $this->kehadiranSummaryCounts();
+
         return $this->kehadiranView('index', [
-            'totalPegawai' => Pegawai::count(),
-            'totalRsvp' => Pegawai::where('rsvp', true)->count(),
-            'totalHadir' => Pegawai::where('is_attend', true)->count(),
+            'totalPegawai' => $counts['totalPegawai'],
+            'totalRsvp' => $counts['totalRsvp'],
+            'totalHadir' => $counts['totalHadir'],
             'lateSessionOnAir' => $this->callingService->lateSessionOnAirExists(),
             'allSesis' => SesiMajlis::query()->orderBy('id')->get(),
+        ]);
+    }
+
+    public function stats(): JsonResponse
+    {
+        $counts = $this->kehadiranSummaryCounts();
+
+        return response()->json([
+            'total_pegawai' => $counts['totalPegawai'],
+            'total_rsvp' => $counts['totalRsvp'],
+            'total_hadir' => $counts['totalHadir'],
         ]);
     }
 
@@ -42,7 +55,7 @@ abstract class AbstractKehadiranController extends Controller
             $query->where('sesi_majlis_id', request()->integer('sesi_majlis_id'));
         }
 
-        $this->callingService->applyDefaultCallingOrder($query);
+        $this->callingService->applyKehadiranDataTableOrder($query);
         $actionsView = $this->bladeNamespace().'::kehadiran.actions';
 
         return DataTables::of($query)
@@ -60,25 +73,24 @@ abstract class AbstractKehadiranController extends Controller
             })
             ->editColumn('nama', fn (Pegawai $pegawai) => $this->renderOfficerCell($pegawai))
             ->removeColumn('no_kp')
-            ->addColumn('rsvp_label', function (Pegawai $pegawai) {
+            ->addColumn('rsvp_sesi_label', function (Pegawai $pegawai) {
                 if ($pegawai->rsvp) {
-                    return '<span class="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-emerald-100 to-cyan-100 px-2.5 py-1 text-xs font-semibold text-emerald-800 shadow-sm shadow-emerald-100 dark:from-emerald-900/40 dark:to-cyan-900/40 dark:text-emerald-200 dark:shadow-emerald-900/30"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500/75 dark:bg-emerald-300/80"></span>'.e(__('Ya')).'</span>';
+                    $rsvp = '<span class="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-emerald-100 to-cyan-100 px-2.5 py-1 text-xs font-semibold text-emerald-800 shadow-sm shadow-emerald-100 dark:from-emerald-900/40 dark:to-cyan-900/40 dark:text-emerald-200 dark:shadow-emerald-900/30"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500/75 dark:bg-emerald-300/80"></span>'.e(__('Ya')).'</span>';
+                } else {
+                    $rsvp = '<span class="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-rose-100 to-fuchsia-100 px-2.5 py-1 text-xs font-semibold text-rose-800 shadow-sm shadow-rose-100 dark:from-rose-900/40 dark:to-fuchsia-900/40 dark:text-rose-200 dark:shadow-rose-900/30"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-rose-500/75 dark:bg-rose-300/80"></span>'.e(__('Tidak')).'</span>';
                 }
 
-                return '<span class="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-rose-100 to-fuchsia-100 px-2.5 py-1 text-xs font-semibold text-rose-800 shadow-sm shadow-rose-100 dark:from-rose-900/40 dark:to-fuchsia-900/40 dark:text-rose-200 dark:shadow-rose-900/30"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-rose-500/75 dark:bg-rose-300/80"></span>'.e(__('Tidak')).'</span>';
-            })
-            ->addColumn('sesi_name', function (Pegawai $pegawai) {
-                $label = (int) $pegawai->s_kehadiran === Pegawai::S_KEHADIRAN_PETANG
-                    ? __('Petang')
-                    : __('Pagi');
+                $sesiText = (int) $pegawai->s_kehadiran === Pegawai::S_KEHADIRAN_PETANG
+                    ? e(__('Petang'))
+                    : e(__('Pagi'));
 
-                return e($label);
+                return '<div class="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 align-middle text-center">'.$rsvp.'<span class="text-muted-foreground shrink-0">'.e(' - ').'</span><span class="text-sm font-medium text-foreground">'.$sesiText.'</span></div>';
             })
             ->addColumn('no_kerusi', fn (Pegawai $pegawai) => e((string) ($pegawai->no_kerusi ?? '-')))
             ->addColumn('ptj_name', fn (Pegawai $pegawai) => e((string) ($pegawai->ptj?->nama_ptj ?? '-')))
             ->removeColumn('no_panggilan_lewat')
             ->addColumn('action', fn (Pegawai $pegawai) => view($actionsView, ['pegawai' => $pegawai])->render())
-            ->rawColumns(['nama', 'rsvp_label', 'action'])
+            ->rawColumns(['nama', 'rsvp_sesi_label', 'action'])
             ->make(true);
     }
 
@@ -109,7 +121,7 @@ abstract class AbstractKehadiranController extends Controller
                 'ptj_name' => $pegawai->ptj?->nama_ptj ?? '-',
                 'no_kerusi' => $pegawai->no_kerusi ?? '-',
                 'no_meja' => $previewNoMeja,
-                'no_panggilan_lewat' => $pegawai->no_panggilan_lewat ?? $previewLateNumber ?? '-',
+                'no_panggilan_lewat' => $this->jsonNoPanggilanLewatForDetails($pegawai->no_panggilan_lewat, $previewLateNumber),
                 'is_attend' => (bool) $pegawai->is_attend,
             ],
         ]);
@@ -176,9 +188,48 @@ abstract class AbstractKehadiranController extends Controller
             'success' => true,
             'is_attend' => (bool) $pegawai->is_attend,
             'no_meja' => $pegawai->no_meja,
-            'no_panggilan_lewat' => $pegawai->no_panggilan_lewat ?? '-',
+            'no_panggilan_lewat' => $this->jsonNoPanggilanLewat($pegawai->no_panggilan_lewat),
             'message' => $pegawai->is_attend ? __('Kehadiran disahkan.') : __('Kehadiran dibatalkan.'),
         ]);
+    }
+
+    /**
+     * @return int|string Positive late number, or '-' when unset / placeholder zero.
+     */
+    private function jsonNoPanggilanLewat(mixed $value): int|string
+    {
+        $n = (int) ($value ?? 0);
+
+        return $n > 0 ? $n : '-';
+    }
+
+    /**
+     * @return int|string Stored positive number, else preview for walk-ins, else '-'.
+     */
+    private function jsonNoPanggilanLewatForDetails(mixed $stored, ?int $previewLateNumber): int|string
+    {
+        $n = (int) ($stored ?? 0);
+        if ($n > 0) {
+            return $n;
+        }
+
+        if ($previewLateNumber !== null && $previewLateNumber > 0) {
+            return $previewLateNumber;
+        }
+
+        return '-';
+    }
+
+    /**
+     * @return array{totalPegawai: int, totalRsvp: int, totalHadir: int}
+     */
+    private function kehadiranSummaryCounts(): array
+    {
+        return [
+            'totalPegawai' => Pegawai::query()->count(),
+            'totalRsvp' => Pegawai::query()->where('rsvp', true)->count(),
+            'totalHadir' => Pegawai::query()->where('is_attend', true)->count(),
+        ];
     }
 
     private function kehadiranView(string $name, array $data = []): View
