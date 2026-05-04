@@ -94,6 +94,7 @@
                         <li><code class="text-foreground/80">sesi_majlis_id</code> → NULL</li>
                         <li><code class="text-foreground/80">no_meja</code>, <code class="text-foreground/80">no_panggilan_lewat</code> → 0</li>
                         <li><code class="text-foreground/80">is_attend</code>, <code class="text-foreground/80">is_late</code> → 0</li>
+                        <li>{{ __('Rekod pengumuman senarai (jadual pegawai diumumkan) dikosongkan.') }}</li>
                     </ul>
                 </div>
             </div>

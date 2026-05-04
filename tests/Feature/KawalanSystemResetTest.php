@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\AnnouncedOfficer;
 use App\Models\Gred;
 use App\Models\Jawatan;
 use App\Models\Pegawai;
@@ -57,6 +58,15 @@ it('resets all pegawai attendance fields for admin', function (): void {
         's_kehadiran' => Pegawai::S_KEHADIRAN_PAGI,
     ]);
 
+    AnnouncedOfficer::query()->create([
+        'scope_key' => 'sesi:'.$sesi->id,
+        'sesi_majlis_id' => $sesi->id,
+        'pegawai_id' => $pegawai->id,
+        'announced_at' => now(),
+    ]);
+
+    expect(AnnouncedOfficer::query()->count())->toBe(1);
+
     $response = $this->actingAs($admin)->postJson(route('admin.kawalan.system.reset'));
 
     $response->assertOk()
@@ -69,7 +79,8 @@ it('resets all pegawai attendance fields for admin', function (): void {
         ->and($pegawai->no_meja)->toBe(0)
         ->and($pegawai->no_panggilan_lewat)->toBe(0)
         ->and($pegawai->is_attend)->toBeFalse()
-        ->and($pegawai->is_late)->toBeFalse();
+        ->and($pegawai->is_late)->toBeFalse()
+        ->and(AnnouncedOfficer::query()->count())->toBe(0);
 });
 
 it('allows admin to view system page', function (): void {
