@@ -49,7 +49,7 @@ abstract class AbstractKehadiranController extends Controller
 
     public function datatable()
     {
-        $query = Pegawai::query()->with(['ptj']);
+        $query = Pegawai::query()->with(['ptj', 'jawatan']);
 
         if (request()->filled('sesi_majlis_id')) {
             $query->where('sesi_majlis_id', request()->integer('sesi_majlis_id'));
@@ -243,6 +243,11 @@ abstract class AbstractKehadiranController extends Controller
         $kp = e((string) ($pegawai->no_kp ?? '—'));
         $initials = e($this->officerInitials($pegawai->nama));
         $kpLabel = e(__('No. KP'));
+        $jawatanLine = '';
+        $descJawatan = $pegawai->jawatan?->desc_jawatan;
+        if (filled($descJawatan)) {
+            $jawatanLine = '<p class="kawalan-dt-officer-jawatan">'.e((string) $descJawatan).'</p>';
+        }
 
         return '<div class="kawalan-dt-officer flex max-w-[20rem] items-start gap-3">'
             .'<span class="kawalan-dt-officer-avatar" aria-hidden="true">'.$initials.'</span>'
@@ -252,6 +257,7 @@ abstract class AbstractKehadiranController extends Controller
             .'<span class="kawalan-dt-officer-kp-label">'.$kpLabel.'</span>'
             .'<span class="kawalan-dt-officer-kp">'.$kp.'</span>'
             .'</p>'
+            .$jawatanLine
             .'</div>'
             .'</div>';
     }

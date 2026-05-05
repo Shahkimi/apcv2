@@ -123,6 +123,15 @@
     color: color-mix(in srgb, var(--muted-foreground) 92%, var(--foreground));
 }
 
+.kawalan-dt-officer-jawatan {
+    margin: 0.25rem 0 0;
+    font-size: 0.625rem;
+    line-height: 1.35;
+    font-weight: 500;
+    color: var(--muted-foreground);
+    word-break: break-word;
+}
+
 /* Table body — row hover like Cleopatra user-row */
 .kawalan-dt-table.dataTable tbody tr {
     transition: background-color 150ms ease;
