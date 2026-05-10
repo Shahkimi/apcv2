@@ -15,7 +15,8 @@
             </div>
         @endif
 
-        <section id="kehadiran-stats-region" class="mb-6" aria-label="{{ __('Ringkasan kehadiran') }}">
+        <section id="kehadiran-stats-region" class="mb-6" aria-label="{{ __('Ringkasan kehadiran') }}"
+            aria-live="polite" aria-atomic="false">
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 <x-stats-card :label="__('Jumlah pegawai')" :value="number_format($totalPegawai)" stat-key="total_pegawai"
                     icon="ri-team-line" />
@@ -80,17 +81,41 @@
                     return Number(n).toLocaleString('en-US');
                 }
 
+                const kehadiranStatsPollMs = 12000;
+                let kehadiranStatsPollId = null;
+
                 function refreshKehadiranStats() {
                     const $region = $('#kehadiran-stats-region');
                     if (!$region.length) {
                         return;
                     }
-                    $.getJSON(kehadiranStatsUrl).done(function(d) {
-                        $region.find('[data-stat="total_pegawai"]').text(formatStatNumber(d.total_pegawai));
-                        $region.find('[data-stat="total_rsvp"]').text(formatStatNumber(d.total_rsvp));
-                        $region.find('[data-stat="total_hadir"]').text(formatStatNumber(d.total_hadir));
-                    });
+                    $.ajax({
+                            url: kehadiranStatsUrl,
+                            dataType: 'json',
+                            headers: {
+                                Accept: 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                        })
+                        .done(function(d) {
+                            $region.find('[data-stat="total_pegawai"]').text(formatStatNumber(d.total_pegawai));
+                            $region.find('[data-stat="total_rsvp"]').text(formatStatNumber(d.total_rsvp));
+                            $region.find('[data-stat="total_hadir"]').text(formatStatNumber(d.total_hadir));
+                        });
                 }
+
+                function startKehadiranStatsPolling() {
+                    if (kehadiranStatsPollId !== null) {
+                        return;
+                    }
+                    kehadiranStatsPollId = window.setInterval(function() {
+                        if (document.visibilityState === 'visible') {
+                            refreshKehadiranStats();
+                        }
+                    }, kehadiranStatsPollMs);
+                }
+
+                let kehadiranDtAjaxRetries = 0;
 
                 const table = $('#kehadiran-table').DataTable({
                     ...(window.kawalanDataTableDefaults || {}),
@@ -101,6 +126,40 @@
                         url: '{{ route('user.kehadiran.datatable') }}',
                         data: function(d) {
                             d.sesi_majlis_id = $('#sesi-filter').val() || '';
+                        },
+                        error: function(_xhr, _textStatus, errorThrown) {
+                            if (errorThrown === 'abort') {
+                                return;
+                            }
+
+                            if (kehadiranDtAjaxRetries < 1) {
+                                kehadiranDtAjaxRetries += 1;
+                                setTimeout(function() {
+                                    table.ajax.reload(null, false);
+                                }, 500);
+
+                                return;
+                            }
+
+                            kehadiranDtAjaxRetries = 0;
+
+                            if (window.Swal && typeof window.Swal.fire === 'function') {
+                                window.Swal.fire({
+                                    icon: 'error',
+                                    title: '{{ __('Ralat') }}',
+                                    text: '{{ __('Gagal memuatkan senarai. Sila cuba lagi atau muat semula halaman.') }}',
+                                    confirmButtonText: '{{ __('Tutup') }}',
+                                    background: 'var(--popover)',
+                                    color: 'var(--popover-foreground)',
+                                    buttonsStyling: false,
+                                    customClass: {
+                                        popup: 'kawalan-swal2-popup',
+                                        confirmButton: 'kawalan-swal2-confirm-danger',
+                                    },
+                                });
+                            } else {
+                                alert('{{ __('Gagal memuatkan senarai.') }}');
+                            }
                         },
                     },
                     columnDefs: [{
@@ -167,8 +226,13 @@
                     ],
                 });
 
+                $('#kehadiran-table').on('xhr.dt', function() {
+                    kehadiranDtAjaxRetries = 0;
+                });
+
                 queueMicrotask(function() {
                     refreshKehadiranStats();
+                    startKehadiranStatsPolling();
                 });
 
                 function onKehadiranStatsVisibility() {
@@ -180,6 +244,10 @@
 
                 $(window).on('beforeunload', function() {
                     document.removeEventListener('visibilitychange', onKehadiranStatsVisibility);
+                    if (kehadiranStatsPollId !== null) {
+                        window.clearInterval(kehadiranStatsPollId);
+                        kehadiranStatsPollId = null;
+                    }
                 });
 
                 $('#sesi-filter').on('change', function() {

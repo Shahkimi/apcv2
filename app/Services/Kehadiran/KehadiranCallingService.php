@@ -154,17 +154,27 @@ final class KehadiranCallingService
             return;
         }
 
-        DB::transaction(function () use ($pegawai, $activeSesi): void {
-            $max = (int) Pegawai::query()
-                ->where('sesi_majlis_id', $activeSesi->id)
-                ->where('no_panggilan_lewat', '>', 0)
-                ->lockForUpdate()
-                ->max('no_panggilan_lewat');
-            $startNumber = $this->lateCallingStartNumber($activeSesi);
-            $nextNumber = max($startNumber, $max + 1);
-            $pegawai->no_panggilan_lewat = $nextNumber;
-            $pegawai->is_late = true;
-        });
+        /*
+         * Serialize allocation per session: lock one sesi_majlis row instead of lockForUpdate on many
+         * pegawai rows (avoids lock pile-up when many users verify at once). Caller must run inside a transaction.
+         */
+        $lockedSesi = SesiMajlis::query()
+            ->whereKey($activeSesi->id)
+            ->lockForUpdate()
+            ->first();
+
+        if ($lockedSesi === null) {
+            return;
+        }
+
+        $max = (int) Pegawai::query()
+            ->where('sesi_majlis_id', $lockedSesi->id)
+            ->where('no_panggilan_lewat', '>', 0)
+            ->max('no_panggilan_lewat');
+        $startNumber = $this->lateCallingStartNumber($lockedSesi);
+        $nextNumber = max($startNumber, $max + 1);
+        $pegawai->no_panggilan_lewat = $nextNumber;
+        $pegawai->is_late = true;
     }
 
     public function previewNextLateCallingNumber(?SesiMajlis $activeSesi): ?int

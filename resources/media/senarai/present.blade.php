@@ -120,6 +120,8 @@
         const storageKey = `senarai_position_${sesiId ?? 'all'}`;
 
         let currentIndex = 0;
+        let progressSaveInFlight = false;
+        let displayGeneration = 0;
         const totalOfficers = officers.length;
 
         if (totalOfficers === 0) {
@@ -155,6 +157,7 @@
                 payload.sesi_id = sesiId;
             }
 
+            progressSaveInFlight = true;
             try {
                 await fetch(progressUpdateUrl, {
                     method: 'POST',
@@ -167,11 +170,16 @@
                 });
             } catch (err) {
                 /* localStorage still preserves position when network is unstable */
+            } finally {
+                progressSaveInFlight = false;
             }
         }
 
         function showOfficer(index, options = {}) {
             if (totalOfficers === 0) return;
+
+            displayGeneration += 1;
+            const gen = displayGeneration;
 
             const persist = options.persist ?? true;
             const animate = options.animate ?? true;
@@ -199,6 +207,10 @@
                 ptjEl.style.transform = 'translateY(20px)';
 
                 setTimeout(function() {
+                    if (gen !== displayGeneration) {
+                        return;
+                    }
+
                     nameEl.textContent = officer.nama;
                     jawatanEl.textContent = officer.jawatan;
                     ptjEl.textContent = officer.ptj;
@@ -207,11 +219,19 @@
                     nameEl.style.transform = 'translateY(0)';
 
                     setTimeout(function() {
+                        if (gen !== displayGeneration) {
+                            return;
+                        }
+
                         jawatanEl.style.opacity = '1';
                         jawatanEl.style.transform = 'translateY(0)';
                     }, 120);
 
                     setTimeout(function() {
+                        if (gen !== displayGeneration) {
+                            return;
+                        }
+
                         ptjEl.style.opacity = '1';
                         ptjEl.style.transform = 'translateY(0)';
                     }, 240);
@@ -224,6 +244,10 @@
         }
 
         async function syncFromServer() {
+            if (progressSaveInFlight) {
+                return;
+            }
+
             const query = sesiId != null ? `?sesi_id=${encodeURIComponent(String(sesiId))}` : '';
 
             try {

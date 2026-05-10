@@ -9,6 +9,7 @@ use App\Models\Pegawai;
 use App\Models\SesiMajlis;
 use App\Services\Kehadiran\KehadiranCallingService;
 use App\Services\SettingsService;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -159,30 +160,44 @@ abstract class AbstractKehadiranController extends Controller
             }
         }
 
-        DB::transaction(function () use ($pegawai, $willAttend, $activeSesi): void {
-            $pegawai->is_attend = $willAttend;
+        try {
+            DB::transaction(function () use ($pegawai, $willAttend, $activeSesi): void {
+                $pegawai->is_attend = $willAttend;
 
-            if ($pegawai->is_attend && $activeSesi !== null) {
-                $pegawai->sesi_majlis_id = $activeSesi->id;
-                if (! $pegawai->rsvp) {
-                    $pegawai->no_kerusi = null;
-                    $pegawai->no_meja = null;
-                    $this->callingService->assignLateCallingNumberIfApplicable($pegawai, $activeSesi);
-                } else {
-                    $pegawai->no_meja = $this->callingService->calculateTableNumber($pegawai->no_kerusi, $activeSesi);
-                    if ($activeSesi->is_late) {
+                if ($pegawai->is_attend && $activeSesi !== null) {
+                    $pegawai->sesi_majlis_id = $activeSesi->id;
+                    if (! $pegawai->rsvp) {
+                        $pegawai->no_kerusi = null;
+                        $pegawai->no_meja = null;
                         $this->callingService->assignLateCallingNumberIfApplicable($pegawai, $activeSesi);
                     } else {
-                        $pegawai->is_late = false;
-                        $pegawai->no_panggilan_lewat = null;
+                        $pegawai->no_meja = $this->callingService->calculateTableNumber($pegawai->no_kerusi, $activeSesi);
+                        if ($activeSesi->is_late) {
+                            $this->callingService->assignLateCallingNumberIfApplicable($pegawai, $activeSesi);
+                        } else {
+                            $pegawai->is_late = false;
+                            $pegawai->no_panggilan_lewat = null;
+                        }
                     }
+                } else {
+                    $this->callingService->clearLateCallingOnCancel($pegawai);
                 }
-            } else {
-                $this->callingService->clearLateCallingOnCancel($pegawai);
+
+                $pegawai->save();
+            });
+        } catch (QueryException $e) {
+            $driverErrno = $e->errorInfo[1] ?? null;
+            if (in_array($driverErrno, [1205, 1213], true)) {
+                report($e);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => __('Sistem sedang sibuk. Sila cuba lagi.'),
+                ], 503);
             }
 
-            $pegawai->save();
-        });
+            throw $e;
+        }
 
         return response()->json([
             'success' => true,
