@@ -56,7 +56,7 @@ class ReportController extends Controller
         $sesi = SesiMajlis::query()->findOrFail((int) $validated['sesi_id']);
         $query = $this->reportPreviewTableService
             ->queryFor($sesi, $validated['section'])
-            ->with(['ptj']);
+            ->with(['ptj', 'bersara']);
 
         return DataTables::of($query)
             ->filterColumn('nama', function (Builder $query, string $keyword): void {
@@ -85,8 +85,12 @@ class ReportController extends Controller
             ->editColumn('nama', fn (Pegawai $pegawai) => e((string) $pegawai->nama))
             ->editColumn('no_kerusi', fn (Pegawai $pegawai) => e((string) ($pegawai->no_kerusi ?? '-')))
             ->editColumn('no_meja', fn (Pegawai $pegawai) => e((string) ($pegawai->no_meja ?? '-')))
+            ->editColumn('tarikh_bersara', fn (Pegawai $pegawai) => e($pegawai->tarikh_bersara?->format('d/m/Y') ?? '-'))
+            ->editColumn('tempoh_berkhidmat', fn (Pegawai $pegawai) => e((string) ($pegawai->tempoh_berkhidmat ?? '-')))
             ->addColumn('ptj_name', fn (Pegawai $pegawai) => e((string) ($pegawai->ptj?->nama_ptj ?? '-')))
+            ->addColumn('bersara_name', fn (Pegawai $pegawai) => e((string) ($pegawai->bersara?->jenis_bersara ?? '-')))
             ->removeColumn('ptj')
+            ->removeColumn('bersara')
             ->removeColumn('no_kp')
             ->make(true);
     }
@@ -118,9 +122,12 @@ class ReportController extends Controller
         $slot = (int) $sesi->s_kehadiran;
 
         $query = Pegawai::query()
-            ->with(['ptj:id,nama_ptj'])
+            ->with(['ptj:id,nama_ptj', 'bersara:id,jenis_bersara'])
             ->where('sesi_majlis_id', $sesiId)
-            ->select(['id', 'nama', 'ptj_id', 'no_kerusi', 'no_meja', 'is_late']);
+            ->select([
+                'id', 'nama', 'ptj_id', 'no_kerusi', 'no_meja', 'is_late',
+                'tarikh_bersara', 'bersara_id', 'tempoh_berkhidmat',
+            ]);
 
         $onTime = collect();
         $late = collect();
@@ -143,11 +150,14 @@ class ReportController extends Controller
 
         if ($exportType !== self::EXPORT_ONTIME && $exportType !== self::EXPORT_LATE) {
             $notAttendSlot = Pegawai::query()
-                ->with(['ptj:id,nama_ptj'])
+                ->with(['ptj:id,nama_ptj', 'bersara:id,jenis_bersara'])
                 ->where('s_kehadiran', $slot)
                 ->where('is_attend', false)
                 ->orderBy('no_kerusi')
-                ->select(['id', 'nama', 'ptj_id', 'no_kerusi', 'no_meja', 'is_late'])
+                ->select([
+                    'id', 'nama', 'ptj_id', 'no_kerusi', 'no_meja', 'is_late',
+                    'tarikh_bersara', 'bersara_id', 'tempoh_berkhidmat',
+                ])
                 ->get();
         }
 

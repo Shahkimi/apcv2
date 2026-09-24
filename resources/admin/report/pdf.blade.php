@@ -26,11 +26,18 @@
         .w-ptj { width: 32%; }
         .w-kerusi { width: 16%; text-align: center; }
         .w-meja { width: 16%; text-align: center; }
+        .w-tarikh { width: 12%; text-align: center; }
+        .w-jenis { width: 12%; }
+        .w-tempoh { width: 8%; text-align: center; }
+        body.jasamu .w-name { width: 24%; }
+        body.jasamu .w-ptj { width: 20%; }
+        body.jasamu .w-kerusi { width: 9%; }
+        body.jasamu .w-meja { width: 9%; }
         .empty { border: 1px dashed #9ca3af; padding: 8px; color: #6b7280; font-size: 10px; }
         .footer { margin-top: 14px; border-top: 1px solid #d1d5db; padding-top: 6px; color: #6b7280; font-size: 9px; text-align: center; }
     </style>
 </head>
-<body>
+<body class="{{ $isJasamu ? 'jasamu' : '' }}">
     @php
         $scope = $exportType ?? 'all';
         $showOnTime = $scope === 'all' || $scope === 'ontime';
@@ -57,96 +64,21 @@
     @if ($showOnTime)
         <section class="section">
             <h2 class="section-title">{{ __('Pegawai Tepat Masa') }} <span class="count">({{ $onTime->count() }} {{ __('orang') }})</span></h2>
-            @if ($onTime->isEmpty())
-                <p class="empty">{{ __('Tiada pegawai tepat masa untuk sesi ini.') }}</p>
-            @else
-                <table>
-                    <thead>
-                        <tr>
-                            <th class="w-no">#</th>
-                            <th class="w-name">{{ __('Nama') }}</th>
-                            <th class="w-ptj">{{ __('PTJ') }}</th>
-                            <th class="w-kerusi">{{ __('No. Kerusi / No. Sijil') }}</th>
-                            <th class="w-meja">{{ __('Meja') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($onTime as $index => $pegawai)
-                            <tr>
-                                <td class="w-no">{{ $index + 1 }}</td>
-                                <td class="w-name">{{ $pegawai->nama }}</td>
-                                <td class="w-ptj">{{ $pegawai->ptj?->nama_ptj ?? '-' }}</td>
-                                <td class="w-kerusi">{{ $pegawai->no_kerusi ?? '-' }}</td>
-                                <td class="w-meja">{{ $pegawai->no_meja ?? '-' }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            @endif
+            @include('admin::report.partials.pdf-table', ['rows' => $onTime, 'emptyText' => __('Tiada pegawai tepat masa untuk sesi ini.')])
         </section>
     @endif
 
     @if ($showLate)
         <section class="section">
             <h2 class="section-title">{{ __('Pegawai Lewat') }} <span class="count">({{ $late->count() }} {{ __('orang') }})</span></h2>
-            @if ($late->isEmpty())
-                <p class="empty">{{ __('Tiada pegawai lewat untuk sesi ini.') }}</p>
-            @else
-                <table>
-                    <thead>
-                        <tr>
-                            <th class="w-no">#</th>
-                            <th class="w-name">{{ __('Nama') }}</th>
-                            <th class="w-ptj">{{ __('PTJ') }}</th>
-                            <th class="w-kerusi">{{ __('No. Kerusi / No. Sijil') }}</th>
-                            <th class="w-meja">{{ __('Meja') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($late as $index => $pegawai)
-                            <tr>
-                                <td class="w-no">{{ $index + 1 }}</td>
-                                <td class="w-name">{{ $pegawai->nama }}</td>
-                                <td class="w-ptj">{{ $pegawai->ptj?->nama_ptj ?? '-' }}</td>
-                                <td class="w-kerusi">{{ $pegawai->no_kerusi ?? '-' }}</td>
-                                <td class="w-meja">{{ $pegawai->no_meja ?? '-' }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            @endif
+            @include('admin::report.partials.pdf-table', ['rows' => $late, 'emptyText' => __('Tiada pegawai lewat untuk sesi ini.')])
         </section>
     @endif
 
     @if ($showNotAttendSlot)
         <section class="section">
             <h2 class="section-title">{{ __('Pegawai Tidak Hadir (Slot Sesi)') }} <span class="count">({{ $notAttendSlot->count() }} {{ __('orang') }})</span></h2>
-            @if ($notAttendSlot->isEmpty())
-                <p class="empty">{{ __('Tiada pegawai dalam kategori ini untuk sesi ini.') }}</p>
-            @else
-                <table>
-                    <thead>
-                        <tr>
-                            <th class="w-no">#</th>
-                            <th class="w-name">{{ __('Nama') }}</th>
-                            <th class="w-ptj">{{ __('PTJ') }}</th>
-                            <th class="w-kerusi">{{ __('No. Kerusi / No. Sijil') }}</th>
-                            <th class="w-meja">{{ __('Meja') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($notAttendSlot as $index => $pegawai)
-                            <tr>
-                                <td class="w-no">{{ $index + 1 }}</td>
-                                <td class="w-name">{{ $pegawai->nama }}</td>
-                                <td class="w-ptj">{{ $pegawai->ptj?->nama_ptj ?? '-' }}</td>
-                                <td class="w-kerusi">{{ $pegawai->no_kerusi ?? '-' }}</td>
-                                <td class="w-meja">{{ $pegawai->no_meja ?? '-' }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            @endif
+            @include('admin::report.partials.pdf-table', ['rows' => $notAttendSlot, 'emptyText' => __('Tiada pegawai dalam kategori ini untuk sesi ini.')])
         </section>
     @endif
 

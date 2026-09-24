@@ -6,16 +6,33 @@ namespace App\Http\Controllers\Admin\Kawalan;
 
 use App\Http\Controllers\Controller;
 use App\Models\SesiMajlis;
+use App\Services\EventModeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Yajra\DataTables\Facades\DataTables;
 
 class SesiMajlisController extends Controller
 {
+    public function __construct(private readonly EventModeService $eventMode) {}
+
     public function index(): View
     {
-        return view('admin::kawalan.sesi-majlis.index');
+        return view('admin::kawalan.sesi-majlis.index', [
+            'eventModeOptions' => EventModeService::options(),
+        ]);
+    }
+
+    public function updateEventMode(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'mode' => ['required', 'string', Rule::in(array_keys(EventModeService::options()))],
+        ]);
+
+        $this->eventMode->set($validated['mode']);
+
+        return response()->json(['success' => true, 'mode' => $validated['mode']]);
     }
 
     public function datatable()

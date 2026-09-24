@@ -15,6 +15,7 @@
                     ['label' => __('PTJ'), 'route' => 'admin.kawalan.ptj.index', 'icon' => 'ri-building-line'],
                     ['label' => __('Jawatan'), 'route' => 'admin.kawalan.jawatan.index', 'icon' => 'ri-briefcase-line'],
                     ['label' => __('Gred'), 'route' => 'admin.kawalan.gred.index', 'icon' => 'ri-star-line'],
+                    ['label' => __('Bersara'), 'route' => 'admin.kawalan.bersara.index', 'icon' => 'ri-user-heart-line'],
                     ['label' => __('Meja'), 'route' => 'admin.kawalan.meja.index', 'icon' => 'ri-table-line'],
                     ['label' => __('Sesi Majlis'), 'route' => 'admin.kawalan.sesi-majlis.index', 'icon' => 'ri-calendar-event-line'],
                     ['label' => __('Backdrop'), 'route' => 'admin.kawalan.backdrop.index', 'icon' => 'ri-image-2-line'],

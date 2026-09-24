@@ -14,12 +14,13 @@ use Symfony\Component\HttpFoundation\Response;
 
 class DatabaseImportController extends Controller
 {
-    public function index(): View
+    public function index(DatabaseImportService $service): View
     {
         return view('admin::kawalan.database.index', [
-            'fillableFields' => DatabaseImportService::PEGAWAI_FILLABLE,
-            'requiredMapped' => DatabaseImportService::REQUIRED_MAPPED_FIELDS,
-            'optionalPolicyFields' => DatabaseImportService::OPTIONAL_POLICY_FIELDS,
+            'fillableFields' => $service->fillableFields(),
+            'requiredMapped' => $service->requiredMappedFields(),
+            'optionalPolicyFields' => $service->optionalPolicyFields(),
+            'jasamuFields' => DatabaseImportService::JASAMU_FIELDS,
         ]);
     }
 

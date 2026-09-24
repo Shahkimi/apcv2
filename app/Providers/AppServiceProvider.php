@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Models\SesiMajlis;
 use App\Observers\SesiMajlisObserver;
+use App\Services\EventModeService;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -16,7 +17,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(EventModeService::class);
     }
 
     /**
@@ -29,5 +30,12 @@ class AppServiceProvider extends ServiceProvider
         View::addNamespace('user', resource_path('user'));
         View::addNamespace('media', resource_path('media'));
         View::addNamespace('admin', resource_path('admin'));
+
+        View::composer('*', function ($view): void {
+            $mode = $this->app->make(EventModeService::class)->current();
+
+            $view->with('eventMode', $mode)
+                ->with('isJasamu', $mode === EventModeService::MODE_JASAMU);
+        });
     }
 }

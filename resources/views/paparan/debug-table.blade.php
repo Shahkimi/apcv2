@@ -1,3 +1,15 @@
+@php
+    $paparanColumns = [__('Bil.'), __('Giliran'), __('Nama pegawai'), __('Tempat Duduk'), __('PTJ')];
+    if ($isJasamu) {
+        $paparanColumns[] = __('Persaraan');
+    }
+    $paparanColumns[] = __('Masa hadir');
+    $paparanColumns[] = __('Status');
+
+    $centeredIndexes = $isJasamu ? [0, 1, 3, 5, 6, 7] : [0, 1, 3, 5, 6];
+    $headerClasses = array_fill_keys($centeredIndexes, 'text-center');
+@endphp
+
 <x-kawalan-shell>
     <x-crud-header
         :title="__('Debug paparan')"
@@ -64,8 +76,8 @@
 
         <x-data-table
             table-id="paparan-table"
-            :columns="[__('Bil.'), __('Giliran'), __('Nama pegawai'), __('Tempat Duduk'), __('PTJ'), __('Masa hadir'), __('Status')]"
-            :column-header-classes="[0 => 'text-center', 1 => 'text-center', 3 => 'text-center', 5 => 'text-center', 6 => 'text-center']"
+            :columns="$paparanColumns"
+            :column-header-classes="$headerClasses"
             class="shadow-sm ring-1 ring-border/30"
         />
     </section>
@@ -76,6 +88,7 @@
         $(function() {
             const refreshMs = @json($refreshIntervalMs);
             const paparanStatsUrl = @json($statsRoute);
+            const isJasamu = @json($isJasamu);
 
             function formatStatNumber(n) {
                 return Number(n).toLocaleString('en-US');
@@ -177,30 +190,73 @@
                         }
                     },
                 },
-                columnDefs: [
-                    { targets: 0, className: 'text-center tabular-nums text-muted-foreground', width: '3.5rem' },
-                    { targets: 1, className: 'text-center tabular-nums font-semibold text-foreground', width: '8%' },
-                    { targets: 2, className: 'align-top py-3 min-w-0', width: '30%' },
-                    { targets: 3, className: 'text-center align-top py-3', width: '15%' },
-                    { targets: 4, className: 'text-muted-foreground min-w-0', width: '20%' },
-                    { targets: 5, className: 'text-center tabular-nums font-medium text-foreground', width: '13%' },
-                    { targets: 6, className: 'text-center', width: '10%' },
-                ],
                 columns: [
                     {
                         data: null,
                         orderable: false,
                         searchable: false,
+                        className: 'dt-center tabular-nums text-muted-foreground',
+                        width: '3.5rem',
                         render: function(_data, _type, _row, meta) {
                             return meta.settings._iDisplayStart + meta.row + 1;
                         },
                     },
-                    { data: 'giliran', name: 'giliran', searchable: false, orderable: false, defaultContent: '—' },
-                    { data: 'nama', name: 'nama' },
-                    { data: 'tempat_duduk', name: 'tempat_duduk', searchable: false, orderable: false },
-                    { data: 'ptj_name', name: 'ptj.nama_ptj', searchable: false, orderable: false },
-                    { data: 'hadir_at_label', name: 'hadir_at', searchable: false, orderable: false, defaultContent: '—' },
-                    { data: 'status_label', name: 'status', searchable: false, orderable: false },
+                    {
+                        data: 'giliran',
+                        name: 'giliran',
+                        searchable: false,
+                        orderable: false,
+                        defaultContent: '—',
+                        className: 'dt-center tabular-nums font-semibold text-foreground',
+                        width: '8%',
+                    },
+                    {
+                        data: 'nama',
+                        name: 'nama',
+                        className: 'align-top py-3 min-w-0',
+                        width: isJasamu ? '24%' : '30%',
+                    },
+                    {
+                        data: 'tempat_duduk',
+                        name: 'tempat_duduk',
+                        searchable: false,
+                        orderable: false,
+                        className: 'dt-center align-top py-3',
+                        width: '15%',
+                    },
+                    {
+                        data: 'ptj_name',
+                        name: 'ptj.nama_ptj',
+                        searchable: false,
+                        orderable: false,
+                        className: 'text-muted-foreground min-w-0',
+                        width: isJasamu ? '16%' : '20%',
+                    },
+                    ...(isJasamu ? [{
+                        data: 'persaraan',
+                        name: 'persaraan',
+                        searchable: false,
+                        orderable: false,
+                        className: 'dt-center',
+                        width: '14%',
+                    }] : []),
+                    {
+                        data: 'hadir_at_label',
+                        name: 'hadir_at',
+                        searchable: false,
+                        orderable: false,
+                        defaultContent: '—',
+                        className: 'dt-center tabular-nums font-medium text-foreground',
+                        width: '13%',
+                    },
+                    {
+                        data: 'status_label',
+                        name: 'status',
+                        searchable: false,
+                        orderable: false,
+                        className: 'dt-center',
+                        width: '10%',
+                    },
                 ],
             });
 

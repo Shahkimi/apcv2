@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Models\Bersara;
 use App\Models\Gred;
 use App\Models\Jawatan;
 use App\Models\Pegawai;
@@ -27,6 +28,10 @@ class ReferenceDataSeeder extends Seeder
         $g1 = Gred::query()->create(['desc_gred' => 'N41']);
         $g2 = Gred::query()->create(['desc_gred' => 'N29']);
         $g3 = Gred::query()->create(['desc_gred' => 'N22']);
+
+        Bersara::query()->create(['jenis_bersara' => 'Wajib']);
+        Bersara::query()->create(['jenis_bersara' => 'Pilihan']);
+        Bersara::query()->create(['jenis_bersara' => 'Kesihatan']);
 
         $ptjIds = [$ptj1->id, $ptj2->id];
         $jawatanIds = [$j1->id, $j2->id, $j3->id];

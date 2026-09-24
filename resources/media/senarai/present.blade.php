@@ -27,6 +27,18 @@
             --officer-jawatan-font-size-md: {{ (int) $displaySettings['fonts']['jawatan_md'] }}px;
             --officer-ptj-font-size: {{ (int) $displaySettings['fonts']['ptj_base_px'] }}px;
             --officer-ptj-font-size-sm: {{ (int) $displaySettings['fonts']['ptj_sm_px'] }}px;
+            /*
+             * Jasamu-only lines (tarikh bersara / bersara / tempoh berkhidmat) — same breakpoint idea.
+             */
+            --officer-tarikh-font-size: {{ (int) $displaySettings['fonts']['tarikh_base'] }}px;
+            --officer-tarikh-font-size-sm: {{ (int) $displaySettings['fonts']['tarikh_sm'] }}px;
+            --officer-tarikh-font-size-md: {{ (int) $displaySettings['fonts']['tarikh_md'] }}px;
+            --officer-bersara-font-size: {{ (int) $displaySettings['fonts']['bersara_base'] }}px;
+            --officer-bersara-font-size-sm: {{ (int) $displaySettings['fonts']['bersara_sm'] }}px;
+            --officer-bersara-font-size-md: {{ (int) $displaySettings['fonts']['bersara_md'] }}px;
+            --officer-tempoh-font-size: {{ (int) $displaySettings['fonts']['tempoh_base'] }}px;
+            --officer-tempoh-font-size-sm: {{ (int) $displaySettings['fonts']['tempoh_sm'] }}px;
+            --officer-tempoh-font-size-md: {{ (int) $displaySettings['fonts']['tempoh_md'] }}px;
             --officer-mt-base: {{ $displaySettings['position']['mt_base'] }};
             --officer-mt-sm: {{ $displaySettings['position']['mt_sm'] }};
             --officer-mt-md: {{ $displaySettings['position']['mt_md'] }};
@@ -47,11 +59,26 @@
             line-height: 1.2;
         }
 
-        #officer-ptj {
-            font-size: var(--officer-ptj-font-size);
+        .officer-line {
             font-weight: 500;
             color: #fff;
             line-height: 1.2;
+        }
+
+        #officer-ptj {
+            font-size: var(--officer-ptj-font-size);
+        }
+
+        #officer-tarikh {
+            font-size: var(--officer-tarikh-font-size);
+        }
+
+        #officer-bersara {
+            font-size: var(--officer-bersara-font-size);
+        }
+
+        #officer-tempoh {
+            font-size: var(--officer-tempoh-font-size);
         }
 
         .officer-display-wrap {
@@ -72,6 +99,18 @@
                 font-size: var(--officer-ptj-font-size-sm);
             }
 
+            #officer-tarikh {
+                font-size: var(--officer-tarikh-font-size-sm);
+            }
+
+            #officer-bersara {
+                font-size: var(--officer-bersara-font-size-sm);
+            }
+
+            #officer-tempoh {
+                font-size: var(--officer-tempoh-font-size-sm);
+            }
+
             .officer-display-wrap {
                 margin-top: var(--officer-mt-sm);
             }
@@ -84,6 +123,18 @@
 
             #officer-jawatan {
                 font-size: var(--officer-jawatan-font-size-md);
+            }
+
+            #officer-tarikh {
+                font-size: var(--officer-tarikh-font-size-md);
+            }
+
+            #officer-bersara {
+                font-size: var(--officer-bersara-font-size-md);
+            }
+
+            #officer-tempoh {
+                font-size: var(--officer-tempoh-font-size-md);
             }
 
             .officer-display-wrap {
@@ -105,7 +156,13 @@
             <div id="officer-display" class="transition-content space-y-1 sm:space-y-2">
                 <h1 id="officer-name" class="transition-content"></h1>
                 <p id="officer-jawatan" class="transition-content"></p>
-                <p id="officer-ptj"></p>
+                @if ($isJasamu)
+                    <p id="officer-tarikh" class="officer-line transition-content"></p>
+                    <p id="officer-bersara" class="officer-line transition-content"></p>
+                    <p id="officer-tempoh" class="officer-line transition-content"></p>
+                @else
+                    <p id="officer-ptj" class="officer-line"></p>
+                @endif
             </div>
         </div>
     </div>
@@ -116,6 +173,14 @@
         const progressReadUrl = @json(route('media.senarai.progress.show'));
         const progressUpdateUrl = @json(route('media.senarai.progress.update'));
         const sesiId = @json($sesiId);
+        const isJasamu = @json($isJasamu);
+        const extraLines = isJasamu
+            ? [
+                ['officer-tarikh', (o) => `{{ __('Tarikh bersara') }}: ${o.tarikh_bersara}`],
+                ['officer-bersara', (o) => `{{ __('Bersara') }}: ${o.bersara}`],
+                ['officer-tempoh', (o) => `{{ __('Tempoh berkhidmat') }}: ${o.tempoh}`],
+            ]
+            : [['officer-ptj', (o) => o.ptj]];
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
         const storageKey = `senarai_position_${sesiId ?? 'all'}`;
 
@@ -130,7 +195,16 @@
 
         const nameEl = document.getElementById('officer-name');
         const jawatanEl = document.getElementById('officer-jawatan');
-        const ptjEl = document.getElementById('officer-ptj');
+        const extraEls = extraLines.map(([id]) => document.getElementById(id)).filter(Boolean);
+
+        function fillExtras(officer) {
+            extraLines.forEach(([id, getText]) => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.textContent = getText(officer);
+                }
+            });
+        }
 
         function normalizeIndex(index) {
             if (totalOfficers <= 0) {
@@ -191,20 +265,24 @@
             if (!animate) {
                 nameEl.textContent = officer.nama;
                 jawatanEl.textContent = officer.jawatan;
-                ptjEl.textContent = officer.ptj;
+                fillExtras(officer);
                 nameEl.style.opacity = '1';
                 jawatanEl.style.opacity = '1';
-                ptjEl.style.opacity = '1';
                 nameEl.style.transform = 'translateY(0)';
                 jawatanEl.style.transform = 'translateY(0)';
-                ptjEl.style.transform = 'translateY(0)';
+                extraEls.forEach(function(el) {
+                    el.style.opacity = '1';
+                    el.style.transform = 'translateY(0)';
+                });
             } else {
                 nameEl.style.opacity = '0';
                 nameEl.style.transform = 'translateY(20px)';
                 jawatanEl.style.opacity = '0';
                 jawatanEl.style.transform = 'translateY(20px)';
-                ptjEl.style.opacity = '0';
-                ptjEl.style.transform = 'translateY(20px)';
+                extraEls.forEach(function(el) {
+                    el.style.opacity = '0';
+                    el.style.transform = 'translateY(20px)';
+                });
 
                 setTimeout(function() {
                     if (gen !== displayGeneration) {
@@ -213,7 +291,7 @@
 
                     nameEl.textContent = officer.nama;
                     jawatanEl.textContent = officer.jawatan;
-                    ptjEl.textContent = officer.ptj;
+                    fillExtras(officer);
 
                     nameEl.style.opacity = '1';
                     nameEl.style.transform = 'translateY(0)';
@@ -232,8 +310,10 @@
                             return;
                         }
 
-                        ptjEl.style.opacity = '1';
-                        ptjEl.style.transform = 'translateY(0)';
+                        extraEls.forEach(function(el) {
+                            el.style.opacity = '1';
+                            el.style.transform = 'translateY(0)';
+                        });
                     }, 240);
                 }, 250);
             }

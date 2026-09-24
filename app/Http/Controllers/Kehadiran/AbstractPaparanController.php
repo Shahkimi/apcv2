@@ -51,8 +51,11 @@ abstract class AbstractPaparanController extends Controller
         $filters = $this->buildFilters($request);
 
         $base = Pegawai::query()
-            ->select(['id', 'nama', 'no_kp', 'ptj_id', 'jawatan_id', 'no_kerusi', 'no_meja', 'no_panggilan_lewat', 'is_late', 'hadir_at'])
-            ->with(['ptj:id,nama_ptj', 'jawatan:id,desc_jawatan'])
+            ->select([
+                'id', 'nama', 'no_kp', 'ptj_id', 'jawatan_id', 'no_kerusi', 'no_meja', 'no_panggilan_lewat', 'is_late', 'hadir_at',
+                'tarikh_bersara', 'bersara_id', 'tempoh_berkhidmat',
+            ])
+            ->with(['ptj:id,nama_ptj', 'jawatan:id,desc_jawatan', 'bersara:id,jenis_bersara'])
             ->tap($filters);
 
         $stats = $this->computeStats($request);
@@ -81,9 +84,10 @@ abstract class AbstractPaparanController extends Controller
             ->removeColumn('no_kerusi')
             ->removeColumn('no_meja')
             ->addColumn('ptj_name', fn (Pegawai $pegawai) => e((string) ($pegawai->ptj?->nama_ptj ?? '—')))
+            ->addColumn('persaraan', fn (Pegawai $pegawai) => $this->renderPersaraanCell($pegawai))
             ->addColumn('hadir_at_label', fn (Pegawai $pegawai) => $this->formatHadirAt($pegawai->hadir_at))
             ->addColumn('status_label', fn (Pegawai $pegawai) => $this->renderStatusPill((bool) $pegawai->is_late))
-            ->rawColumns(['nama', 'tempat_duduk', 'status_label'])
+            ->rawColumns(['nama', 'tempat_duduk', 'persaraan', 'status_label'])
             ->with(['stats' => $stats])
             ->make(true);
     }
@@ -151,6 +155,18 @@ abstract class AbstractPaparanController extends Controller
             .'<span class="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-1 text-xs font-semibold tabular-nums text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300" title="'.e(__('No. Meja')).'">'
             .'<i class="ri-table-line text-sm" aria-hidden="true"></i>'.$meja
             .'</span>'
+            .'</div>';
+    }
+
+    private function renderPersaraanCell(Pegawai $pegawai): string
+    {
+        $tarikh = $pegawai->tarikh_bersara?->format('d/m/Y') ?? '—';
+        $jenis = $pegawai->bersara?->jenis_bersara ?? '—';
+        $tempoh = $pegawai->tempoh_berkhidmat !== null ? $pegawai->tempoh_berkhidmat.' '.__('tahun') : '—';
+
+        return '<div class="flex flex-col items-center gap-0.5 text-xs">'
+            .'<span class="font-semibold tabular-nums text-foreground">'.e($tarikh).'</span>'
+            .'<span class="text-muted-foreground">'.e($jenis).' · '.e($tempoh).'</span>'
             .'</div>';
     }
 

@@ -36,6 +36,27 @@
     line-height: 1.2;
 }
 
+.presentation-preview-stage .officer-tarikh {
+    font-size: var(--officer-tarikh-font-size);
+    font-weight: 500;
+    color: #fff;
+    line-height: 1.2;
+}
+
+.presentation-preview-stage .officer-bersara {
+    font-size: var(--officer-bersara-font-size);
+    font-weight: 500;
+    color: #fff;
+    line-height: 1.2;
+}
+
+.presentation-preview-stage .officer-tempoh {
+    font-size: var(--officer-tempoh-font-size);
+    font-weight: 500;
+    color: #fff;
+    line-height: 1.2;
+}
+
 /* Matrix number inputs — hide native spin buttons, unit suffix is added in markup */
 .matrix-number {
     appearance: textfield;

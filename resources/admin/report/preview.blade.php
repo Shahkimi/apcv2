@@ -1,3 +1,20 @@
+@php
+    $reportTableColumns = ['#', __('Nama'), __('PTJ')];
+    $reportCentered = [0];
+    if ($isJasamu) {
+        $reportTableColumns[] = __('Tarikh Bersara');
+        $reportCentered[] = count($reportTableColumns) - 1;
+        $reportTableColumns[] = __('Jenis Persaraan');
+        $reportTableColumns[] = __('Tempoh (thn)');
+        $reportCentered[] = count($reportTableColumns) - 1;
+    }
+    $reportTableColumns[] = __('No. Kerusi / No. Sijil');
+    $reportCentered[] = count($reportTableColumns) - 1;
+    $reportTableColumns[] = __('No. Meja');
+    $reportCentered[] = count($reportTableColumns) - 1;
+    $reportHeaderClasses = array_fill_keys($reportCentered, 'text-center');
+@endphp
+
 <x-dashboard-layout :title="__('Pratonton Laporan Kehadiran')" role="admin">
     <x-kawalan-shell>
         <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -95,8 +112,8 @@
                 </div>
                 <x-data-table
                     table-id="report-ontime-table"
-                    :columns="['#', __('Nama'), __('PTJ'), __('No. Kerusi / No. Sijil'), __('No. Meja')]"
-                    :column-header-classes="[0 => 'text-center', 3 => 'text-center', 4 => 'text-center']"
+                    :columns="$reportTableColumns"
+                    :column-header-classes="$reportHeaderClasses"
                     class="shadow-sm ring-1 ring-border/30"
                 />
             </section>
@@ -121,8 +138,8 @@
                 </div>
                 <x-data-table
                     table-id="report-late-table"
-                    :columns="['#', __('Nama'), __('PTJ'), __('No. Kerusi / No. Sijil'), __('No. Meja')]"
-                    :column-header-classes="[0 => 'text-center', 3 => 'text-center', 4 => 'text-center']"
+                    :columns="$reportTableColumns"
+                    :column-header-classes="$reportHeaderClasses"
                     class="shadow-sm ring-1 ring-border/30"
                 />
             </section>
@@ -147,8 +164,8 @@
                 </div>
                 <x-data-table
                     table-id="report-notattend-table"
-                    :columns="['#', __('Nama'), __('PTJ'), __('No. Kerusi / No. Sijil'), __('No. Meja')]"
-                    :column-header-classes="[0 => 'text-center', 3 => 'text-center', 4 => 'text-center']"
+                    :columns="$reportTableColumns"
+                    :column-header-classes="$reportHeaderClasses"
                     class="shadow-sm ring-1 ring-border/30"
                 />
             </section>
@@ -159,6 +176,7 @@
                 $(function() {
                     const datatableUrl = @json(route('admin.report.datatable'));
                     const sesiId = {{ (int) $sesi->id }};
+                    const isJasamu = @json($isJasamu);
 
                     const reportColumns = [{
                             data: null,
@@ -178,6 +196,22 @@
                             data: 'ptj_name',
                             name: 'ptj_name',
                         },
+                        ...(isJasamu ? [
+                            {
+                                data: 'tarikh_bersara',
+                                name: 'tarikh_bersara',
+                                className: 'text-center tabular-nums',
+                            },
+                            {
+                                data: 'bersara_name',
+                                name: 'bersara_name',
+                            },
+                            {
+                                data: 'tempoh_berkhidmat',
+                                name: 'tempoh_berkhidmat',
+                                className: 'text-center tabular-nums',
+                            },
+                        ] : []),
                         {
                             data: 'no_kerusi',
                             name: 'no_kerusi',

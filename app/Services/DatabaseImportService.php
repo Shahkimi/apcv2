@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\Bersara;
 use App\Models\Gred;
 use App\Models\Jawatan;
 use App\Models\Pegawai;
@@ -15,9 +16,11 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
+use PhpOffice\PhpSpreadsheet\Cell\Cell;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\RichText\RichText;
+use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 use RuntimeException;
 
 /**
@@ -71,6 +74,69 @@ final class DatabaseImportService
         'is_late',
         's_kehadiran',
     ];
+
+    /** @var list<string> */
+    public const JASAMU_FIELDS = [
+        'tarikh_bersara',
+        'bersara_id',
+        'tempoh_berkhidmat',
+    ];
+
+    private const TEMPOH_BERKHIDMAT_MAX = 100;
+
+    public function __construct(private readonly EventModeService $eventMode) {}
+
+    /**
+     * @return list<string>
+     */
+    public static function fillableFieldsFor(string $mode): array
+    {
+        return $mode === EventModeService::MODE_JASAMU
+            ? [...self::PEGAWAI_FILLABLE, ...self::JASAMU_FIELDS]
+            : self::PEGAWAI_FILLABLE;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function requiredMappedFieldsFor(string $mode): array
+    {
+        return $mode === EventModeService::MODE_JASAMU
+            ? [...self::REQUIRED_MAPPED_FIELDS, ...self::JASAMU_FIELDS]
+            : self::REQUIRED_MAPPED_FIELDS;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function optionalPolicyFieldsFor(string $mode): array
+    {
+        return self::OPTIONAL_POLICY_FIELDS;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function fillableFields(): array
+    {
+        return self::fillableFieldsFor($this->eventMode->current());
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function requiredMappedFields(): array
+    {
+        return self::requiredMappedFieldsFor($this->eventMode->current());
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function optionalPolicyFields(): array
+    {
+        return self::optionalPolicyFieldsFor($this->eventMode->current());
+    }
 
     public function storeUpload(UploadedFile $file): array
     {
@@ -159,7 +225,7 @@ final class DatabaseImportService
             $headers = [];
             for ($c = 1; $c <= $maxColIdx; $c++) {
                 $coord = Coordinate::stringFromColumnIndex($c).'1';
-                $headers[] = $this->cellToImportString($sheet->getCell($coord)->getValue());
+                $headers[] = $this->cellToImportString($sheet->getCell($coord));
             }
 
             $rowCount = 0;
@@ -168,7 +234,7 @@ final class DatabaseImportService
                 $row = [];
                 for ($c = 1; $c <= $maxColIdx; $c++) {
                     $coord = Coordinate::stringFromColumnIndex($c).$r;
-                    $row[] = $this->cellToImportString($sheet->getCell($coord)->getValue());
+                    $row[] = $this->cellToImportString($sheet->getCell($coord));
                 }
                 if (! $this->rowIsEmpty($row)) {
                     $rowCount++;
@@ -182,8 +248,10 @@ final class DatabaseImportService
         }
     }
 
-    private function cellToImportString(mixed $value): string
+    private function cellToImportString(Cell $cell): string
     {
+        $value = $cell->getValue();
+
         if ($value === null) {
             return '';
         }
@@ -194,6 +262,10 @@ final class DatabaseImportService
 
         if ($value instanceof DateTimeInterface) {
             return $value->format('Y-m-d H:i:s');
+        }
+
+        if ((is_int($value) || is_float($value)) && ExcelDate::isDateTime($cell)) {
+            return ExcelDate::excelToDateTimeObject((float) $value)->format('Y-m-d H:i:s');
         }
 
         if (is_float($value) && floor($value) === $value && abs($value) < 1e15) {
@@ -391,7 +463,7 @@ final class DatabaseImportService
                 $row = [];
                 for ($c = 1; $c <= $maxColIdx; $c++) {
                     $coord = Coordinate::stringFromColumnIndex($c).$r;
-                    $row[] = $this->cellToImportString($sheet->getCell($coord)->getValue());
+                    $row[] = $this->cellToImportString($sheet->getCell($coord));
                 }
                 if (! $this->rowIsEmpty($row)) {
                     $rows[] = $row;
@@ -436,8 +508,9 @@ final class DatabaseImportService
         int $csvLine,
     ): array {
         $out = ['_csv_line' => $csvLine];
+        $requiredMappedFields = $this->requiredMappedFields();
 
-        foreach (self::PEGAWAI_FILLABLE as $field) {
+        foreach ($this->fillableFields() as $field) {
             $csvHeader = $mapping[$field] ?? '';
             $raw = '';
             if ($csvHeader !== '' && isset($headerIndex[$csvHeader])) {
@@ -449,7 +522,7 @@ final class DatabaseImportService
             $isEmpty = $csvHeader === '' || $raw === '';
             $policy = $emptyPolicy[$field] ?? self::POLICY_ZERO;
 
-            if (in_array($field, self::REQUIRED_MAPPED_FIELDS, true)) {
+            if (in_array($field, $requiredMappedFields, true)) {
                 if ($csvHeader === '') {
                     throw new InvalidArgumentException("Baris {$csvLine}: medan '{$field}' mesti dipetakan ke lajur sumber.");
                 }
@@ -469,9 +542,78 @@ final class DatabaseImportService
     {
         return match ($field) {
             'nama', 'no_kp' => $raw,
-            'ptj_id', 'jawatan_id', 'gred_id' => $this->parseRequiredId($raw, $field, $csvLine),
+            'ptj_id', 'jawatan_id', 'gred_id', 'bersara_id' => $this->parseRequiredId($raw, $field, $csvLine),
+            'tarikh_bersara' => $this->parseTarikhBersara($raw, $csvLine),
+            'tempoh_berkhidmat' => $this->parseTempohBerkhidmat($raw, $csvLine),
             default => throw new InvalidArgumentException("Baris {$csvLine}: medan tidak dijangka '{$field}'."),
         };
+    }
+
+    private function parseTarikhBersara(string $raw, int $csvLine): string
+    {
+        // ddmmyyyy, e.g. 31122026
+        if (preg_match('/^(\d{2})(\d{2})(\d{4})$/', $raw, $m) === 1) {
+            [$_, $d, $mo, $y] = $m;
+
+            return $this->assembleTarikhBersara((int) $d, (int) $mo, (int) $y, $csvLine, $raw);
+        }
+
+        // d/m/yyyy
+        if (preg_match('/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/', $raw, $m) === 1) {
+            [$_, $d, $mo, $y] = $m;
+
+            return $this->assembleTarikhBersara((int) $d, (int) $mo, (int) $y, $csvLine, $raw);
+        }
+
+        // d-m-yyyy
+        if (preg_match('/^(\d{1,2})-(\d{1,2})-(\d{4})$/', $raw, $m) === 1) {
+            [$_, $d, $mo, $y] = $m;
+
+            return $this->assembleTarikhBersara((int) $d, (int) $mo, (int) $y, $csvLine, $raw);
+        }
+
+        // yyyy-mm-dd (optionally with H:i:s, e.g. from an Excel date cell)
+        if (preg_match('/^(\d{4})-(\d{2})-(\d{2})(?: \d{2}:\d{2}:\d{2})?$/', $raw, $m) === 1) {
+            [$_, $y, $mo, $d] = $m;
+
+            return $this->assembleTarikhBersara((int) $d, (int) $mo, (int) $y, $csvLine, $raw);
+        }
+
+        // Excel date serial number fallback (e.g. 46000)
+        if (ctype_digit($raw) && strlen($raw) === 5) {
+            try {
+                return ExcelDate::excelToDateTimeObject((int) $raw)->format('Y-m-d');
+            } catch (\Throwable) {
+                throw new InvalidArgumentException("Baris {$csvLine}: 'tarikh_bersara' tidak sah ({$raw}).");
+            }
+        }
+
+        throw new InvalidArgumentException(
+            "Baris {$csvLine}: 'tarikh_bersara' mesti format ddmmyyyy (cth. 31122026), dd/mm/yyyy atau yyyy-mm-dd."
+        );
+    }
+
+    private function assembleTarikhBersara(int $day, int $month, int $year, int $csvLine, string $raw): string
+    {
+        if (! checkdate($month, $day, $year)) {
+            throw new InvalidArgumentException("Baris {$csvLine}: 'tarikh_bersara' tarikh tidak sah ({$raw}).");
+        }
+
+        return sprintf('%04d-%02d-%02d', $year, $month, $day);
+    }
+
+    private function parseTempohBerkhidmat(string $raw, int $csvLine): int
+    {
+        if (! ctype_digit($raw)) {
+            throw new InvalidArgumentException("Baris {$csvLine}: 'tempoh_berkhidmat' mesti nombor tidak negatif.");
+        }
+
+        $value = (int) $raw;
+        if ($value > self::TEMPOH_BERKHIDMAT_MAX) {
+            throw new InvalidArgumentException("Baris {$csvLine}: 'tempoh_berkhidmat' mesti tidak lebih daripada ".self::TEMPOH_BERKHIDMAT_MAX.'.');
+        }
+
+        return $value;
     }
 
     private function castOptionalField(
@@ -602,6 +744,7 @@ final class DatabaseImportService
         $jawatanIds = collect($built)->pluck('jawatan_id')->unique()->filter()->all();
         $gredIds = collect($built)->pluck('gred_id')->unique()->filter()->all();
         $sesiIds = collect($built)->pluck('sesi_majlis_id')->unique()->filter()->all();
+        $bersaraIds = collect($built)->pluck('bersara_id')->unique()->filter()->all();
 
         $existingPtj = Ptj::query()->whereIn('id', $ptjIds)->pluck('id')->all();
         $existingJawatan = Jawatan::query()->whereIn('id', $jawatanIds)->pluck('id')->all();
@@ -609,11 +752,15 @@ final class DatabaseImportService
         $existingSesi = $sesiIds === []
             ? []
             : SesiMajlis::query()->whereIn('id', $sesiIds)->pluck('id')->all();
+        $existingBersara = $bersaraIds === []
+            ? []
+            : Bersara::query()->whereIn('id', $bersaraIds)->pluck('id')->all();
 
         $existingPtj = array_flip($existingPtj);
         $existingJawatan = array_flip($existingJawatan);
         $existingGred = array_flip($existingGred);
         $existingSesi = array_flip($existingSesi);
+        $existingBersara = array_flip($existingBersara);
 
         $kps = collect($built)->pluck('no_kp')->unique()->filter()->all();
         $existingKp = Pegawai::query()->whereIn('no_kp', $kps)->pluck('no_kp')->all();
@@ -636,6 +783,10 @@ final class DatabaseImportService
             $sId = $row['sesi_majlis_id'] ?? null;
             if ($sId !== null && is_int($sId) && ! isset($existingSesi[$sId])) {
                 $errors[] = "Baris {$line}: sesi_majlis_id '{$sId}' tidak wujud.";
+            }
+            $bId = $row['bersara_id'] ?? null;
+            if (is_int($bId) && ! isset($existingBersara[$bId])) {
+                $errors[] = "Baris {$line}: bersara_id '{$bId}' tidak wujud.";
             }
             $kp = $row['no_kp'] ?? '';
             if (is_string($kp) && $kp !== '' && isset($existingKp[$kp])) {

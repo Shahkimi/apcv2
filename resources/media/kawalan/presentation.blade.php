@@ -25,6 +25,11 @@
                 ['icon' => 'ri-user-line', 'label' => __('Nama'), 'key' => 'fonts_name', 'name' => 'fonts[name_%s]', 'min' => 10, 'max' => 200],
                 ['icon' => 'ri-briefcase-line', 'label' => __('Jawatan'), 'key' => 'fonts_jawatan', 'name' => 'fonts[jawatan_%s]', 'min' => 10, 'max' => 200],
             ];
+            if ($isJasamu) {
+                $fontRows[] = ['icon' => 'ri-calendar-check-line', 'label' => __('Tarikh bersara'), 'key' => 'fonts_tarikh', 'name' => 'fonts[tarikh_%s]', 'min' => 10, 'max' => 200];
+                $fontRows[] = ['icon' => 'ri-user-heart-line', 'label' => __('Bersara'), 'key' => 'fonts_bersara', 'name' => 'fonts[bersara_%s]', 'min' => 10, 'max' => 200];
+                $fontRows[] = ['icon' => 'ri-history-line', 'label' => __('Tempoh berkhidmat'), 'key' => 'fonts_tempoh', 'name' => 'fonts[tempoh_%s]', 'min' => 10, 'max' => 200];
+            }
             $mtRow = ['icon' => 'ri-align-top', 'label' => __('Margin atas'), 'key' => 'position_mt', 'name' => 'position[mt_%s]', 'min' => 0, 'max' => 2000];
         @endphp
 
@@ -82,7 +87,13 @@
                                         <div class="officer-display">
                                             <div class="officer-name">{{ __('Nama Pegawai Contoh') }}</div>
                                             <div class="officer-jawatan">{{ __('Pegawai Teknologi Maklumat') }}</div>
-                                            <div class="officer-ptj">{{ __('PTJ Contoh') }}</div>
+                                            @if ($isJasamu)
+                                                <div class="officer-tarikh">{{ __('Tarikh bersara: 31/12/2026') }}</div>
+                                                <div class="officer-bersara">{{ __('Bersara: Wajib') }}</div>
+                                                <div class="officer-tempoh">{{ __('Tempoh berkhidmat: 25 tahun') }}</div>
+                                            @else
+                                                <div class="officer-ptj">{{ __('PTJ Contoh') }}</div>
+                                            @endif
                                         </div>
                                     </div>
                                 </div>
@@ -256,7 +267,11 @@
                             <h2 class="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                                 {{ __('Saiz Fon') }}
                             </h2>
-                            <p class="mt-1 text-sm text-muted-foreground">{{ __('Nama dan jawatan guna unit px. PTJ guna kelas Tailwind untuk responsif.') }}</p>
+                            <p class="mt-1 text-sm text-muted-foreground">
+                                {{ $isJasamu
+                                    ? __('Semua baris (nama, jawatan, tarikh bersara, bersara, tempoh berkhidmat) guna unit px.')
+                                    : __('Nama dan jawatan guna unit px. PTJ guna kelas Tailwind untuk responsif.') }}
+                            </p>
                         </div>
 
                         <div class="grid grid-cols-[minmax(5.5rem,8rem)_repeat(3,minmax(0,1fr))] gap-x-3 gap-y-4 sm:gap-x-4">
@@ -307,43 +322,45 @@
                                 @endforeach
                             @endforeach
 
-                            <div class="flex items-center gap-2 pt-2 text-sm font-medium text-foreground">
-                                <i class="ri-building-line text-muted-foreground" aria-hidden="true"></i>
-                                {{ __('PTJ') }}
-                            </div>
-                            <div class="min-w-0">
-                                <select
-                                    id="fonts_ptj_base"
-                                    name="fonts[ptj_base]"
-                                    x-model="values.fonts_ptj_base"
-                                    class="h-9 w-full rounded-md border border-input bg-background px-2.5 text-sm"
-                                    :class="errors.fonts_ptj_base ? 'border-destructive' : ''"
-                                >
-                                    @foreach ($ptjFontOptions as $option)
-                                        <option value="{{ $option }}" @selected($formValues['fonts_ptj_base'] === $option)>{{ $option }}</option>
-                                    @endforeach
-                                </select>
-                                <template x-if="errors.fonts_ptj_base">
-                                    <p class="mt-1 text-xs text-destructive" x-text="errors.fonts_ptj_base"></p>
-                                </template>
-                            </div>
-                            <div class="col-span-2 min-w-0">
-                                <select
-                                    id="fonts_ptj_sm"
-                                    name="fonts[ptj_sm]"
-                                    x-model="values.fonts_ptj_sm"
-                                    class="h-9 w-full rounded-md border border-input bg-background px-2.5 text-sm"
-                                    :class="errors.fonts_ptj_sm ? 'border-destructive' : ''"
-                                >
-                                    @foreach ($ptjFontOptions as $option)
-                                        <option value="{{ $option }}" @selected($formValues['fonts_ptj_sm'] === $option)>{{ $option }}</option>
-                                    @endforeach
-                                </select>
-                                <p class="mt-1 text-[11px] text-muted-foreground">{{ __('Tablet & Desktop') }}</p>
-                                <template x-if="errors.fonts_ptj_sm">
-                                    <p class="mt-1 text-xs text-destructive" x-text="errors.fonts_ptj_sm"></p>
-                                </template>
-                            </div>
+                            @unless ($isJasamu)
+                                <div class="flex items-center gap-2 pt-2 text-sm font-medium text-foreground">
+                                    <i class="ri-building-line text-muted-foreground" aria-hidden="true"></i>
+                                    {{ __('PTJ') }}
+                                </div>
+                                <div class="min-w-0">
+                                    <select
+                                        id="fonts_ptj_base"
+                                        name="fonts[ptj_base]"
+                                        x-model="values.fonts_ptj_base"
+                                        class="h-9 w-full rounded-md border border-input bg-background px-2.5 text-sm"
+                                        :class="errors.fonts_ptj_base ? 'border-destructive' : ''"
+                                    >
+                                        @foreach ($ptjFontOptions as $option)
+                                            <option value="{{ $option }}" @selected($formValues['fonts_ptj_base'] === $option)>{{ $option }}</option>
+                                        @endforeach
+                                    </select>
+                                    <template x-if="errors.fonts_ptj_base">
+                                        <p class="mt-1 text-xs text-destructive" x-text="errors.fonts_ptj_base"></p>
+                                    </template>
+                                </div>
+                                <div class="col-span-2 min-w-0">
+                                    <select
+                                        id="fonts_ptj_sm"
+                                        name="fonts[ptj_sm]"
+                                        x-model="values.fonts_ptj_sm"
+                                        class="h-9 w-full rounded-md border border-input bg-background px-2.5 text-sm"
+                                        :class="errors.fonts_ptj_sm ? 'border-destructive' : ''"
+                                    >
+                                        @foreach ($ptjFontOptions as $option)
+                                            <option value="{{ $option }}" @selected($formValues['fonts_ptj_sm'] === $option)>{{ $option }}</option>
+                                        @endforeach
+                                    </select>
+                                    <p class="mt-1 text-[11px] text-muted-foreground">{{ __('Tablet & Desktop') }}</p>
+                                    <template x-if="errors.fonts_ptj_sm">
+                                        <p class="mt-1 text-xs text-destructive" x-text="errors.fonts_ptj_sm"></p>
+                                    </template>
+                                </div>
+                            @endunless
                         </div>
                     </section>
                 </div>
@@ -430,6 +447,9 @@
                         '--officer-name-font-size': `${n(v.fonts_name_md)}px`,
                         '--officer-jawatan-font-size': `${n(v.fonts_jawatan_md)}px`,
                         '--officer-ptj-font-size': `${this.ptjPx[v.fonts_ptj_sm] ?? 24}px`,
+                        '--officer-tarikh-font-size': `${n(v.fonts_tarikh_md)}px`,
+                        '--officer-bersara-font-size': `${n(v.fonts_bersara_md)}px`,
+                        '--officer-tempoh-font-size': `${n(v.fonts_tempoh_md)}px`,
                     };
                 },
 
@@ -477,6 +497,15 @@
                             jawatan_md: this.values.fonts_jawatan_md,
                             ptj_base: this.values.fonts_ptj_base,
                             ptj_sm: this.values.fonts_ptj_sm,
+                            tarikh_base: this.values.fonts_tarikh_base,
+                            tarikh_sm: this.values.fonts_tarikh_sm,
+                            tarikh_md: this.values.fonts_tarikh_md,
+                            bersara_base: this.values.fonts_bersara_base,
+                            bersara_sm: this.values.fonts_bersara_sm,
+                            bersara_md: this.values.fonts_bersara_md,
+                            tempoh_base: this.values.fonts_tempoh_base,
+                            tempoh_sm: this.values.fonts_tempoh_sm,
+                            tempoh_md: this.values.fonts_tempoh_md,
                         },
                     };
                 },

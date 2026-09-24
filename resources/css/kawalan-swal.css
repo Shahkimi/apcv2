@@ -131,6 +131,27 @@
     }
 }
 
+/* Compact attendance confirmation (custom header inside html, no swal icon/title) */
+.kawalan-swal2-compact.kawalan-swal2-popup {
+    max-width: 30rem;
+    padding: 1rem;
+}
+
+.kawalan-swal2-compact .swal2-html-container {
+    margin: 0;
+    padding: 0;
+}
+
+.kawalan-swal2-compact .kawalan-swal2-actions {
+    margin-top: 0.9rem;
+}
+
+@media (max-width: 640px) {
+    .kawalan-swal2-compact.kawalan-swal2-popup {
+        max-width: calc(100vw - 2rem);
+    }
+}
+
 @keyframes kawalanApprovePop {
     0% {
         transform: scale(0.9);

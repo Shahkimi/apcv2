@@ -25,6 +25,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'is_late',
     'hadir_at',
     's_kehadiran',
+    'tarikh_bersara',
+    'bersara_id',
+    'tempoh_berkhidmat',
 ])]
 class Pegawai extends Model
 {
@@ -48,6 +51,8 @@ class Pegawai extends Model
             'no_meja' => 'integer',
             'no_panggilan_lewat' => 'integer',
             's_kehadiran' => 'integer',
+            'tarikh_bersara' => 'date',
+            'tempoh_berkhidmat' => 'integer',
         ];
     }
 
@@ -69,5 +74,10 @@ class Pegawai extends Model
     public function sesiMajlis(): BelongsTo
     {
         return $this->belongsTo(SesiMajlis::class);
+    }
+
+    public function bersara(): BelongsTo
+    {
+        return $this->belongsTo(Bersara::class);
     }
 }

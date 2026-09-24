@@ -114,7 +114,7 @@ final class KehadiranCallingService
     public function attendedPegawaiForDisplay(?int $sesiId = null): Collection
     {
         $query = Pegawai::query()
-            ->with(['ptj', 'sesiMajlis', 'jawatan'])
+            ->with(['ptj', 'sesiMajlis', 'jawatan', 'bersara'])
             ->where('is_attend', true);
 
         if ($sesiId !== null) {

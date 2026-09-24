@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Models\Bersara;
 use App\Models\Pegawai;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -37,5 +38,14 @@ class PegawaiFactory extends Factory
             'no_panggilan_lewat' => null,
             'no_sijil' => fake()->optional(0.55)->numberBetween(1, 999),
         ];
+    }
+
+    public function jasamu(?int $bersaraId = null): static
+    {
+        return $this->state(fn (): array => [
+            'tarikh_bersara' => now()->addDays(fake()->numberBetween(0, 730))->toDateString(),
+            'bersara_id' => $bersaraId ?? Bersara::query()->firstOrCreate(['jenis_bersara' => 'Wajib'])->id,
+            'tempoh_berkhidmat' => fake()->numberBetween(10, 40),
+        ]);
     }
 }

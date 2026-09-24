@@ -4,16 +4,88 @@
 @endphp
 
 <x-dashboard-layout :title="__('Sesi Majlis')" role="admin">
-    <x-crud-header
-        :title="__('Sesi Majlis')"
-        :description="__('Urus sesi majlis: aktif, lewat, mula kira detik, dan offset kerusi untuk pengiraan no. meja.')"
-        :create-label="__('Tambah sesi')"
-    />
+    <div
+        x-data="{ tab: 'sesi' }"
+        x-init="$watch('tab', v => { if (v === 'sesi') { requestAnimationFrame(() => $('#sesi-majlis-table').DataTable().columns.adjust()); } })"
+    >
+        <div role="tablist" class="mb-6 inline-flex items-center gap-1 rounded-lg bg-muted p-1">
+            <button
+                type="button"
+                role="tab"
+                x-on:click="tab = 'sesi'"
+                :aria-selected="tab === 'sesi'"
+                @class([
+                    'inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+                ])
+                x-bind:class="tab === 'sesi' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'"
+            >
+                <i class="ri-calendar-event-line"></i>
+                {{ __('Sesi Majlis') }}
+            </button>
+            <button
+                type="button"
+                role="tab"
+                x-on:click="tab = 'mod'"
+                :aria-selected="tab === 'mod'"
+                class="inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+                x-bind:class="tab === 'mod' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'"
+            >
+                <i class="ri-toggle-line"></i>
+                {{ __('Mod Acara') }}
+            </button>
+        </div>
 
-    <x-data-table
-        table-id="sesi-majlis-table"
-        :columns="['ID', __('Sesi'), __('Aktif'), __('Lewat'), __('Mula kira detik'), __('Offset kerusi'), __('Jenis kehadiran'), __('Dicipta'), __('Tindakan')]"
-    />
+        <div x-show="tab === 'sesi'">
+            <x-crud-header
+                :title="__('Sesi Majlis')"
+                :description="__('Urus sesi majlis: aktif, lewat, mula kira detik, dan offset kerusi untuk pengiraan no. meja.')"
+                :create-label="__('Tambah sesi')"
+            />
+
+            <x-data-table
+                table-id="sesi-majlis-table"
+                :columns="['ID', __('Sesi'), __('Aktif'), __('Lewat'), __('Mula kira detik'), __('Offset kerusi'), __('Jenis kehadiran'), __('Dicipta'), __('Tindakan')]"
+            />
+        </div>
+
+        <div x-show="tab === 'mod'" x-cloak>
+            <div class="rounded-xl border border-border bg-card p-6">
+                <h2 class="text-lg font-semibold text-foreground">{{ __('Mod Acara') }}</h2>
+                <p class="mt-1 text-sm text-muted-foreground">
+                    {{ __('Pilih acara yang sedang berlangsung. Tukaran ini akan menukar medan dan paparan yang berkaitan di seluruh sistem tanpa memadam sebarang data.') }}
+                </p>
+
+                <fieldset id="event-mode-choice" class="mt-6 grid gap-3 sm:grid-cols-2">
+                    <legend class="sr-only">{{ __('Mod Acara') }}</legend>
+                    @foreach ($eventModeOptions as $value => $label)
+                        <label
+                            @class([
+                                'flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors',
+                                'border-primary bg-primary/5' => $eventMode === $value,
+                                'border-border hover:bg-muted/50' => $eventMode !== $value,
+                            ])
+                        >
+                            <input
+                                type="radio"
+                                name="event_mode"
+                                value="{{ $value }}"
+                                class="js-event-mode mt-1 h-4 w-4 border-border text-primary focus:ring-primary"
+                                @checked($eventMode === $value)
+                            />
+                            <span>
+                                <span class="block text-sm font-semibold text-foreground">{{ $label }}</span>
+                                <span class="mt-1 block text-xs text-muted-foreground">
+                                    {{ $value === 'jasamu'
+                                        ? __('Majlis persaraan: memaparkan tarikh bersara, jenis persaraan dan tempoh berkhidmat.')
+                                        : __('Majlis anugerah: memaparkan PTJ pegawai seperti biasa.') }}
+                                </span>
+                            </span>
+                        </label>
+                    @endforeach
+                </fieldset>
+            </div>
+        </div>
+    </div>
 
     <div class="modal-backdrop"></div>
 
@@ -291,6 +363,37 @@
                                 alert('{{ __('Ralat') }}');
                             });
                     });
+                });
+
+                let currentEventMode = '{{ $eventMode }}';
+
+                $('.js-event-mode').on('change', function () {
+                    const $radio = $(this);
+                    const mode = $radio.val();
+                    const previous = currentEventMode;
+
+                    $.ajax({
+                        url: '{{ route('admin.kawalan.sesi-majlis.event-mode') }}',
+                        method: 'POST',
+                        data: { _token: '{{ csrf_token() }}', mode: mode },
+                        headers: { Accept: 'application/json' },
+                    })
+                        .done(function () {
+                            currentEventMode = mode;
+                            window.Swal?.fire({
+                                toast: true,
+                                position: 'top-end',
+                                icon: 'success',
+                                title: '{{ __('Mod acara dikemas kini') }}',
+                                showConfirmButton: false,
+                                timer: 2000,
+                            });
+                        })
+                        .fail(function () {
+                            $('.js-event-mode').prop('checked', false);
+                            $('.js-event-mode[value="' + previous + '"]').prop('checked', true);
+                            alert('{{ __('Ralat mengemaskini mod acara') }}');
+                        });
                 });
             });
         </script>

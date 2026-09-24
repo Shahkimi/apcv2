@@ -190,16 +190,8 @@ html.dark .kawalan-dt-table.dataTable tbody tr:hover {
     width: 100% !important;
 }
 
-#paparan-table.dataTable > thead > tr > th:nth-child(1),
-#paparan-table.dataTable > tbody > tr > td:nth-child(1),
-#paparan-table.dataTable > thead > tr > th:nth-child(2),
-#paparan-table.dataTable > tbody > tr > td:nth-child(2),
-#paparan-table.dataTable > thead > tr > th:nth-child(4),
-#paparan-table.dataTable > tbody > tr > td:nth-child(4),
-#paparan-table.dataTable > thead > tr > th:nth-child(6),
-#paparan-table.dataTable > tbody > tr > td:nth-child(6),
-#paparan-table.dataTable > thead > tr > th:nth-child(7),
-#paparan-table.dataTable > tbody > tr > td:nth-child(7) {
+#paparan-table.dataTable > thead > tr > th.dt-center,
+#paparan-table.dataTable > tbody > tr > td.dt-center {
     text-align: center !important;
 }
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\Kawalan\BackdropController as KawalanBackdropController;
+use App\Http\Controllers\Admin\Kawalan\BersaraController as KawalanBersaraController;
 use App\Http\Controllers\Admin\Kawalan\DatabaseImportController as KawalanDatabaseImportController;
 use App\Http\Controllers\Admin\Kawalan\GredController as KawalanGredController;
 use App\Http\Controllers\Admin\Kawalan\JawatanController as KawalanJawatanController;
@@ -142,9 +143,16 @@ Route::middleware('auth')->group(function () {
 
                 Route::get('sesi-majlis', [KawalanSesiMajlisController::class, 'index'])->name('sesi-majlis.index');
                 Route::get('sesi-majlis/datatable', [KawalanSesiMajlisController::class, 'datatable'])->name('sesi-majlis.datatable');
+                Route::post('sesi-majlis/event-mode', [KawalanSesiMajlisController::class, 'updateEventMode'])->name('sesi-majlis.event-mode');
                 Route::post('sesi-majlis', [KawalanSesiMajlisController::class, 'store'])->name('sesi-majlis.store');
                 Route::put('sesi-majlis/{sesi_majlis}', [KawalanSesiMajlisController::class, 'update'])->name('sesi-majlis.update');
                 Route::delete('sesi-majlis/{sesi_majlis}', [KawalanSesiMajlisController::class, 'destroy'])->name('sesi-majlis.destroy');
+
+                Route::get('bersara', [KawalanBersaraController::class, 'index'])->name('bersara.index');
+                Route::get('bersara/datatable', [KawalanBersaraController::class, 'datatable'])->name('bersara.datatable');
+                Route::post('bersara', [KawalanBersaraController::class, 'store'])->name('bersara.store');
+                Route::put('bersara/{bersara}', [KawalanBersaraController::class, 'update'])->name('bersara.update');
+                Route::delete('bersara/{bersara}', [KawalanBersaraController::class, 'destroy'])->name('bersara.destroy');
 
                 Route::get('backdrop', [KawalanBackdropController::class, 'index'])->name('backdrop.index');
                 Route::get('backdrop/datatable', [KawalanBackdropController::class, 'datatable'])->name('backdrop.datatable');

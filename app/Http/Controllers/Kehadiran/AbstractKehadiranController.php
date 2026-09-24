@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Kehadiran\Concerns\RendersOfficerCell;
 use App\Models\Pegawai;
 use App\Models\SesiMajlis;
+use App\Services\EventModeService;
 use App\Services\Kehadiran\KehadiranCallingService;
 use App\Services\SettingsService;
 use Illuminate\Database\QueryException;
@@ -23,6 +24,7 @@ abstract class AbstractKehadiranController extends Controller
     public function __construct(
         private readonly KehadiranCallingService $callingService,
         private readonly SettingsService $settings,
+        private readonly EventModeService $eventMode,
     ) {}
 
     abstract protected function bladeNamespace(): string;
@@ -99,7 +101,7 @@ abstract class AbstractKehadiranController extends Controller
 
     public function getDetails(Pegawai $pegawai): JsonResponse
     {
-        $pegawai->loadMissing(['ptj:id,nama_ptj', 'sesiMajlis:id,sesi']);
+        $pegawai->loadMissing(['ptj:id,nama_ptj', 'sesiMajlis:id,sesi', 'bersara:id,jenis_bersara']);
         $activeSesi = $this->callingService->activeOnAirSesi();
         $previewLateNumber = null;
         $previewNoMeja = $activeSesi !== null
@@ -114,6 +116,7 @@ abstract class AbstractKehadiranController extends Controller
             'show_table_number' => $this->settings->showTableNumberInDialog(),
             'active_sesi_s_kehadiran' => $activeSesi !== null ? (int) $activeSesi->s_kehadiran : null,
             'active_sesi_name' => $activeSesi?->sesi,
+            'event_mode' => $this->eventMode->current(),
             'pegawai' => [
                 'id' => $pegawai->id,
                 'nama' => $pegawai->nama,
@@ -126,6 +129,9 @@ abstract class AbstractKehadiranController extends Controller
                 'no_meja' => $previewNoMeja,
                 'no_panggilan_lewat' => $this->jsonNoPanggilanLewatForDetails($pegawai->no_panggilan_lewat, $previewLateNumber),
                 'is_attend' => (bool) $pegawai->is_attend,
+                'tarikh_bersara' => $pegawai->tarikh_bersara?->format('d/m/Y') ?? '-',
+                'bersara_name' => $pegawai->bersara?->jenis_bersara ?? '-',
+                'tempoh_berkhidmat' => $pegawai->tempoh_berkhidmat ?? '-',
             ],
         ]);
     }

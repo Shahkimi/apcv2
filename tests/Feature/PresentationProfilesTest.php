@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\PresentationProfile;
 use App\Models\User;
+use App\Services\EventModeService;
 use App\Services\Presentation\PresentationDisplayConfigService;
 use App\Services\SettingsService;
 
@@ -30,6 +31,15 @@ function presentationConfigPayload(array $overrides = []): array
             'jawatan_md' => 20,
             'ptj_base' => 'text-lg',
             'ptj_sm' => 'text-xl',
+            'tarikh_base' => 18,
+            'tarikh_sm' => 22,
+            'tarikh_md' => 26,
+            'bersara_base' => 18,
+            'bersara_sm' => 22,
+            'bersara_md' => 26,
+            'tempoh_base' => 18,
+            'tempoh_sm' => 22,
+            'tempoh_md' => 26,
         ],
     ], $overrides);
 }
@@ -254,4 +264,74 @@ it('resolves display settings for the presentation screen after the refactor', f
         ->get(route('media.senarai.present'))
         ->assertOk()
         ->assertSee('61px', false);
+});
+
+it('shows jasamu font rows instead of the ptj select when event mode is jasamu', function (): void {
+    app(EventModeService::class)->set(EventModeService::MODE_JASAMU);
+    $media = presentationMediaUser();
+
+    $this->actingAs($media)
+        ->get(route('media.kawalan.presentation.index'))
+        ->assertOk()
+        ->assertSee('id="fonts_tarikh_md"', false)
+        ->assertSee('id="fonts_bersara_md"', false)
+        ->assertSee('id="fonts_tempoh_md"', false)
+        ->assertDontSee('id="fonts_ptj_sm"', false);
+});
+
+it('shows the ptj select instead of jasamu font rows when event mode is apc', function (): void {
+    $media = presentationMediaUser();
+
+    $this->actingAs($media)
+        ->get(route('media.kawalan.presentation.index'))
+        ->assertOk()
+        ->assertSee('id="fonts_ptj_sm"', false)
+        ->assertDontSee('id="fonts_tarikh_md"', false);
+});
+
+it('saves and reflects jasamu font sizes on the presentation screen', function (): void {
+    app(EventModeService::class)->set(EventModeService::MODE_JASAMU);
+    $media = presentationMediaUser();
+
+    $this->actingAs($media)
+        ->putJson(route('media.kawalan.presentation.update'), presentationConfigPayload(['fonts' => ['tarikh_md' => 61]]))
+        ->assertOk()
+        ->assertJsonPath('success', true);
+
+    $this->actingAs($media)
+        ->get(route('media.senarai.present'))
+        ->assertOk()
+        ->assertSee('--officer-tarikh-font-size-md: 61px', false);
+});
+
+it('rejects an out-of-range jasamu font size on profile creation', function (): void {
+    $media = presentationMediaUser();
+
+    $this->actingAs($media)
+        ->postJson(route('media.kawalan.presentation.profiles.store'), [
+            'name' => 'Tidak Sah Jasamu',
+            'config' => presentationConfigPayload(['fonts' => ['tarikh_md' => 5]]),
+        ])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['config.fonts.tarikh_md']);
+});
+
+it('falls back to default jasamu font sizes when an old payload omits them', function (): void {
+    $media = presentationMediaUser();
+    $legacyPayload = presentationConfigPayload();
+    unset(
+        $legacyPayload['fonts']['tarikh_base'], $legacyPayload['fonts']['tarikh_sm'], $legacyPayload['fonts']['tarikh_md'],
+        $legacyPayload['fonts']['bersara_base'], $legacyPayload['fonts']['bersara_sm'], $legacyPayload['fonts']['bersara_md'],
+        $legacyPayload['fonts']['tempoh_base'], $legacyPayload['fonts']['tempoh_sm'], $legacyPayload['fonts']['tempoh_md'],
+    );
+
+    $this->actingAs($media)
+        ->putJson(route('media.kawalan.presentation.update'), $legacyPayload)
+        ->assertOk()
+        ->assertJsonPath('success', true);
+
+    $live = app(PresentationDisplayConfigService::class)->live();
+    expect($live['fonts']['tarikh_md'])->toBe(36);
+    expect($live['fonts']['bersara_md'])->toBe(36);
+    expect($live['fonts']['tempoh_md'])->toBe(36);
 });

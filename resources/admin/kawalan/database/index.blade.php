@@ -22,6 +22,9 @@
         'is_attend' => __('Hadir'),
         'is_late' => __('Lewat'),
         's_kehadiran' => __('Sesi kehadiran (0=pagi, 1=petang)'),
+        'tarikh_bersara' => __('Tarikh bersara (ddmmyyyy)'),
+        'bersara_id' => __('Jenis persaraan (ID)'),
+        'tempoh_berkhidmat' => __('Tempoh berkhidmat (tahun)'),
     ];
 @endphp
 
@@ -31,6 +34,18 @@
         :description="__('Muat naik CSV atau Excel (.xlsx), pilih pemetaan lajur, pratonton, kemudian import.')"
         :show-create="false"
     />
+
+    @if ($isJasamu)
+        <div class="mb-6 flex items-start gap-3 rounded-lg border border-violet-500/30 bg-violet-500/10 p-4 text-sm text-violet-900 dark:text-violet-200">
+            <i class="ri-information-line mt-0.5 text-lg"></i>
+            <div>
+                <p class="font-semibold">{{ __('Mod acara: Jasamu Dikenang — medan tambahan diperlukan') }}</p>
+                <p class="mt-1 text-violet-900/80 dark:text-violet-200/80">
+                    {{ __('Tarikh bersara, jenis persaraan (ID daripada Kawalan &gt; Bersara) dan tempoh berkhidmat mesti dipetakan dan diisi untuk setiap baris.') }}
+                </p>
+            </div>
+        </div>
+    @endif
 
     <div
         class="space-y-8"
@@ -240,6 +255,10 @@
                                                 {{ __('NOT NULL — lalai 0 (pagi).') }}
                                             @endif
                                         </p>
+                                    @elseif ($field === 'tarikh_bersara')
+                                        <span class="text-xs text-muted-foreground">
+                                            {{ __('Format: ddmmyyyy (cth. 31122026), dd/mm/yyyy atau yyyy-mm-dd.') }}
+                                        </span>
                                     @else
                                         <span class="text-xs text-muted-foreground">—</span>
                                     @endif
