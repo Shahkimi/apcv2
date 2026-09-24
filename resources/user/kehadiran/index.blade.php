@@ -83,12 +83,14 @@
 
                 const kehadiranStatsPollMs = 12000;
                 let kehadiranStatsPollId = null;
+                let kehadiranStatsInFlight = false;
 
                 function refreshKehadiranStats() {
                     const $region = $('#kehadiran-stats-region');
-                    if (!$region.length) {
+                    if (!$region.length || kehadiranStatsInFlight) {
                         return;
                     }
+                    kehadiranStatsInFlight = true;
                     $.ajax({
                             url: kehadiranStatsUrl,
                             dataType: 'json',
@@ -101,6 +103,9 @@
                             $region.find('[data-stat="total_pegawai"]').text(formatStatNumber(d.total_pegawai));
                             $region.find('[data-stat="total_rsvp"]').text(formatStatNumber(d.total_rsvp));
                             $region.find('[data-stat="total_hadir"]').text(formatStatNumber(d.total_hadir));
+                        })
+                        .always(function() {
+                            kehadiranStatsInFlight = false;
                         });
                 }
 
@@ -256,8 +261,13 @@
 
                 $('#kehadiran-table').on('click', '.js-verify-kehadiran', function() {
                     const $btn = $(this);
+                    if ($btn.prop('disabled')) {
+                        return;
+                    }
                     const id = $btn.data('id');
                     const isAttend = Number($btn.data('is-attend')) === 1;
+
+                    $btn.prop('disabled', true);
 
                     $.ajax({
                             url: '{{ route('user.kehadiran.details', ['pegawai' => '__ID__']) }}'.replace(
@@ -453,13 +463,16 @@
                                     return;
                                 }
 
+                                $btn.prop('disabled', true);
+
                                 $.ajax({
                                         url: '{{ route('user.kehadiran.verify', ['pegawai' => '__ID__']) }}'
                                             .replace('__ID__', String(id)),
                                         method: 'POST',
                                         data: {
                                             _token: '{{ csrf_token() }}',
-                                            _method: 'PUT'
+                                            _method: 'PUT',
+                                            is_attend: isAttend ? 0 : 1
                                         },
                                         headers: {
                                             Accept: 'application/json'
@@ -494,6 +507,7 @@
                                         });
                                     })
                                     .fail(function(xhr) {
+                                        $btn.prop('disabled', false);
                                         const msg = xhr?.responseJSON?.message;
                                         alert(msg || '{{ __('Ralat') }}');
                                     });
@@ -501,6 +515,9 @@
                         })
                         .fail(function() {
                             alert('{{ __('Ralat mendapatkan maklumat pegawai') }}');
+                        })
+                        .always(function() {
+                            $btn.prop('disabled', false);
                         });
                 });
             });

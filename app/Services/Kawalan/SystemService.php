@@ -26,6 +26,7 @@ final class SystemService
                 'no_panggilan_lewat' => 0,
                 'is_attend' => false,
                 'is_late' => false,
+                'hadir_at' => null,
             ]);
         });
     }

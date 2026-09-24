@@ -67,27 +67,6 @@
 }
 
 /* Officer cell — name + No. KP (Kehadiran & similar) */
-.kawalan-dt-officer-avatar {
-    display: inline-flex;
-    height: 2.5rem;
-    width: 2.5rem;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    border-radius: 0.75rem;
-    border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
-    background: linear-gradient(
-        145deg,
-        color-mix(in srgb, var(--primary) 12%, var(--card)),
-        color-mix(in srgb, var(--muted) 35%, var(--card))
-    );
-    font-size: 0.6875rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    color: var(--foreground);
-    box-shadow: 0 1px 2px color-mix(in srgb, var(--foreground) 6%, transparent);
-}
-
 .kawalan-dt-officer-name {
     margin: 0;
     font-size: 0.875rem;
@@ -199,6 +178,34 @@ html.dark .kawalan-dt-table.dataTable tbody tr:hover {
 
 .kawalan-dt-table.dataTable.no-footer {
     border-bottom: none;
+}
+
+/*
+ * Debug paparan: fixed layout so column widths from DataTables columnDefs apply reliably.
+ * Bil./Giliran/Tempat Duduk/Masa hadir/Status are centred numeric-style columns.
+ */
+#paparan-table.kawalan-dt-table.dataTable,
+#paparan-table.dataTable {
+    table-layout: fixed;
+    width: 100% !important;
+}
+
+#paparan-table.dataTable > thead > tr > th:nth-child(1),
+#paparan-table.dataTable > tbody > tr > td:nth-child(1),
+#paparan-table.dataTable > thead > tr > th:nth-child(2),
+#paparan-table.dataTable > tbody > tr > td:nth-child(2),
+#paparan-table.dataTable > thead > tr > th:nth-child(4),
+#paparan-table.dataTable > tbody > tr > td:nth-child(4),
+#paparan-table.dataTable > thead > tr > th:nth-child(6),
+#paparan-table.dataTable > tbody > tr > td:nth-child(6),
+#paparan-table.dataTable > thead > tr > th:nth-child(7),
+#paparan-table.dataTable > tbody > tr > td:nth-child(7) {
+    text-align: center !important;
+}
+
+/* Giliran: emphasised as the primary calling-order value */
+#paparan-table.dataTable > tbody > tr > td:nth-child(2) {
+    font-size: 1rem;
 }
 
 /* Footer: info + pagination (Cleopatra table-advanced footer) */

@@ -1,0 +1,70 @@
+/*
+ * Opacity-modifier fallbacks for Cleopatra's semantic theme tokens.
+ *
+ * Tailwind's `bg-primary/10` style opacity modifiers only work when the
+ * underlying theme color is registered with an `<alpha-value>` placeholder
+ * (e.g. `rgb(var(--x) / <alpha-value>)`). This project's tokens are plain
+ * `var(--x)` references (see tailwind.config.js + theme.css), so Tailwind's
+ * JIT silently produces NO rule for `bg-primary/10`, `border-border/70`, etc.
+ * — the class exists in markup but renders nothing.
+ *
+ * These hand-written rules fill that gap using `color-mix()`, named to
+ * exactly match the (Tailwind-style, slash-escaped) class Tailwind would
+ * have generated, so any existing or future `token/opacity` usage across
+ * the app is covered without touching markup.
+ */
+.bg-background\/40 {
+    background-color: color-mix(in oklab, var(--background) 40%, transparent);
+}
+
+.bg-background\/60 {
+    background-color: color-mix(in oklab, var(--background) 60%, transparent);
+}
+
+.bg-card\/95 {
+    background-color: color-mix(in oklab, var(--card) 95%, transparent);
+}
+
+.bg-muted\/20 {
+    background-color: color-mix(in oklab, var(--muted) 20%, transparent);
+}
+
+.bg-muted\/50 {
+    background-color: color-mix(in oklab, var(--muted) 50%, transparent);
+}
+
+.bg-primary\/5 {
+    background-color: color-mix(in oklab, var(--primary) 5%, transparent);
+}
+
+.bg-primary\/10 {
+    background-color: color-mix(in oklab, var(--primary) 10%, transparent);
+}
+
+.bg-primary\/15 {
+    background-color: color-mix(in oklab, var(--primary) 15%, transparent);
+}
+
+.bg-destructive\/10 {
+    background-color: color-mix(in oklab, var(--destructive) 10%, transparent);
+}
+
+.border-border\/50 {
+    border-color: color-mix(in oklab, var(--border) 50%, transparent);
+}
+
+.border-border\/70 {
+    border-color: color-mix(in oklab, var(--border) 70%, transparent);
+}
+
+.border-border\/80 {
+    border-color: color-mix(in oklab, var(--border) 80%, transparent);
+}
+
+.border-primary\/50 {
+    border-color: color-mix(in oklab, var(--primary) 50%, transparent);
+}
+
+.ring-primary\/30 {
+    --tw-ring-color: color-mix(in oklab, var(--primary) 30%, transparent);
+}

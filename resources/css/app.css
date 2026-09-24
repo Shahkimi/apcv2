@@ -5,6 +5,8 @@
 @import './buttons.css';
 @import './kawalan-datatables.css';
 @import './kawalan-swal.css';
+@import './kawalan-tint.css';
+@import './presentation-settings.css';
 
 @tailwind base;
 @tailwind components;

@@ -167,6 +167,22 @@
     margin-bottom: 0.25rem;
 }
 
+/* Text input prompts (e.g. naming/renaming a saved profile) */
+.kawalan-swal2-input.swal2-input {
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius);
+    background: var(--background) !important;
+    color: var(--foreground) !important;
+    box-shadow: none !important;
+    font-size: 0.9rem;
+}
+
+.kawalan-swal2-input.swal2-input:focus {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-color: var(--ring) !important;
+}
+
 .kawalan-swal2-approve .swal2-html-container {
     margin-top: 0.35rem;
     font-size: 0.875rem;

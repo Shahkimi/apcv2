@@ -1,0 +1,83 @@
+/* Kawalan Presentasi — live preview stage (mirrors media/senarai/present.blade.php) */
+.presentation-preview-stage {
+    transform-origin: top left;
+    overflow: hidden;
+}
+
+.presentation-preview-stage .officer-display-wrap {
+    margin-top: var(--officer-mt);
+    transform: translateY(var(--officer-translate-y));
+    padding-left: var(--officer-px);
+    padding-right: var(--officer-px);
+}
+
+.presentation-preview-stage .officer-display > * + * {
+    margin-top: var(--officer-gap);
+}
+
+.presentation-preview-stage .officer-name {
+    font-size: var(--officer-name-font-size);
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.1;
+}
+
+.presentation-preview-stage .officer-jawatan {
+    font-size: var(--officer-jawatan-font-size);
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.9);
+    line-height: 1.2;
+}
+
+.presentation-preview-stage .officer-ptj {
+    font-size: var(--officer-ptj-font-size);
+    font-weight: 500;
+    color: #fff;
+    line-height: 1.2;
+}
+
+/* Matrix number inputs — hide native spin buttons, unit suffix is added in markup */
+.matrix-number {
+    appearance: textfield;
+    -moz-appearance: textfield;
+}
+
+.matrix-number::-webkit-inner-spin-button,
+.matrix-number::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Matrix range sliders — compact themed track/thumb */
+.matrix-range {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    border-radius: 9999px;
+    background: var(--muted);
+    outline: none;
+    cursor: pointer;
+}
+
+.matrix-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 9999px;
+    background: var(--primary);
+    border: 2px solid var(--background);
+    box-shadow: 0 0 0 1px var(--border);
+}
+
+.matrix-range::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 9999px;
+    background: var(--primary);
+    border: 2px solid var(--background);
+}
+
+.matrix-range:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+}

@@ -6,17 +6,17 @@ namespace App\Http\Controllers\Media\Kawalan;
 
 use App\Http\Controllers\Controller;
 use App\Models\Backdrop;
-use App\Services\SettingsService;
+use App\Models\PresentationProfile;
+use App\Services\Presentation\PresentationDisplayConfigService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class PresentationSettingsController extends Controller
 {
-    private const SETTINGS_KEY = 'presentation_display_config';
-
     public function __construct(
-        private readonly SettingsService $settings
+        private readonly PresentationDisplayConfigService $displayConfig,
     ) {}
 
     public function index(): View
@@ -26,118 +26,64 @@ class PresentationSettingsController extends Controller
             ->orderBy('display_order')
             ->first();
 
+        $config = $this->displayConfig->live();
+
+        $profiles = PresentationProfile::query()
+            ->orderBy('name')
+            ->get()
+            ->map(fn (PresentationProfile $profile) => [
+                'id' => $profile->id,
+                'name' => $profile->name,
+                'updated_at' => $profile->updated_at?->toIso8601String() ?? '',
+                'updated_human' => $profile->updated_at?->diffForHumans() ?? '',
+                'form_values' => $this->displayConfig->toFormValues($this->displayConfig->resolve($profile->config)),
+            ])
+            ->values();
+
         return view('media::kawalan.presentation', [
-            'config' => $this->resolvedConfig(),
-            'ptjFontOptions' => $this->ptjFontOptions(),
+            'config' => $config,
+            'formValues' => $this->displayConfig->toFormValues($config),
+            'ptjFontOptions' => $this->displayConfig->ptjFontOptions(),
+            'ptjFontPx' => collect($this->displayConfig->ptjFontOptions())
+                ->mapWithKeys(fn (string $class) => [$class => $this->displayConfig->ptjClassToPx($class)])
+                ->all(),
+            'profiles' => $profiles,
+            'activeProfileId' => $this->displayConfig->activeProfileId(),
+            'maxProfiles' => PresentationProfile::MAX_PROFILES,
             'backdrop' => $backdrop,
         ]);
     }
 
-    public function update(Request $request): RedirectResponse
+    public function update(Request $request): RedirectResponse|JsonResponse
     {
-        $validated = $request->validate([
-            'position.mt_base' => ['required', 'integer', 'min:0', 'max:2000'],
-            'position.mt_sm' => ['required', 'integer', 'min:0', 'max:2000'],
-            'position.mt_md' => ['required', 'integer', 'min:0', 'max:2000'],
-            'position.translate_y' => ['required', 'integer', 'min:-1000', 'max:1000'],
-            'fonts.name_base' => ['required', 'integer', 'min:10', 'max:200'],
-            'fonts.name_sm' => ['required', 'integer', 'min:10', 'max:200'],
-            'fonts.name_md' => ['required', 'integer', 'min:10', 'max:200'],
-            'fonts.jawatan_base' => ['required', 'integer', 'min:10', 'max:200'],
-            'fonts.jawatan_sm' => ['required', 'integer', 'min:10', 'max:200'],
-            'fonts.jawatan_md' => ['required', 'integer', 'min:10', 'max:200'],
-            'fonts.ptj_base' => ['required', 'in:'.implode(',', $this->ptjFontOptions())],
-            'fonts.ptj_sm' => ['required', 'in:'.implode(',', $this->ptjFontOptions())],
-        ]);
+        $validated = $request->validate(array_merge(
+            $this->displayConfig->rules(),
+            ['profile_id' => ['nullable', 'integer', 'exists:presentation_profiles,id']],
+        ));
 
-        /** @var array{position: array<string, int|string>, fonts: array<string, int|string>} $validated */
-        $validated['position'] = [
-            'mt_base' => (int) $validated['position']['mt_base'].'px',
-            'mt_sm' => (int) $validated['position']['mt_sm'].'px',
-            'mt_md' => (int) $validated['position']['mt_md'].'px',
-            'translate_y' => (int) $validated['position']['translate_y'].'px',
+        /** @var array{position: array<string, int|string>, fonts: array<string, int|string>} $configInput */
+        $configInput = [
+            'position' => $validated['position'],
+            'fonts' => $validated['fonts'],
         ];
+        $config = $this->displayConfig->normalize($configInput);
 
-        $this->settings->set(self::SETTINGS_KEY, $validated);
+        $this->displayConfig->saveLive($config);
+        $this->displayConfig->setActiveProfileId(
+            isset($validated['profile_id']) && $validated['profile_id'] !== null
+                ? (int) $validated['profile_id']
+                : null
+        );
 
-        return back()->with('status', __('Tetapan paparan berjaya disimpan.'));
-    }
-
-    /**
-     * @return array{position: array{mt_base: string, mt_sm: string, mt_md: string, translate_y: string}, fonts: array{name_base: int, name_sm: int, name_md: int, jawatan_base: int, jawatan_sm: int, jawatan_md: int, ptj_base: string, ptj_sm: string}}
-     */
-    private function resolvedConfig(): array
-    {
-        $stored = $this->settings->get(self::SETTINGS_KEY, []);
-        $defaults = $this->defaultConfig();
-
-        if (! is_array($stored)) {
-            return $defaults;
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => __('Tetapan paparan berjaya disimpan.'),
+                'form_values' => $this->displayConfig->toFormValues($config),
+                'active_profile_id' => $this->displayConfig->activeProfileId(),
+            ]);
         }
 
-        $position = is_array($stored['position'] ?? null) ? $stored['position'] : [];
-        $fonts = is_array($stored['fonts'] ?? null) ? $stored['fonts'] : [];
-
-        return [
-            'position' => [
-                'mt_base' => (string) ($position['mt_base'] ?? $defaults['position']['mt_base']),
-                'mt_sm' => (string) ($position['mt_sm'] ?? $defaults['position']['mt_sm']),
-                'mt_md' => (string) ($position['mt_md'] ?? $defaults['position']['mt_md']),
-                'translate_y' => (string) ($position['translate_y'] ?? $defaults['position']['translate_y']),
-            ],
-            'fonts' => [
-                'name_base' => (int) ($fonts['name_base'] ?? $defaults['fonts']['name_base']),
-                'name_sm' => (int) ($fonts['name_sm'] ?? $defaults['fonts']['name_sm']),
-                'name_md' => (int) ($fonts['name_md'] ?? $defaults['fonts']['name_md']),
-                'jawatan_base' => (int) ($fonts['jawatan_base'] ?? $defaults['fonts']['jawatan_base']),
-                'jawatan_sm' => (int) ($fonts['jawatan_sm'] ?? $defaults['fonts']['jawatan_sm']),
-                'jawatan_md' => (int) ($fonts['jawatan_md'] ?? $defaults['fonts']['jawatan_md']),
-                'ptj_base' => (string) ($fonts['ptj_base'] ?? $defaults['fonts']['ptj_base']),
-                'ptj_sm' => (string) ($fonts['ptj_sm'] ?? $defaults['fonts']['ptj_sm']),
-            ],
-        ];
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    private function ptjFontOptions(): array
-    {
-        return [
-            'text-xs',
-            'text-sm',
-            'text-base',
-            'text-lg',
-            'text-xl',
-            'text-2xl',
-            'text-3xl',
-            'text-4xl',
-            'text-5xl',
-        ];
-    }
-
-    /**
-     * @return array{position: array{mt_base: string, mt_sm: string, mt_md: string, translate_y: string}, fonts: array{name_base: int, name_sm: int, name_md: int, jawatan_base: int, jawatan_sm: int, jawatan_md: int, ptj_base: string, ptj_sm: string}}
-     */
-    private function defaultConfig(): array
-    {
-        return [
-            'position' => [
-                'mt_base' => '230px',
-                'mt_sm' => '270px',
-                'mt_md' => '320px',
-                'translate_y' => '-72px',
-            ],
-            'fonts' => [
-                'name_base' => 36,
-                'name_sm' => 44,
-                'name_md' => 52,
-                'jawatan_base' => 30,
-                'jawatan_sm' => 38,
-                'jawatan_md' => 46,
-                'ptj_base' => 'text-2xl',
-                'ptj_sm' => 'text-4xl',
-            ],
-        ];
+        return back()->with('status', __('Tetapan paparan berjaya disimpan.'));
     }
 }

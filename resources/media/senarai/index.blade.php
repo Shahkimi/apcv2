@@ -1,4 +1,4 @@
-<x-dashboard-layout :title="__('Senarai kehadiran - Persediaan')" role="media">
+<x-dashboard-layout :title="__('Layar Utama')" role="media">
     {{-- Custom styles --}}
     @push('styles')
     <style>
@@ -127,7 +127,7 @@
                 {{-- Title --}}
                 <div>
                     <h1 class="shimmer-text text-5xl font-extrabold tracking-tight sm:text-6xl leading-tight">
-                        {{ __("Persediaan Paparan") }}
+                        {{ __("Layar Utama") }}
                     </h1>
                     <div class="mt-3 h-px w-24 mx-auto bg-gradient-to-r from-transparent via-sky-400 to-transparent"></div>
                 </div>

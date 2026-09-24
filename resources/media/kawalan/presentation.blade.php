@@ -1,197 +1,371 @@
 <x-dashboard-layout :title="__('Kawalan Paparan Presentasi')" role="media">
     <x-kawalan-shell>
-        <x-crud-header
-            :title="__('Kawalan Paparan Presentasi')"
-            :description="__('Ubah kedudukan teks dan saiz fon untuk skrin presentasi senarai kehadiran.')"
-            :show-create="false"
-        />
+        <div>
+            <a
+                href="{{ route('media.senarai.index') }}"
+                class="mb-3 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+            >
+                <i class="ri-arrow-left-line" aria-hidden="true"></i>
+                {{ __('Kembali ke Senarai') }}
+            </a>
+            <x-crud-header
+                :title="__('Kawalan Paparan Presentasi')"
+                :description="__('Ubah kedudukan teks dan saiz fon untuk skrin presentasi senarai kehadiran.')"
+                :show-create="false"
+            />
+        </div>
 
-        @if (session('status'))
-            <div class="mb-6 rounded-xl border border-emerald-300/70 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
-                {{ session('status') }}
-            </div>
-        @endif
+        @php
+            $bps = [
+                'base' => ['label' => __('Telefon'), 'hint' => '< 640px'],
+                'sm' => ['label' => __('Tablet'), 'hint' => '≥ 640px'],
+                'md' => ['label' => __('Desktop'), 'hint' => '≥ 768px'],
+            ];
+            $fontRows = [
+                ['icon' => 'ri-user-line', 'label' => __('Nama'), 'key' => 'fonts_name', 'name' => 'fonts[name_%s]', 'min' => 10, 'max' => 200],
+                ['icon' => 'ri-briefcase-line', 'label' => __('Jawatan'), 'key' => 'fonts_jawatan', 'name' => 'fonts[jawatan_%s]', 'min' => 10, 'max' => 200],
+            ];
+            $mtRow = ['icon' => 'ri-align-top', 'label' => __('Margin atas'), 'key' => 'position_mt', 'name' => 'position[mt_%s]', 'min' => 0, 'max' => 2000];
+        @endphp
 
-        <div class="grid gap-6 lg:grid-cols-1 lg:items-start">
-            <form method="POST" action="{{ route('media.kawalan.presentation.update') }}" class="space-y-6">
+        <div
+            x-data="presentationSettings(@js([
+                'formValues' => $formValues,
+                'profiles' => $profiles,
+                'activeProfileId' => $activeProfileId,
+                'max' => $maxProfiles,
+                'ptjPx' => $ptjFontPx,
+                'backdropUrl' => $backdrop?->file_path ? $backdrop->image_url : null,
+                'routes' => [
+                    'update' => route('media.kawalan.presentation.update'),
+                    'profilesStore' => route('media.kawalan.presentation.profiles.store'),
+                    'profilesUpdate' => route('media.kawalan.presentation.profiles.update', ['presentationProfile' => '__ID__']),
+                    'profilesDestroy' => route('media.kawalan.presentation.profiles.destroy', ['presentationProfile' => '__ID__']),
+                    'profilesApply' => route('media.kawalan.presentation.profiles.apply', ['presentationProfile' => '__ID__']),
+                ],
+            ]))"
+        >
+            @if (session('status'))
+                <div class="mb-6 rounded-xl border border-emerald-300/70 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
+                    {{ session('status') }}
+                </div>
+            @endif
+
+            <form
+                method="POST"
+                action="{{ route('media.kawalan.presentation.update') }}"
+                @submit.prevent="save()"
+                class="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(20rem,26rem)] lg:items-start lg:gap-x-10"
+            >
                 @csrf
                 @method('PUT')
 
-                <section class="rounded-2xl border border-border/70 bg-card p-5 shadow-sm">
-                    <h2 class="flex items-center gap-2 text-base font-semibold text-foreground">
-                        <i class="ri-align-center-vertical text-lg text-muted-foreground" aria-hidden="true"></i>
-                        {{ __('Kedudukan Teks') }}
-                    </h2>
-                    <p class="mt-1 text-sm text-muted-foreground">{{ __('Semua nilai kedudukan menggunakan unit px. Translate Y positif = gerak ke bawah.') }}</p>
+                {{-- Aside: live preview + saved profiles --}}
+                <aside class="mb-10 space-y-10 lg:order-2 lg:sticky lg:top-6 lg:mb-0">
 
-                    <div class="mt-4 grid gap-4 md:grid-cols-2">
-                        @php
-                            $mtBase = old('position.mt_base', (int) rtrim($config['position']['mt_base'], 'px'));
-                            $mtSm = old('position.mt_sm', (int) rtrim($config['position']['mt_sm'], 'px'));
-                            $mtMd = old('position.mt_md', (int) rtrim($config['position']['mt_md'], 'px'));
-                            $ty = old('position.translate_y', (int) rtrim($config['position']['translate_y'], 'px'));
-                        @endphp
-
-                        <div class="space-y-2">
-                            <label for="position_mt_base" class="block text-sm font-medium text-foreground">{{ __('Margin Atas (Telefon)') }}</label>
-                            <input
-                                type="number"
-                                min="0"
-                                max="2000"
-                                id="position_mt_base"
-                                name="position[mt_base]"
-                                value="{{ $mtBase }}"
-                                step="1"
-                                class="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
-                            >
-                            <input type="range" min="0" max="2000" step="1" id="position_mt_base_range" value="{{ $mtBase }}" class="w-full accent-violet-600" data-number-id="position_mt_base">
-                            @error('position.mt_base') <p class="mt-1 text-xs text-rose-500">{{ $message }}</p> @enderror
+                    {{-- Live preview --}}
+                    <section class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                                {{ __('Pratonton') }}
+                            </h2>
+                            <span class="text-[11px] text-muted-foreground">{{ __('Desktop') }} · 1280×720</span>
                         </div>
 
-                        <div class="space-y-2">
-                            <label for="position_mt_sm" class="block text-sm font-medium text-foreground">{{ __('Margin Atas (sm >= 640px)') }}</label>
-                            <input
-                                type="number"
-                                min="0"
-                                max="2000"
-                                id="position_mt_sm"
-                                name="position[mt_sm]"
-                                value="{{ $mtSm }}"
-                                step="1"
-                                class="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
-                            >
-                            <input type="range" min="0" max="2000" step="1" id="position_mt_sm_range" value="{{ $mtSm }}" class="w-full accent-violet-600" data-number-id="position_mt_sm">
-                            @error('position.mt_sm') <p class="mt-1 text-xs text-rose-500">{{ $message }}</p> @enderror
+                        <div class="rounded-xl border border-border/70 bg-muted/20 p-3" x-init="initPreview($el)">
+                            <div class="mx-auto overflow-hidden rounded-md shadow-sm" :style="previewFrameStyle()">
+                                <div
+                                    class="presentation-preview-stage flex items-center justify-center bg-cover bg-center bg-no-repeat text-white"
+                                    :style="previewStageStyle()"
+                                >
+                                    <div class="officer-display-wrap w-full max-w-6xl text-center">
+                                        <div class="officer-display">
+                                            <div class="officer-name">{{ __('Nama Pegawai Contoh') }}</div>
+                                            <div class="officer-jawatan">{{ __('Pegawai Teknologi Maklumat') }}</div>
+                                            <div class="officer-ptj">{{ __('PTJ Contoh') }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="text-[11px] text-muted-foreground">
+                            {{ __('Pratonton anggaran — skrin sebenar bergantung pada resolusi.') }}
+                        </p>
+                    </section>
+
+                    {{-- Saved profiles --}}
+                    <section class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                                {{ __('Profil') }}
+                            </h2>
+                            <span class="text-[11px] tabular-nums text-muted-foreground" x-text="profiles.length + ' / ' + max"></span>
                         </div>
 
-                        <div class="space-y-2">
-                            <label for="position_mt_md" class="block text-sm font-medium text-foreground">{{ __('Margin Atas (md >= 768px)') }}</label>
-                            <input
-                                type="number"
-                                min="0"
-                                max="2000"
-                                id="position_mt_md"
-                                name="position[mt_md]"
-                                value="{{ $mtMd }}"
-                                step="1"
-                                class="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
-                            >
-                            <input type="range" min="0" max="2000" step="1" id="position_mt_md_range" value="{{ $mtMd }}" class="w-full accent-violet-600" data-number-id="position_mt_md">
-                            @error('position.mt_md') <p class="mt-1 text-xs text-rose-500">{{ $message }}</p> @enderror
+                        <template x-if="profiles.length === 0">
+                            <p class="rounded-md border border-dashed border-border/70 px-3 py-4 text-center text-xs text-muted-foreground">
+                                {{ __('Belum ada profil. Laraskan nilai dan simpan sebagai profil.') }}
+                            </p>
+                        </template>
+
+                        <ul class="max-h-72 overflow-y-auto" x-show="profiles.length > 0">
+                            <template x-for="profile in profiles" :key="profile.id">
+                                <li
+                                    class="flex items-center gap-2 border-t border-border/50 py-2 first:border-t-0"
+                                    :class="profile.id === activeProfileId ? '-mx-2 rounded-md bg-primary/5 px-2' : ''"
+                                >
+                                    <span
+                                        class="h-1.5 w-1.5 shrink-0 rounded-full"
+                                        :class="profile.id === activeProfileId ? 'bg-primary' : 'bg-transparent'"
+                                    ></span>
+                                    <div class="min-w-0 flex-1">
+                                        <p class="truncate text-sm font-medium text-foreground" x-text="profile.name"></p>
+                                        <p class="text-[11px] text-muted-foreground">
+                                            <span x-text="profile.updated_human"></span>
+                                            <span x-show="profile.id === activeProfileId" class="ml-1 font-semibold uppercase tracking-wide text-primary">{{ __('Aktif') }}</span>
+                                        </p>
+                                    </div>
+                                    <div class="flex shrink-0 items-center">
+                                        <button type="button" class="btn btn-ghost btn-sm btn-icon text-primary" :disabled="busy" title="{{ __('Guna') }}" @click="applyProfile(profile)">
+                                            <i class="ri-play-circle-line" aria-hidden="true"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-ghost btn-sm btn-icon text-muted-foreground" :disabled="busy" title="{{ __('Kemas kini dengan nilai semasa') }}" @click="overwriteProfile(profile)">
+                                            <i class="ri-save-3-line" aria-hidden="true"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-ghost btn-sm btn-icon text-muted-foreground" :disabled="busy" title="{{ __('Namakan semula') }}" @click="renameProfile(profile)">
+                                            <i class="ri-pencil-line" aria-hidden="true"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-ghost btn-sm btn-icon text-muted-foreground hover:text-destructive" :disabled="busy" title="{{ __('Padam') }}" @click="deleteProfile(profile)">
+                                            <i class="ri-delete-bin-line" aria-hidden="true"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                            </template>
+                        </ul>
+
+                        <button
+                            type="button"
+                            class="btn btn-outline btn-sm w-full gap-1.5"
+                            :disabled="busy || profiles.length >= max"
+                            :title="profiles.length >= max ? '{{ __('Had profil dicapai') }}' : ''"
+                            @click="saveAsProfile()"
+                        >
+                            <i class="ri-add-line" aria-hidden="true"></i>
+                            <span>{{ __('Simpan sebagai profil') }}</span>
+                        </button>
+                    </section>
+                </aside>
+
+                {{-- Main column: matrix settings --}}
+                <div class="space-y-12 lg:order-1">
+
+                    {{-- Kedudukan --}}
+                    <section class="space-y-5">
+                        <div>
+                            <h2 class="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                                {{ __('Kedudukan Teks') }}
+                            </h2>
+                            <p class="mt-1 text-sm text-muted-foreground">{{ __('Semua nilai kedudukan menggunakan unit px. Pratonton memaparkan nilai Desktop.') }}</p>
                         </div>
 
-                        <div class="space-y-2">
-                            <label for="position_translate_y" class="block text-sm font-medium text-foreground">{{ __('Translate Y (ke bawah)') }}</label>
-                            <input
-                                type="number"
-                                min="-1000"
-                                max="1000"
-                                id="position_translate_y"
-                                name="position[translate_y]"
-                                value="{{ $ty }}"
-                                step="1"
-                                class="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
-                            >
-                            <input type="range" min="-1000" max="1000" step="1" id="position_translate_y_range" value="{{ $ty }}" class="w-full accent-violet-600" data-number-id="position_translate_y">
-                            @error('position.translate_y') <p class="mt-1 text-xs text-rose-500">{{ $message }}</p> @enderror
-                        </div>
-                    </div>
-                </section>
+                        <div class="grid grid-cols-[minmax(5.5rem,8rem)_repeat(3,minmax(0,1fr))] gap-x-3 gap-y-4 sm:gap-x-4">
+                            <div></div>
+                            @foreach ($bps as $bp => $meta)
+                                <div>
+                                    <span class="block text-[11px] font-semibold uppercase tracking-wider {{ $bp === 'md' ? 'text-primary' : 'text-muted-foreground' }}">{{ $meta['label'] }}</span>
+                                    <span class="block text-[11px] text-muted-foreground">{{ $meta['hint'] }}</span>
+                                </div>
+                            @endforeach
 
-                <section class="rounded-2xl border border-border/70 bg-card p-5 shadow-sm">
-                    <h2 class="text-base font-semibold text-foreground">{{ __('Saiz Fon (px)') }}</h2>
-                    <p class="mt-1 text-sm text-muted-foreground">{{ __('Nama dan jawatan guna unit px. PTJ guna kelas Tailwind untuk responsif.') }}</p>
-
-                    <div class="mt-4 grid gap-4 md:grid-cols-3">
-                        @php
-                            $nameBase = old('fonts.name_base', $config['fonts']['name_base']);
-                            $nameSm = old('fonts.name_sm', $config['fonts']['name_sm']);
-                            $nameMd = old('fonts.name_md', $config['fonts']['name_md']);
-                            $jawatanBase = old('fonts.jawatan_base', $config['fonts']['jawatan_base']);
-                            $jawatanSm = old('fonts.jawatan_sm', $config['fonts']['jawatan_sm']);
-                            $jawatanMd = old('fonts.jawatan_md', $config['fonts']['jawatan_md']);
-                        @endphp
-
-                        <div class="space-y-2">
-                            <label for="fonts_name_base" class="block text-sm font-medium text-foreground">{{ __('Nama (Telefon)') }}</label>
-                            <input type="number" min="10" max="200" id="fonts_name_base" name="fonts[name_base]" value="{{ $nameBase }}" step="1" class="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm">
-                            <input type="range" min="10" max="200" step="1" id="fonts_name_base_range" value="{{ $nameBase }}" class="w-full accent-violet-600" data-number-id="fonts_name_base">
-                            @error('fonts.name_base') <p class="mt-1 text-xs text-rose-500">{{ $message }}</p> @enderror
-                        </div>
-
-                        <div class="space-y-2">
-                            <label for="fonts_name_sm" class="block text-sm font-medium text-foreground">{{ __('Nama (sm)') }}</label>
-                            <input type="number" min="10" max="200" id="fonts_name_sm" name="fonts[name_sm]" value="{{ $nameSm }}" step="1" class="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm">
-                            <input type="range" min="10" max="200" step="1" id="fonts_name_sm_range" value="{{ $nameSm }}" class="w-full accent-violet-600" data-number-id="fonts_name_sm">
-                            @error('fonts.name_sm') <p class="mt-1 text-xs text-rose-500">{{ $message }}</p> @enderror
-                        </div>
-
-                        <div class="space-y-2">
-                            <label for="fonts_name_md" class="block text-sm font-medium text-foreground">{{ __('Nama (md)') }}</label>
-                            <input type="number" min="10" max="200" id="fonts_name_md" name="fonts[name_md]" value="{{ $nameMd }}" step="1" class="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm">
-                            <input type="range" min="10" max="200" step="1" id="fonts_name_md_range" value="{{ $nameMd }}" class="w-full accent-violet-600" data-number-id="fonts_name_md">
-                            @error('fonts.name_md') <p class="mt-1 text-xs text-rose-500">{{ $message }}</p> @enderror
+                            <div class="flex items-center gap-2 pt-2 text-sm font-medium text-foreground">
+                                <i class="{{ $mtRow['icon'] }} text-muted-foreground" aria-hidden="true"></i>
+                                {{ $mtRow['label'] }}
+                            </div>
+                            @foreach (array_keys($bps) as $bp)
+                                @php $key = $mtRow['key'].'_'.$bp; $name = sprintf($mtRow['name'], $bp); @endphp
+                                <div class="min-w-0">
+                                    <div class="relative">
+                                        <input
+                                            type="number"
+                                            id="{{ $key }}"
+                                            name="{{ $name }}"
+                                            min="{{ $mtRow['min'] }}"
+                                            max="{{ $mtRow['max'] }}"
+                                            step="1"
+                                            value="{{ $formValues[$key] }}"
+                                            x-model.number="values.{{ $key }}"
+                                            class="matrix-number h-9 w-full rounded-md border border-input bg-background pl-3 pr-8 text-sm tabular-nums focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+                                            :class="errors.{{ $key }} ? 'border-destructive' : ''"
+                                        >
+                                        <span class="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-[11px] text-muted-foreground">px</span>
+                                    </div>
+                                    <input
+                                        type="range"
+                                        min="{{ $mtRow['min'] }}"
+                                        max="{{ $mtRow['max'] }}"
+                                        step="1"
+                                        x-model.number="values.{{ $key }}"
+                                        class="matrix-range mt-2 w-full"
+                                        aria-label="{{ $mtRow['label'] }} {{ $bps[$bp]['label'] }}"
+                                    >
+                                    <template x-if="errors.{{ $key }}">
+                                        <p class="mt-1 text-xs text-destructive" x-text="errors.{{ $key }}"></p>
+                                    </template>
+                                </div>
+                            @endforeach
                         </div>
 
-                        <div class="space-y-2">
-                            <label for="fonts_jawatan_base" class="block text-sm font-medium text-foreground">{{ __('Jawatan (Telefon)') }}</label>
-                            <input type="number" min="10" max="200" id="fonts_jawatan_base" name="fonts[jawatan_base]" value="{{ $jawatanBase }}" step="1" class="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm">
-                            <input type="range" min="10" max="200" step="1" id="fonts_jawatan_base_range" value="{{ $jawatanBase }}" class="w-full accent-violet-600" data-number-id="fonts_jawatan_base">
-                            @error('fonts.jawatan_base') <p class="mt-1 text-xs text-rose-500">{{ $message }}</p> @enderror
+                        <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
+                            <div class="flex items-center gap-2 text-sm font-medium text-foreground">
+                                <i class="ri-arrow-up-down-line text-muted-foreground" aria-hidden="true"></i>
+                                {{ __('Translate Y') }}
+                            </div>
+                            <div class="inline-flex h-9 items-stretch overflow-hidden rounded-md border border-input">
+                                <button type="button" class="px-2.5 text-muted-foreground hover:bg-accent" @click="nudge('position_translate_y', -10, -1000, 1000)" aria-label="-10">
+                                    <i class="ri-subtract-line" aria-hidden="true"></i>
+                                </button>
+                                <div class="relative">
+                                    <input
+                                        type="number"
+                                        id="position_translate_y"
+                                        name="position[translate_y]"
+                                        min="-1000"
+                                        max="1000"
+                                        step="1"
+                                        value="{{ $formValues['position_translate_y'] }}"
+                                        x-model.number="values.position_translate_y"
+                                        class="matrix-number h-full w-24 border-x border-input bg-background pl-3 pr-8 text-center text-sm tabular-nums focus:outline-none"
+                                        :class="errors.position_translate_y ? 'border-destructive' : ''"
+                                    >
+                                    <span class="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-[11px] text-muted-foreground">px</span>
+                                </div>
+                                <button type="button" class="px-2.5 text-muted-foreground hover:bg-accent" @click="nudge('position_translate_y', 10, -1000, 1000)" aria-label="+10">
+                                    <i class="ri-add-line" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                            <span class="text-xs text-muted-foreground">{{ __('Positif = ke bawah') }}</span>
+                            <template x-if="errors.position_translate_y">
+                                <p class="w-full text-xs text-destructive" x-text="errors.position_translate_y"></p>
+                            </template>
+                        </div>
+                    </section>
+
+                    {{-- Saiz fon --}}
+                    <section class="space-y-5">
+                        <div>
+                            <h2 class="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                                {{ __('Saiz Fon') }}
+                            </h2>
+                            <p class="mt-1 text-sm text-muted-foreground">{{ __('Nama dan jawatan guna unit px. PTJ guna kelas Tailwind untuk responsif.') }}</p>
                         </div>
 
-                        <div class="space-y-2">
-                            <label for="fonts_jawatan_sm" class="block text-sm font-medium text-foreground">{{ __('Jawatan (sm)') }}</label>
-                            <input type="number" min="10" max="200" id="fonts_jawatan_sm" name="fonts[jawatan_sm]" value="{{ $jawatanSm }}" step="1" class="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm">
-                            <input type="range" min="10" max="200" step="1" id="fonts_jawatan_sm_range" value="{{ $jawatanSm }}" class="w-full accent-violet-600" data-number-id="fonts_jawatan_sm">
-                            @error('fonts.jawatan_sm') <p class="mt-1 text-xs text-rose-500">{{ $message }}</p> @enderror
-                        </div>
+                        <div class="grid grid-cols-[minmax(5.5rem,8rem)_repeat(3,minmax(0,1fr))] gap-x-3 gap-y-4 sm:gap-x-4">
+                            <div></div>
+                            @foreach ($bps as $bp => $meta)
+                                <div>
+                                    <span class="block text-[11px] font-semibold uppercase tracking-wider {{ $bp === 'md' ? 'text-primary' : 'text-muted-foreground' }}">{{ $meta['label'] }}</span>
+                                    <span class="block text-[11px] text-muted-foreground">{{ $meta['hint'] }}</span>
+                                </div>
+                            @endforeach
 
-                        <div class="space-y-2">
-                            <label for="fonts_jawatan_md" class="block text-sm font-medium text-foreground">{{ __('Jawatan (md)') }}</label>
-                            <input type="number" min="10" max="200" id="fonts_jawatan_md" name="fonts[jawatan_md]" value="{{ $jawatanMd }}" step="1" class="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm">
-                            <input type="range" min="10" max="200" step="1" id="fonts_jawatan_md_range" value="{{ $jawatanMd }}" class="w-full accent-violet-600" data-number-id="fonts_jawatan_md">
-                            @error('fonts.jawatan_md') <p class="mt-1 text-xs text-rose-500">{{ $message }}</p> @enderror
-                        </div>
-                    </div>
-
-                    <div class="mt-4 grid gap-4 md:grid-cols-2">
-                        <div class="space-y-2">
-                            <label for="fonts_ptj_base" class="block text-sm font-medium text-foreground">{{ __('PTJ (Telefon)') }}</label>
-                            <select id="fonts_ptj_base" name="fonts[ptj_base]" class="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm">
-                                @foreach ($ptjFontOptions as $option)
-                                    <option value="{{ $option }}" @selected(old('fonts.ptj_base', $config['fonts']['ptj_base']) === $option)>{{ $option }}</option>
+                            @foreach ($fontRows as $row)
+                                <div class="flex items-center gap-2 pt-2 text-sm font-medium text-foreground">
+                                    <i class="{{ $row['icon'] }} text-muted-foreground" aria-hidden="true"></i>
+                                    {{ $row['label'] }}
+                                </div>
+                                @foreach (array_keys($bps) as $bp)
+                                    @php $key = $row['key'].'_'.$bp; $name = sprintf($row['name'], $bp); @endphp
+                                    <div class="min-w-0">
+                                        <div class="relative">
+                                            <input
+                                                type="number"
+                                                id="{{ $key }}"
+                                                name="{{ $name }}"
+                                                min="{{ $row['min'] }}"
+                                                max="{{ $row['max'] }}"
+                                                step="1"
+                                                value="{{ $formValues[$key] }}"
+                                                x-model.number="values.{{ $key }}"
+                                                class="matrix-number h-9 w-full rounded-md border border-input bg-background pl-3 pr-8 text-sm tabular-nums focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+                                                :class="errors.{{ $key }} ? 'border-destructive' : ''"
+                                            >
+                                            <span class="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-[11px] text-muted-foreground">px</span>
+                                        </div>
+                                        <input
+                                            type="range"
+                                            min="{{ $row['min'] }}"
+                                            max="{{ $row['max'] }}"
+                                            step="1"
+                                            x-model.number="values.{{ $key }}"
+                                            class="matrix-range mt-2 w-full"
+                                            aria-label="{{ $row['label'] }} {{ $bps[$bp]['label'] }}"
+                                        >
+                                        <template x-if="errors.{{ $key }}">
+                                            <p class="mt-1 text-xs text-destructive" x-text="errors.{{ $key }}"></p>
+                                        </template>
+                                    </div>
                                 @endforeach
-                            </select>
-                            @error('fonts.ptj_base') <p class="text-xs text-rose-500">{{ $message }}</p> @enderror
-                        </div>
+                            @endforeach
 
-                        <div class="space-y-2">
-                            <label for="fonts_ptj_sm" class="block text-sm font-medium text-foreground">{{ __('PTJ (sm ke atas)') }}</label>
-                            <select id="fonts_ptj_sm" name="fonts[ptj_sm]" class="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm">
-                                @foreach ($ptjFontOptions as $option)
-                                    <option value="{{ $option }}" @selected(old('fonts.ptj_sm', $config['fonts']['ptj_sm']) === $option)>{{ $option }}</option>
-                                @endforeach
-                            </select>
-                            @error('fonts.ptj_sm') <p class="text-xs text-rose-500">{{ $message }}</p> @enderror
+                            <div class="flex items-center gap-2 pt-2 text-sm font-medium text-foreground">
+                                <i class="ri-building-line text-muted-foreground" aria-hidden="true"></i>
+                                {{ __('PTJ') }}
+                            </div>
+                            <div class="min-w-0">
+                                <select
+                                    id="fonts_ptj_base"
+                                    name="fonts[ptj_base]"
+                                    x-model="values.fonts_ptj_base"
+                                    class="h-9 w-full rounded-md border border-input bg-background px-2.5 text-sm"
+                                    :class="errors.fonts_ptj_base ? 'border-destructive' : ''"
+                                >
+                                    @foreach ($ptjFontOptions as $option)
+                                        <option value="{{ $option }}" @selected($formValues['fonts_ptj_base'] === $option)>{{ $option }}</option>
+                                    @endforeach
+                                </select>
+                                <template x-if="errors.fonts_ptj_base">
+                                    <p class="mt-1 text-xs text-destructive" x-text="errors.fonts_ptj_base"></p>
+                                </template>
+                            </div>
+                            <div class="col-span-2 min-w-0">
+                                <select
+                                    id="fonts_ptj_sm"
+                                    name="fonts[ptj_sm]"
+                                    x-model="values.fonts_ptj_sm"
+                                    class="h-9 w-full rounded-md border border-input bg-background px-2.5 text-sm"
+                                    :class="errors.fonts_ptj_sm ? 'border-destructive' : ''"
+                                >
+                                    @foreach ($ptjFontOptions as $option)
+                                        <option value="{{ $option }}" @selected($formValues['fonts_ptj_sm'] === $option)>{{ $option }}</option>
+                                    @endforeach
+                                </select>
+                                <p class="mt-1 text-[11px] text-muted-foreground">{{ __('Tablet & Desktop') }}</p>
+                                <template x-if="errors.fonts_ptj_sm">
+                                    <p class="mt-1 text-xs text-destructive" x-text="errors.fonts_ptj_sm"></p>
+                                </template>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                {{-- Sticky action bar --}}
+                <div class="sticky bottom-4 z-10 mt-10 lg:order-3 lg:col-span-2">
+                    <div class="flex h-14 items-center justify-between rounded-xl border border-border/70 bg-card/95 px-4 shadow-lg backdrop-blur">
+                        <div class="flex min-w-0 items-center gap-2 text-sm">
+                            <span class="h-2 w-2 shrink-0 rounded-full" :class="isDirty() ? 'bg-amber-500' : 'bg-emerald-500'"></span>
+                            <span class="truncate text-muted-foreground" x-text="statusText()"></span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" class="btn btn-ghost btn-sm" :disabled="busy || !isDirty()" @click="revert()">
+                                {{ __('Revert') }}
+                            </button>
+                            <button type="submit" class="btn btn-primary btn-sm gap-1.5" :disabled="busy">
+                                <i class="ri-loader-4-line animate-spin" x-show="busy" aria-hidden="true"></i>
+                                <i class="ri-save-3-line" x-show="!busy" aria-hidden="true"></i>
+                                <span>{{ __('Simpan Tetapan') }}</span>
+                            </button>
                         </div>
                     </div>
-                </section>
-
-                <div class="flex items-center gap-3">
-                    <button
-                        type="button"
-                        id="presentation-revert-btn"
-                        class="inline-flex items-center rounded-xl border border-border bg-background px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted"
-                    >
-                        {{ __('Revert') }}
-                    </button>
-                    <button type="submit" class="inline-flex items-center rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-500">
-                        {{ __('Simpan Tetapan') }}
-                    </button>
-                    <a href="{{ route('media.senarai.index') }}" class="text-sm font-medium text-muted-foreground hover:text-foreground">
-                        {{ __('Kembali ke Senarai') }}
-                    </a>
                 </div>
             </form>
         </div>
@@ -199,71 +373,353 @@
 
     @push('scripts')
         <script>
-            (() => {
-                const numberIds = [
-                    'position_mt_base',
-                    'position_mt_sm',
-                    'position_mt_md',
-                    'position_translate_y',
-                    'fonts_name_base',
-                    'fonts_name_sm',
-                    'fonts_name_md',
-                    'fonts_jawatan_base',
-                    'fonts_jawatan_sm',
-                    'fonts_jawatan_md',
-                ];
+            window.presentationSettings = (init) => ({
+                values: { ...init.formValues },
+                saved: { ...init.formValues },
+                profiles: init.profiles,
+                activeProfileId: init.activeProfileId,
+                loadedProfileId: init.activeProfileId,
+                max: init.max,
+                routes: init.routes,
+                errors: {},
+                busy: false,
 
-                const bindRange = (rangeEl) => {
-                    if (!rangeEl) return;
-                    const numberId = rangeEl.dataset.numberId;
-                    const numberEl = document.getElementById(numberId);
-                    if (!numberEl) return;
+                // Live preview — Desktop (md ≥ 768px) only, virtual stage 1280×720
+                previewWidth: 0,
+                stage: { w: 1280, h: 720 },
+                ptjPx: init.ptjPx,
+                backdropUrl: init.backdropUrl,
 
-                    // Keep number input and range slider in sync
-                    numberEl.value = rangeEl.value;
+                initPreview(el) {
+                    this.previewWidth = el.clientWidth - 24;
+                    new ResizeObserver((entries) => {
+                        this.previewWidth = entries[0].contentRect.width;
+                    }).observe(el);
+                },
 
-                    rangeEl.addEventListener('input', () => {
-                        numberEl.value = rangeEl.value;
+                previewScale() {
+                    return this.previewWidth ? this.previewWidth / this.stage.w : 0;
+                },
+
+                previewFrameStyle() {
+                    const k = this.previewScale();
+                    return { width: `${this.stage.w * k}px`, height: `${this.stage.h * k}px` };
+                },
+
+                previewStageStyle() {
+                    return {
+                        width: `${this.stage.w}px`,
+                        height: `${this.stage.h}px`,
+                        transform: `scale(${this.previewScale()})`,
+                        backgroundImage: this.backdropUrl
+                            ? `url("${this.backdropUrl}")`
+                            : 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
+                        ...this.previewVars(),
+                    };
+                },
+
+                previewVars() {
+                    const v = this.values;
+                    const n = (x) => Number(x) || 0;
+
+                    return {
+                        '--officer-mt': `${n(v.position_mt_md)}px`,
+                        '--officer-translate-y': `${n(v.position_translate_y)}px`,
+                        '--officer-px': '48px',
+                        '--officer-gap': '8px',
+                        '--officer-name-font-size': `${n(v.fonts_name_md)}px`,
+                        '--officer-jawatan-font-size': `${n(v.fonts_jawatan_md)}px`,
+                        '--officer-ptj-font-size': `${this.ptjPx[v.fonts_ptj_sm] ?? 24}px`,
+                    };
+                },
+
+                nudge(key, delta, min, max) {
+                    const v = Number(this.values[key]) || 0;
+                    this.values[key] = Math.min(max, Math.max(min, v + delta));
+                },
+
+                isDirty() {
+                    return JSON.stringify(this.values) !== JSON.stringify(this.saved);
+                },
+
+                statusText() {
+                    if (this.isDirty()) {
+                        return @json(__('Perubahan belum disimpan'));
+                    }
+
+                    const active = this.profiles.find((p) => p.id === this.loadedProfileId);
+                    if (active) {
+                        return @json(__('Menggunakan profil')) + ': ' + active.name;
+                    }
+
+                    return @json(__('Tiada perubahan'));
+                },
+
+                revert() {
+                    this.values = { ...this.saved };
+                    this.errors = {};
+                },
+
+                buildConfigPayload() {
+                    return {
+                        position: {
+                            mt_base: this.values.position_mt_base,
+                            mt_sm: this.values.position_mt_sm,
+                            mt_md: this.values.position_mt_md,
+                            translate_y: this.values.position_translate_y,
+                        },
+                        fonts: {
+                            name_base: this.values.fonts_name_base,
+                            name_sm: this.values.fonts_name_sm,
+                            name_md: this.values.fonts_name_md,
+                            jawatan_base: this.values.fonts_jawatan_base,
+                            jawatan_sm: this.values.fonts_jawatan_sm,
+                            jawatan_md: this.values.fonts_jawatan_md,
+                            ptj_base: this.values.fonts_ptj_base,
+                            ptj_sm: this.values.fonts_ptj_sm,
+                        },
+                    };
+                },
+
+                matchesProfile(profile) {
+                    return JSON.stringify(profile.form_values) === JSON.stringify(this.values);
+                },
+
+                async save() {
+                    if (this.busy) return;
+                    this.busy = true;
+                    this.errors = {};
+
+                    try {
+                        const matched = this.profiles.find((p) => this.matchesProfile(p));
+                        const payload = this.buildConfigPayload();
+                        if (matched) {
+                            payload.profile_id = matched.id;
+                        }
+
+                        const { data } = await window.axios.put(this.routes.update, payload, {
+                            headers: { Accept: 'application/json' },
+                        });
+
+                        this.saved = { ...this.values };
+                        this.activeProfileId = data.active_profile_id;
+                        this.loadedProfileId = data.active_profile_id;
+                        this.toast('success', data.message);
+                    } catch (e) {
+                        this.handleValidationError(e);
+                    } finally {
+                        this.busy = false;
+                    }
+                },
+
+                async saveAsProfile() {
+                    if (this.busy || this.profiles.length >= this.max) return;
+
+                    const { value: name } = await window.Swal.fire({
+                        title: @json(__('Simpan sebagai profil')),
+                        input: 'text',
+                        inputPlaceholder: @json(__('Nama profil')),
+                        showCancelButton: true,
+                        confirmButtonText: @json(__('Simpan')),
+                        cancelButtonText: @json(__('Batal')),
+                        background: 'var(--popover)',
+                        color: 'var(--popover-foreground)',
+                        buttonsStyling: false,
+                        customClass: {
+                            popup: 'kawalan-swal2-popup',
+                            htmlContainer: 'kawalan-swal2-text',
+                            actions: 'kawalan-swal2-actions',
+                            confirmButton: 'kawalan-swal2-confirm-success',
+                            cancelButton: 'kawalan-swal2-cancel',
+                            input: 'kawalan-swal2-input',
+                        },
+                        inputValidator: (value) => (!value || !value.trim() ? @json(__('Nama diperlukan')) : undefined),
                     });
 
-                    numberEl.addEventListener('input', () => {
-                        rangeEl.value = numberEl.value;
+                    if (!name) return;
+
+                    this.busy = true;
+                    try {
+                        const { data } = await window.axios.post(this.routes.profilesStore, {
+                            name: name.trim(),
+                            config: this.buildConfigPayload(),
+                        });
+
+                        this.profiles = data.profiles;
+                        this.activeProfileId = data.active_profile_id;
+                        this.loadedProfileId = data.profile.id;
+                        this.toast('success', data.message);
+                    } catch (e) {
+                        this.toastFromException(e);
+                    } finally {
+                        this.busy = false;
+                    }
+                },
+
+                async applyProfile(profile) {
+                    if (this.busy) return;
+                    this.busy = true;
+
+                    try {
+                        const { data } = await window.axios.post(this.routes.profilesApply.replace('__ID__', profile.id));
+
+                        this.values = { ...data.form_values };
+                        this.saved = { ...data.form_values };
+                        this.loadedProfileId = data.active_profile_id;
+                        this.activeProfileId = data.active_profile_id;
+                        this.profiles = data.profiles;
+                        this.errors = {};
+                        this.toast('success', data.message);
+                    } catch (e) {
+                        this.toastFromException(e);
+                    } finally {
+                        this.busy = false;
+                    }
+                },
+
+                async overwriteProfile(profile) {
+                    if (this.busy) return;
+
+                    const result = await window.Swal.fire({
+                        title: @json(__('Kemas kini profil ini dengan nilai semasa?')),
+                        text: profile.name,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        reverseButtons: true,
+                        confirmButtonText: @json(__('Kemas kini')),
+                        cancelButtonText: @json(__('Batal')),
+                        background: 'var(--popover)',
+                        color: 'var(--popover-foreground)',
+                        buttonsStyling: false,
+                        customClass: {
+                            popup: 'kawalan-swal2-popup',
+                            htmlContainer: 'kawalan-swal2-text',
+                            actions: 'kawalan-swal2-actions',
+                            confirmButton: 'kawalan-swal2-confirm-warning',
+                            cancelButton: 'kawalan-swal2-cancel',
+                        },
                     });
-                };
 
-                const ranges = Array.from(document.querySelectorAll('input[type="range"][data-number-id]'));
-                ranges.forEach(bindRange);
+                    if (!result.isConfirmed) return;
 
-                // Revert button resets inputs back to initial saved values (page load)
-                const revertBtn = document.getElementById('presentation-revert-btn');
-                const initialValues = {};
+                    this.busy = true;
+                    try {
+                        const { data } = await window.axios.put(this.routes.profilesUpdate.replace('__ID__', profile.id), {
+                            config: this.buildConfigPayload(),
+                        });
 
-                numberIds.forEach((id) => {
-                    initialValues[id] = document.getElementById(id)?.value ?? '';
-                });
+                        this.profiles = data.profiles;
+                        this.toast('success', data.message);
+                    } catch (e) {
+                        this.toastFromException(e);
+                    } finally {
+                        this.busy = false;
+                    }
+                },
 
-                initialValues.fonts_ptj_base = document.getElementById('fonts_ptj_base')?.value ?? '';
-                initialValues.fonts_ptj_sm = document.getElementById('fonts_ptj_sm')?.value ?? '';
+                async renameProfile(profile) {
+                    if (this.busy) return;
 
-                if (!revertBtn) return;
-
-                revertBtn.addEventListener('click', () => {
-                    numberIds.forEach((id) => {
-                        const el = document.getElementById(id);
-                        if (!el) return;
-
-                        el.value = initialValues[id];
-
-                        const range = document.querySelector(`input[type="range"][data-number-id="${id}"]`);
-                        if (range) range.value = initialValues[id];
+                    const { value: name } = await window.Swal.fire({
+                        title: @json(__('Namakan semula profil')),
+                        input: 'text',
+                        inputValue: profile.name,
+                        showCancelButton: true,
+                        confirmButtonText: @json(__('Simpan')),
+                        cancelButtonText: @json(__('Batal')),
+                        background: 'var(--popover)',
+                        color: 'var(--popover-foreground)',
+                        buttonsStyling: false,
+                        customClass: {
+                            popup: 'kawalan-swal2-popup',
+                            htmlContainer: 'kawalan-swal2-text',
+                            actions: 'kawalan-swal2-actions',
+                            confirmButton: 'kawalan-swal2-confirm-success',
+                            cancelButton: 'kawalan-swal2-cancel',
+                            input: 'kawalan-swal2-input',
+                        },
+                        inputValidator: (value) => (!value || !value.trim() ? @json(__('Nama diperlukan')) : undefined),
                     });
 
-                    const ptjBase = document.getElementById('fonts_ptj_base');
-                    const ptjSm = document.getElementById('fonts_ptj_sm');
-                    if (ptjBase) ptjBase.value = initialValues.fonts_ptj_base;
-                    if (ptjSm) ptjSm.value = initialValues.fonts_ptj_sm;
-                });
-            })();
+                    if (!name || name.trim() === profile.name) return;
+
+                    this.busy = true;
+                    try {
+                        const { data } = await window.axios.put(this.routes.profilesUpdate.replace('__ID__', profile.id), {
+                            name: name.trim(),
+                        });
+
+                        this.profiles = data.profiles;
+                        this.toast('success', data.message);
+                    } catch (e) {
+                        this.toastFromException(e);
+                    } finally {
+                        this.busy = false;
+                    }
+                },
+
+                async deleteProfile(profile) {
+                    if (this.busy) return;
+
+                    const confirmed = await window.kawalanConfirmDelete({
+                        title: @json(__('Padam profil ini?')),
+                        text: profile.name,
+                        confirmButtonText: @json(__('Padam')),
+                        cancelButtonText: @json(__('Batal')),
+                    });
+
+                    if (!confirmed) return;
+
+                    this.busy = true;
+                    try {
+                        const { data } = await window.axios.delete(this.routes.profilesDestroy.replace('__ID__', profile.id));
+
+                        this.profiles = data.profiles;
+                        this.activeProfileId = data.active_profile_id;
+                        if (this.loadedProfileId === profile.id) {
+                            this.loadedProfileId = null;
+                        }
+                        this.toast('success', data.message);
+                    } catch (e) {
+                        this.toastFromException(e);
+                    } finally {
+                        this.busy = false;
+                    }
+                },
+
+                handleValidationError(e) {
+                    if (e.response && e.response.status === 422 && e.response.data.errors) {
+                        const flat = {};
+                        Object.keys(e.response.data.errors).forEach((key) => {
+                            flat[key.replace('.', '_')] = e.response.data.errors[key][0];
+                        });
+                        this.errors = flat;
+                        this.toast('error', @json(__('Sila semak semula nilai yang dimasukkan.')));
+                        return;
+                    }
+
+                    this.toastFromException(e);
+                },
+
+                toastFromException(e) {
+                    const message = e.response?.data?.message || @json(__('Ralat berlaku. Sila cuba lagi.'));
+                    this.toast('error', message);
+                },
+
+                toast(icon, message) {
+                    window.Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon,
+                        title: message,
+                        showConfirmButton: false,
+                        timer: 1800,
+                        timerProgressBar: true,
+                        background: 'var(--popover)',
+                        color: 'var(--popover-foreground)',
+                    });
+                },
+            });
         </script>
     @endpush
 </x-dashboard-layout>

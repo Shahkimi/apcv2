@@ -31,6 +31,9 @@ class PegawaiFactory extends Factory
             'no_meja' => fn (array $attributes): ?int => ! empty($attributes['is_attend'])
                 ? fake()->numberBetween(1, 40)
                 : null,
+            'hadir_at' => fn (array $attributes): ?\Illuminate\Support\Carbon => ! empty($attributes['is_attend'])
+                ? now()->subMinutes(fake()->numberBetween(0, 180))
+                : null,
             'no_panggilan_lewat' => null,
             'no_sijil' => fake()->optional(0.55)->numberBetween(1, 999),
         ];

@@ -4,19 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Media;
 
-use App\Http\Controllers\Controller;
-use App\Services\Kehadiran\PaparanViewDataBuilder;
-use Illuminate\Http\Request;
-use Illuminate\View\View;
+use App\Http\Controllers\Kehadiran\AbstractPaparanController;
 
-class PaparanController extends Controller
+class PaparanController extends AbstractPaparanController
 {
-    public function __construct(
-        private readonly PaparanViewDataBuilder $paparanViewData,
-    ) {}
-
-    public function index(Request $request): View
+    protected function bladeNamespace(): string
     {
-        return view('media::paparan.index', $this->paparanViewData->buildForRequest($request));
+        return 'media';
     }
 }

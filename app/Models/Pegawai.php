@@ -23,6 +23,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'no_panggilan_lewat',
     'is_attend',
     'is_late',
+    'hadir_at',
     's_kehadiran',
 ])]
 class Pegawai extends Model
@@ -41,6 +42,7 @@ class Pegawai extends Model
             'rsvp' => 'boolean',
             'is_attend' => 'boolean',
             'is_late' => 'boolean',
+            'hadir_at' => 'datetime',
             'no_kerusi' => 'integer',
             'no_sijil' => 'integer',
             'no_meja' => 'integer',

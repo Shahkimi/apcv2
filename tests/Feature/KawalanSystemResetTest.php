@@ -55,6 +55,7 @@ it('resets all pegawai attendance fields for admin', function (): void {
         'no_panggilan_lewat' => 3,
         'is_attend' => true,
         'is_late' => true,
+        'hadir_at' => now(),
         's_kehadiran' => Pegawai::S_KEHADIRAN_PAGI,
     ]);
 
@@ -80,6 +81,7 @@ it('resets all pegawai attendance fields for admin', function (): void {
         ->and($pegawai->no_panggilan_lewat)->toBe(0)
         ->and($pegawai->is_attend)->toBeFalse()
         ->and($pegawai->is_late)->toBeFalse()
+        ->and($pegawai->hadir_at)->toBeNull()
         ->and(AnnouncedOfficer::query()->count())->toBe(0);
 });
 

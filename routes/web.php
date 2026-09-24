@@ -17,6 +17,7 @@ use App\Http\Controllers\Admin\PaparanController as AdminPaparanController;
 use App\Http\Controllers\Admin\ReportController as AdminReportController;
 use App\Http\Controllers\Admin\SenaraiAnalyticsController as AdminSenaraiAnalyticsController;
 use App\Http\Controllers\Media\DashboardController as MediaDashboardController;
+use App\Http\Controllers\Media\Kawalan\PresentationProfileController as MediaPresentationProfileController;
 use App\Http\Controllers\Media\Kawalan\PresentationSettingsController as MediaPresentationSettingsController;
 use App\Http\Controllers\Media\PaparanController as MediaPaparanController;
 use App\Http\Controllers\Media\SenaraiAnalyticsController as MediaSenaraiAnalyticsController;
@@ -66,6 +67,8 @@ Route::middleware('auth')->group(function () {
         ->group(function () {
             Route::get('/dashboard', [MediaDashboardController::class, 'index'])->name('dashboard');
             Route::get('/paparan', [MediaPaparanController::class, 'index'])->name('paparan.index');
+            Route::get('/paparan/datatable', [MediaPaparanController::class, 'datatable'])->name('paparan.datatable');
+            Route::get('/paparan/stats', [MediaPaparanController::class, 'stats'])->name('paparan.stats');
             Route::get('/senarai/present', [MediaSenaraiController::class, 'present'])->name('senarai.present');
             Route::get('/senarai', [MediaSenaraiController::class, 'index'])->name('senarai.index');
             Route::get('/senarai/analytics', [MediaSenaraiAnalyticsController::class, 'index'])->name('senarai.analytics');
@@ -76,6 +79,14 @@ Route::middleware('auth')->group(function () {
             Route::prefix('kawalan')->name('kawalan.')->group(function () {
                 Route::get('/presentation', [MediaPresentationSettingsController::class, 'index'])->name('presentation.index');
                 Route::put('/presentation', [MediaPresentationSettingsController::class, 'update'])->name('presentation.update');
+
+                Route::prefix('presentation/profiles')->name('presentation.profiles.')->group(function () {
+                    Route::get('/', [MediaPresentationProfileController::class, 'index'])->name('index');
+                    Route::post('/', [MediaPresentationProfileController::class, 'store'])->name('store');
+                    Route::put('/{presentationProfile}', [MediaPresentationProfileController::class, 'update'])->name('update');
+                    Route::delete('/{presentationProfile}', [MediaPresentationProfileController::class, 'destroy'])->name('destroy');
+                    Route::post('/{presentationProfile}/apply', [MediaPresentationProfileController::class, 'apply'])->name('apply');
+                });
             });
         });
 
@@ -100,6 +111,8 @@ Route::middleware('auth')->group(function () {
             });
 
             Route::get('paparan', [AdminPaparanController::class, 'index'])->name('paparan.index');
+            Route::get('paparan/datatable', [AdminPaparanController::class, 'datatable'])->name('paparan.datatable');
+            Route::get('paparan/stats', [AdminPaparanController::class, 'stats'])->name('paparan.stats');
 
             Route::prefix('kawalan')->name('kawalan.')->group(function () {
                 Route::get('ptj', [KawalanPtjController::class, 'index'])->name('ptj.index');

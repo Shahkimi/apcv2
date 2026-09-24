@@ -5,7 +5,7 @@
         'admin' => [
             ['label' => __('Dashboard'), 'route' => 'admin.dashboard', 'icon' => 'ri-dashboard-line'],
             ['label' => __('Kehadiran'), 'route' => 'admin.kehadiran.index', 'icon' => 'ri-user-follow-line'],
-            ['label' => __('Paparan'), 'route' => 'admin.paparan.index', 'icon' => 'ri-tv-2-line'],
+            ['label' => __('Debug paparan'), 'route' => 'admin.paparan.index', 'icon' => 'ri-bug-line'],
             ['label' => __('Analitik Senarai'), 'route' => 'admin.senarai.analytics', 'icon' => 'ri-bar-chart-line'],
             ['label' => __('Laporan'), 'route' => 'admin.report.index', 'icon' => 'ri-file-pdf-line'],
             [
@@ -26,8 +26,8 @@
         ],
         'media' => [
             ['label' => __('Dashboard'), 'route' => 'media.dashboard', 'icon' => 'ri-dashboard-line'],
-            ['label' => __('Paparan'), 'route' => 'media.paparan.index', 'icon' => 'ri-tv-2-line'],
-            ['label' => __('Senarai kehadiran'), 'route' => 'media.senarai.index', 'icon' => 'ri-list-check-2'],
+            ['label' => __('Layar Utama'), 'route' => 'media.senarai.index', 'icon' => 'ri-slideshow-3-line'],
+            ['label' => __('Debug paparan'), 'route' => 'media.paparan.index', 'icon' => 'ri-bug-line'],
             ['label' => __('Kawalan Presentasi'), 'route' => 'media.kawalan.presentation.index', 'icon' => 'ri-settings-4-line'],
             ['label' => __('Analitik Senarai'), 'route' => 'media.senarai.analytics', 'icon' => 'ri-bar-chart-line'],
         ],

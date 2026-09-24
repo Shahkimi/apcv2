@@ -13,6 +13,10 @@ use Illuminate\Support\Facades\DB;
 
 final class KehadiranCallingService
 {
+    private bool $tableCapacityResolved = false;
+
+    private ?int $tableCapacity = null;
+
     public function lateSessionOnAirExists(): bool
     {
         $active = $this->activeOnAirSesi();
@@ -43,9 +47,9 @@ final class KehadiranCallingService
             return null;
         }
 
-        $capacity = Meja::query()->orderBy('id')->value('sizing');
+        $capacity = $this->tableCapacity();
 
-        if (! is_numeric($capacity) || (int) $capacity < 1) {
+        if ($capacity === null || $capacity < 1) {
             return null;
         }
 
@@ -56,7 +60,21 @@ final class KehadiranCallingService
             return null;
         }
 
-        return (int) floor(($relativeSeat - 1) / (int) $capacity) + 1;
+        return (int) floor(($relativeSeat - 1) / $capacity) + 1;
+    }
+
+    /**
+     * Table capacity (Meja.sizing), memoised per service instance (one per request).
+     */
+    private function tableCapacity(): ?int
+    {
+        if (! $this->tableCapacityResolved) {
+            $this->tableCapacityResolved = true;
+            $value = Meja::query()->orderBy('id')->value('sizing');
+            $this->tableCapacity = is_numeric($value) ? (int) $value : null;
+        }
+
+        return $this->tableCapacity;
     }
 
     /**
@@ -211,5 +229,16 @@ final class KehadiranCallingService
         $pegawai->no_panggilan_lewat = null;
         $pegawai->is_late = false;
         $pegawai->sesi_majlis_id = null;
+        $pegawai->hadir_at = null;
+    }
+
+    /**
+     * Debug paparan DataTable: latest attendance first; rows without hadir_at last; ties by id desc.
+     */
+    public function applyPaparanLatestFirstOrder(Builder $query): void
+    {
+        $query->orderByRaw('CASE WHEN hadir_at IS NULL THEN 1 ELSE 0 END')
+            ->orderByDesc('hadir_at')
+            ->orderByDesc('id');
     }
 }

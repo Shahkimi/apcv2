@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Kehadiran;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Kehadiran\Concerns\RendersOfficerCell;
 use App\Models\Pegawai;
 use App\Models\SesiMajlis;
 use App\Services\Kehadiran\KehadiranCallingService;
@@ -17,6 +18,8 @@ use Yajra\DataTables\Facades\DataTables;
 
 abstract class AbstractKehadiranController extends Controller
 {
+    use RendersOfficerCell;
+
     public function __construct(
         private readonly KehadiranCallingService $callingService,
         private readonly SettingsService $settings,
@@ -33,7 +36,7 @@ abstract class AbstractKehadiranController extends Controller
             'totalRsvp' => $counts['totalRsvp'],
             'totalHadir' => $counts['totalHadir'],
             'lateSessionOnAir' => $this->callingService->lateSessionOnAirExists(),
-            'allSesis' => SesiMajlis::query()->orderBy('id')->get(),
+            'allSesis' => SesiMajlis::query()->select(['id', 'sesi'])->orderBy('id')->get(),
         ]);
     }
 
@@ -45,31 +48,31 @@ abstract class AbstractKehadiranController extends Controller
             'total_pegawai' => $counts['totalPegawai'],
             'total_rsvp' => $counts['totalRsvp'],
             'total_hadir' => $counts['totalHadir'],
-        ]);
+        ])->header('Cache-Control', 'no-store, private');
     }
 
     public function datatable()
     {
-        $query = Pegawai::query()->with(['ptj', 'jawatan']);
+        $query = Pegawai::query()
+            ->select(['id', 'nama', 'no_kp', 'ptj_id', 'jawatan_id', 'rsvp', 'no_kerusi', 'is_attend', 's_kehadiran'])
+            ->with(['ptj:id,nama_ptj', 'jawatan:id,desc_jawatan']);
 
         if (request()->filled('sesi_majlis_id')) {
             $query->where('sesi_majlis_id', request()->integer('sesi_majlis_id'));
         }
 
-        $this->callingService->applyKehadiranDataTableOrder($query);
-        $actionsView = $this->bladeNamespace().'::kehadiran.actions';
-
         return DataTables::of($query)
+            ->order(fn ($query) => $this->callingService->applyKehadiranDataTableOrder($query))
             ->filterColumn('nama', function ($query, $keyword) {
                 if (trim((string) $keyword) === '') {
                     return;
                 }
 
-                $like = '%'.mb_strtolower((string) $keyword, 'UTF-8').'%';
+                $like = '%'.$keyword.'%';
 
                 $query->where(function ($q) use ($like) {
-                    $q->whereRaw('LOWER(nama) LIKE ?', [$like])
-                        ->orWhereRaw('LOWER(no_kp) LIKE ?', [$like]);
+                    $q->where('nama', 'like', $like)
+                        ->orWhere('no_kp', 'like', $like);
                 });
             })
             ->editColumn('nama', fn (Pegawai $pegawai) => $this->renderOfficerCell($pegawai))
@@ -89,15 +92,14 @@ abstract class AbstractKehadiranController extends Controller
             })
             ->addColumn('no_kerusi', fn (Pegawai $pegawai) => e((string) ($pegawai->no_kerusi ?? '-')))
             ->addColumn('ptj_name', fn (Pegawai $pegawai) => e((string) ($pegawai->ptj?->nama_ptj ?? '-')))
-            ->removeColumn('no_panggilan_lewat')
-            ->addColumn('action', fn (Pegawai $pegawai) => view($actionsView, ['pegawai' => $pegawai])->render())
+            ->addColumn('action', fn (Pegawai $pegawai) => $this->renderActionCell($pegawai))
             ->rawColumns(['nama', 'rsvp_sesi_label', 'action'])
             ->make(true);
     }
 
     public function getDetails(Pegawai $pegawai): JsonResponse
     {
-        $pegawai->loadMissing(['ptj', 'sesiMajlis']);
+        $pegawai->loadMissing(['ptj:id,nama_ptj', 'sesiMajlis:id,sesi']);
         $activeSesi = $this->callingService->activeOnAirSesi();
         $previewLateNumber = null;
         $previewNoMeja = $activeSesi !== null
@@ -130,7 +132,8 @@ abstract class AbstractKehadiranController extends Controller
 
     public function verify(Pegawai $pegawai): JsonResponse
     {
-        $willAttend = ! $pegawai->is_attend;
+        $intent = request()->has('is_attend') ? request()->boolean('is_attend') : null;
+        $willAttend = $intent ?? ! $pegawai->is_attend;
         $activeSesi = null;
 
         if ($willAttend) {
@@ -161,29 +164,41 @@ abstract class AbstractKehadiranController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($pegawai, $willAttend, $activeSesi): void {
-                $pegawai->is_attend = $willAttend;
+            $pegawai = DB::transaction(function () use ($pegawai, $willAttend, $activeSesi): Pegawai {
+                /** @var Pegawai $locked */
+                $locked = Pegawai::query()->whereKey($pegawai->getKey())->lockForUpdate()->firstOrFail();
 
-                if ($pegawai->is_attend && $activeSesi !== null) {
-                    $pegawai->sesi_majlis_id = $activeSesi->id;
-                    if (! $pegawai->rsvp) {
-                        $pegawai->no_kerusi = null;
-                        $pegawai->no_meja = null;
-                        $this->callingService->assignLateCallingNumberIfApplicable($pegawai, $activeSesi);
+                // Idempotent: a duplicate submit (double-click, retry after a 503) is a no-op
+                // instead of flipping the state back.
+                if ($locked->is_attend === $willAttend) {
+                    return $locked;
+                }
+
+                $locked->is_attend = $willAttend;
+
+                if ($locked->is_attend && $activeSesi !== null) {
+                    $locked->hadir_at = now();
+                    $locked->sesi_majlis_id = $activeSesi->id;
+                    if (! $locked->rsvp) {
+                        $locked->no_kerusi = null;
+                        $locked->no_meja = null;
+                        $this->callingService->assignLateCallingNumberIfApplicable($locked, $activeSesi);
                     } else {
-                        $pegawai->no_meja = $this->callingService->calculateTableNumber($pegawai->no_kerusi, $activeSesi);
+                        $locked->no_meja = $this->callingService->calculateTableNumber($locked->no_kerusi, $activeSesi);
                         if ($activeSesi->is_late) {
-                            $this->callingService->assignLateCallingNumberIfApplicable($pegawai, $activeSesi);
+                            $this->callingService->assignLateCallingNumberIfApplicable($locked, $activeSesi);
                         } else {
-                            $pegawai->is_late = false;
-                            $pegawai->no_panggilan_lewat = null;
+                            $locked->is_late = false;
+                            $locked->no_panggilan_lewat = null;
                         }
                     }
                 } else {
-                    $this->callingService->clearLateCallingOnCancel($pegawai);
+                    $this->callingService->clearLateCallingOnCancel($locked);
                 }
 
-                $pegawai->save();
+                $locked->save();
+
+                return $locked;
             });
         } catch (QueryException $e) {
             $driverErrno = $e->errorInfo[1] ?? null;
@@ -240,10 +255,18 @@ abstract class AbstractKehadiranController extends Controller
      */
     private function kehadiranSummaryCounts(): array
     {
+        $row = Pegawai::query()
+            ->selectRaw(
+                'COUNT(*) AS total_pegawai, '
+                .'COALESCE(SUM(CASE WHEN rsvp = 1 THEN 1 ELSE 0 END), 0) AS total_rsvp, '
+                .'COALESCE(SUM(CASE WHEN is_attend = 1 THEN 1 ELSE 0 END), 0) AS total_hadir'
+            )
+            ->first();
+
         return [
-            'totalPegawai' => Pegawai::query()->count(),
-            'totalRsvp' => Pegawai::query()->where('rsvp', true)->count(),
-            'totalHadir' => Pegawai::query()->where('is_attend', true)->count(),
+            'totalPegawai' => (int) $row->total_pegawai,
+            'totalRsvp' => (int) $row->total_rsvp,
+            'totalHadir' => (int) $row->total_hadir,
         ];
     }
 
@@ -252,46 +275,25 @@ abstract class AbstractKehadiranController extends Controller
         return view($this->bladeNamespace().'::kehadiran.'.$name, $data);
     }
 
-    private function renderOfficerCell(Pegawai $pegawai): string
+    private function renderActionCell(Pegawai $pegawai): string
     {
-        $nama = e($pegawai->nama);
-        $kp = e((string) ($pegawai->no_kp ?? '—'));
-        $initials = e($this->officerInitials($pegawai->nama));
-        $kpLabel = e(__('No. KP'));
-        $jawatanLine = '';
-        $descJawatan = $pegawai->jawatan?->desc_jawatan;
-        if (filled($descJawatan)) {
-            $jawatanLine = '<p class="kawalan-dt-officer-jawatan">'.e((string) $descJawatan).'</p>';
-        }
+        $isAttended = (bool) $pegawai->is_attend;
+        $btnClass = $isAttended
+            ? 'btn btn-sm rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 shadow-sm hover:bg-emerald-100 dark:border-emerald-800/60 dark:bg-emerald-950/30 dark:text-emerald-200'
+            : 'btn btn-sm rounded-lg bg-primary text-primary-foreground shadow-sm hover:brightness-105';
+        $icon = $isAttended ? 'ri-checkbox-circle-line' : 'ri-check-line';
+        $label = $isAttended ? __('Hadir') : __('Sahkan');
+        $title = $isAttended ? __('Tandakan belum hadir') : __('Sahkan kehadiran');
 
-        return '<div class="kawalan-dt-officer flex max-w-[20rem] items-start gap-3">'
-            .'<span class="kawalan-dt-officer-avatar" aria-hidden="true">'.$initials.'</span>'
-            .'<div class="min-w-0 flex-1">'
-            .'<p class="kawalan-dt-officer-name leading-snug">'.$nama.'</p>'
-            .'<p class="kawalan-dt-officer-kp-line mt-1">'
-            .'<span class="kawalan-dt-officer-kp-label">'.$kpLabel.'</span>'
-            .'<span class="kawalan-dt-officer-kp">'.$kp.'</span>'
-            .'</p>'
-            .$jawatanLine
-            .'</div>'
+        return '<div class="flex w-full items-center justify-center">'
+            .'<button type="button" class="'.e($btnClass).' js-verify-kehadiran"'
+            .' data-id="'.e((string) $pegawai->id).'"'
+            .' data-nama="'.e($pegawai->nama).'"'
+            .' data-is-attend="'.($isAttended ? 1 : 0).'"'
+            .' title="'.e($title).'">'
+            .'<i class="'.e($icon).'"></i>'
+            .'<span>'.e($label).'</span>'
+            .'</button>'
             .'</div>';
-    }
-
-    private function officerInitials(string $nama): string
-    {
-        $trimmed = trim($nama);
-        if ($trimmed === '') {
-            return '?';
-        }
-
-        $parts = preg_split('/\s+/u', $trimmed) ?: [];
-        if (count($parts) >= 2) {
-            $first = mb_substr($parts[0], 0, 1);
-            $last = mb_substr($parts[count($parts) - 1], 0, 1);
-
-            return mb_strtoupper($first.$last, 'UTF-8');
-        }
-
-        return mb_strtoupper(mb_substr($trimmed, 0, min(2, mb_strlen($trimmed))), 'UTF-8');
     }
 }
