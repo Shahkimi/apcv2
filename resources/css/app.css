@@ -7,6 +7,7 @@
 @import './kawalan-swal.css';
 @import './kawalan-tint.css';
 @import './presentation-settings.css';
+@import './navbar.css';
 
 @tailwind base;
 @tailwind components;
