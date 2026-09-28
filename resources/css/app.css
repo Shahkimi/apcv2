@@ -9,6 +9,7 @@
 @import './presentation-settings.css';
 @import './navbar.css';
 @import './sidebar.css';
+@import './home.css';
 
 @tailwind base;
 @tailwind components;
