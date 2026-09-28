@@ -1,0 +1,97 @@
+/* Dashboard sidebar — collapsible icon rail (desktop) + floating tooltips */
+
+:root {
+    --sidebar-w: 16rem;
+}
+
+html.sidebar-collapsed {
+    --sidebar-w: 4.5rem;
+}
+
+.sb-aside {
+    width: 16rem;
+}
+
+.sb-item {
+    position: relative;
+}
+
+@media (min-width: 1024px) {
+    .sb-aside {
+        width: var(--sidebar-w);
+        transition: width 0.2s ease;
+    }
+
+    .sb-main {
+        margin-left: var(--sidebar-w);
+        transition: margin-left 0.2s ease;
+    }
+
+    html.sidebar-collapsed .sb-label,
+    html.sidebar-collapsed .sb-section-title,
+    html.sidebar-collapsed .sb-chevron,
+    html.sidebar-collapsed .sb-brand,
+    html.sidebar-collapsed .sb-user-text,
+    html.sidebar-collapsed .sb-status-text,
+    html.sidebar-collapsed .sb-children {
+        display: none;
+    }
+
+    html.sidebar-collapsed .sb-header {
+        justify-content: center;
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    html.sidebar-collapsed .sb-collapse-btn {
+        margin-left: 0;
+    }
+
+    html.sidebar-collapsed .sb-item {
+        justify-content: center;
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    html.sidebar-collapsed .sb-divider {
+        display: block;
+    }
+
+    html.sidebar-collapsed .sb-footer-row {
+        flex-direction: column;
+    }
+}
+
+.sb-item[aria-current='page']::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.5rem;
+    bottom: 0.5rem;
+    width: 3px;
+    border-radius: 9999px;
+    background: var(--primary);
+}
+
+/* Single floating tooltip, lives outside the aside so overflow/transform never clip it */
+#sb-tooltip {
+    position: fixed;
+    z-index: 70;
+    transform: translateY(-50%);
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.12s;
+}
+
+#sb-tooltip.is-visible {
+    opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sb-aside,
+    .sb-main,
+    #sb-tooltip {
+        transition: none;
+    }
+}

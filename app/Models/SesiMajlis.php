@@ -27,11 +27,7 @@ class SesiMajlis extends Model
             'is_late' => 'boolean',
             'countdown_start_late' => 'integer',
             'seat_offset' => 'integer',
-            's_kehadiran' => 'integer',
-
-
-
-            
+            's_kehadiran' => 'integer',            
         ];
     }
 

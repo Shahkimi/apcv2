@@ -7,7 +7,7 @@
     <title>{{ __('Presentasi Kehadiran') }}</title>
     @vite(['resources/css/app.css'])
     <style>
-        .transition-content { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .transition-content { transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
 
         /*
          * Officer name — set any size in px (e.g. 50px). Edit only the numbers below.
@@ -184,9 +184,18 @@
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
         const storageKey = `senarai_position_${sesiId ?? 'all'}`;
 
+        const NAV_MIN_MS = 250;
+        const SYNC_COOLDOWN_MS = 8000;
+
         let currentIndex = 0;
-        let progressSaveInFlight = false;
         let displayGeneration = 0;
+        let navSeq = 0;
+        let lastUserNavAt = 0;
+        let lastNavAt = 0;
+        let pendingSaves = 0;
+        let saveChain = Promise.resolve();
+        let syncInFlight = false;
+        let lastWriteUpdatedAt = null;
         const totalOfficers = officers.length;
 
         if (totalOfficers === 0) {
@@ -214,7 +223,7 @@
             return Math.max(0, Math.min(index, totalOfficers - 1));
         }
 
-        async function saveProgress(index) {
+        function saveProgress(index) {
             const officer = officers[index];
             if (!officer || officer.id == null) {
                 return;
@@ -231,22 +240,33 @@
                 payload.sesi_id = sesiId;
             }
 
-            progressSaveInFlight = true;
-            try {
-                await fetch(progressUpdateUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': csrfToken,
-                    },
-                    body: JSON.stringify(payload),
+            pendingSaves += 1;
+            saveChain = saveChain
+                .then(function () {
+                    return fetch(progressUpdateUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                        },
+                        body: JSON.stringify(payload),
+                    });
+                })
+                .then(function (response) {
+                    return response && response.ok ? response.json() : null;
+                })
+                .then(function (data) {
+                    if (data && data.last_updated_at) {
+                        lastWriteUpdatedAt = data.last_updated_at;
+                    }
+                })
+                .catch(function () {
+                    /* localStorage still preserves position when network is unstable */
+                })
+                .finally(function () {
+                    pendingSaves -= 1;
                 });
-            } catch (err) {
-                /* localStorage still preserves position when network is unstable */
-            } finally {
-                progressSaveInFlight = false;
-            }
         }
 
         function showOfficer(index, options = {}) {
@@ -261,6 +281,11 @@
 
             currentIndex = normalizedIndex;
             const officer = officers[currentIndex];
+
+            if (persist) {
+                navSeq += 1;
+                lastUserNavAt = Date.now();
+            }
 
             if (!animate) {
                 nameEl.textContent = officer.nama;
@@ -323,10 +348,19 @@
             }
         }
 
-        async function syncFromServer() {
-            if (progressSaveInFlight) {
-                return;
+        async function syncFromServer(options = {}) {
+            const force = options.force ?? false;
+
+            if (syncInFlight || pendingSaves > 0 || document.hidden) {
+                return null;
             }
+
+            if (!force && Date.now() - lastUserNavAt < SYNC_COOLDOWN_MS) {
+                return null;
+            }
+
+            const seqAtStart = navSeq;
+            syncInFlight = true;
 
             const query = sesiId != null ? `?sesi_id=${encodeURIComponent(String(sesiId))}` : '';
 
@@ -337,18 +371,32 @@
                     },
                 });
                 if (!response.ok) {
-                    return;
+                    return null;
                 }
 
                 const data = await response.json();
+
+                if (navSeq !== seqAtStart || pendingSaves > 0) {
+                    return null;
+                }
+
+                if (lastWriteUpdatedAt && data.last_updated_at && data.last_updated_at <= lastWriteUpdatedAt) {
+                    return null;
+                }
+
                 const serverIndex = normalizeIndex(Number(data.current_index ?? 0));
                 if (serverIndex !== currentIndex) {
                     currentIndex = serverIndex;
                     localStorage.setItem(storageKey, String(serverIndex));
                     showOfficer(serverIndex, { persist: false, animate: true });
                 }
+
+                return data;
             } catch (err) {
                 /* keep local progress when network fails */
+                return null;
+            } finally {
+                syncInFlight = false;
             }
         }
 
@@ -360,8 +408,11 @@
                 showOfficer(0, { persist: false, animate: false });
             }
 
-            await syncFromServer();
-            saveProgress(currentIndex);
+            const serverData = await syncFromServer({ force: true });
+
+            if (!serverData || !serverData.last_updated_at) {
+                saveProgress(currentIndex);
+            }
         }
 
         function exitFullscreenIfActive() {
@@ -463,22 +514,39 @@
         })();
 
         document.addEventListener('keydown', function(e) {
-            if (e.key === 'ArrowRight' && currentIndex < totalOfficers - 1) {
-                e.preventDefault();
-                showOfficer(currentIndex + 1);
-            } else if (e.key === 'ArrowLeft' && currentIndex > 0) {
-                e.preventDefault();
-                showOfficer(currentIndex - 1);
-            } else if (e.key === 'Escape') {
+            if (e.key === 'Escape') {
                 e.preventDefault();
                 exitFullscreenIfActive().finally(function () {
                     window.location.href = setupUrl;
                 });
+                return;
+            }
+
+            const isNavKey = e.key === 'ArrowRight' || e.key === 'ArrowLeft' || e.key === 'Home' || e.key === 'End';
+            if (!isNavKey) {
+                return;
+            }
+
+            if (Date.now() - lastNavAt < NAV_MIN_MS) {
+                e.preventDefault();
+                return;
+            }
+
+            if (e.key === 'ArrowRight' && currentIndex < totalOfficers - 1) {
+                e.preventDefault();
+                lastNavAt = Date.now();
+                showOfficer(currentIndex + 1);
+            } else if (e.key === 'ArrowLeft' && currentIndex > 0) {
+                e.preventDefault();
+                lastNavAt = Date.now();
+                showOfficer(currentIndex - 1);
             } else if (e.key === 'Home' && totalOfficers > 0) {
                 e.preventDefault();
+                lastNavAt = Date.now();
                 showOfficer(0);
             } else if (e.key === 'End' && totalOfficers > 0) {
                 e.preventDefault();
+                lastNavAt = Date.now();
                 showOfficer(totalOfficers - 1);
             }
         });

@@ -21,14 +21,13 @@ class SenaraiAnalyticsController extends Controller
     public function index(Request $request): View
     {
         $sesiId = $request->filled('sesi_id') ? $request->integer('sesi_id') : null;
-        $totalOfficers = $this->callingService->attendedPegawaiForDisplay($sesiId)->count();
+        $totalOfficers = $this->callingService->attendedPegawaiCount($sesiId);
         $progress = $this->progressService->getProgress($sesiId, $totalOfficers);
 
         return view('admin::senarai.analytics', [
             'allSesis' => SesiMajlis::query()->orderBy('id')->get(),
             'selectedSesiId' => $sesiId,
             'progress' => $progress,
-            'announcedOfficers' => $this->progressService->getAnnouncedOfficers($sesiId),
         ]);
     }
 }

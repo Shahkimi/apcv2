@@ -76,6 +76,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/senarai/progress', [MediaSenaraiProgressController::class, 'show'])->name('senarai.progress.show');
             Route::post('/senarai/progress', [MediaSenaraiProgressController::class, 'update'])->name('senarai.progress.update');
             Route::get('/senarai/progress/analytics', [MediaSenaraiProgressController::class, 'analytics'])->name('senarai.progress.analytics');
+            Route::get('/senarai/progress/announced', [MediaSenaraiProgressController::class, 'announcedDatatable'])->name('senarai.progress.announced');
 
             Route::prefix('kawalan')->name('kawalan.')->group(function () {
                 Route::get('/presentation', [MediaPresentationSettingsController::class, 'index'])->name('presentation.index');
@@ -98,6 +99,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
             Route::get('/senarai/analytics', [AdminSenaraiAnalyticsController::class, 'index'])->name('senarai.analytics');
             Route::get('/senarai/progress/analytics', [MediaSenaraiProgressController::class, 'analytics'])->name('senarai.progress.analytics');
+            Route::get('/senarai/progress/announced', [MediaSenaraiProgressController::class, 'announcedDatatable'])->name('senarai.progress.announced');
             Route::get('/report', [AdminReportController::class, 'index'])->name('report.index');
             Route::get('/report/preview', [AdminReportController::class, 'preview'])->name('report.preview');
             Route::get('/report/datatable', [AdminReportController::class, 'datatable'])->name('report.datatable');

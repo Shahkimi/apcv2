@@ -105,7 +105,8 @@ final class KehadiranCallingService
         $query->orderByRaw('CASE WHEN COALESCE(is_late, 0) = 0 THEN 0 ELSE 1 END')
             ->orderByRaw(
                 'CASE WHEN COALESCE(is_late, 0) = 0 THEN COALESCE(no_kerusi, 2147483647) ELSE COALESCE(no_panggilan_lewat, 2147483647) END'
-            );
+            )
+            ->orderBy('id');
     }
 
     /**
@@ -124,6 +125,17 @@ final class KehadiranCallingService
         $this->applyPaparanDisplayOrder($query);
 
         return $query->get();
+    }
+
+    public function attendedPegawaiCount(?int $sesiId = null): int
+    {
+        $query = Pegawai::query()->where('is_attend', true);
+
+        if ($sesiId !== null) {
+            $query->where('sesi_majlis_id', $sesiId);
+        }
+
+        return $query->count();
     }
 
     /**

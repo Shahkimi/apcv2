@@ -11,6 +11,61 @@
     width: 100%;
 }
 
+/* Fill modifier — used on Sesi Majlis bento tile so only the row list scrolls, not the page */
+.kawalan-dt-card--fill {
+    display: flex;
+    flex-direction: column;
+}
+
+.kawalan-dt-card--fill .dataTables_wrapper {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.kawalan-dt-card--fill .kawalan-dt-toolbar,
+.kawalan-dt-card--fill .kawalan-dt-footer,
+.kawalan-dt-card--fill .dataTables_scrollHead {
+    flex-shrink: 0;
+}
+
+.kawalan-dt-card--fill .dataTables_scroll {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.kawalan-dt-card--fill .dataTables_scrollBody {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: auto !important;
+    max-height: none !important;
+}
+
+.kawalan-dt-row-active {
+    background-color: color-mix(in srgb, var(--primary) 6%, transparent);
+}
+
+/*
+ * Senarai analytics: fixed layout so column widths from DataTables columnDefs apply reliably.
+ */
+#announced-table.kawalan-dt-table.dataTable,
+#announced-table.dataTable {
+    table-layout: fixed;
+    width: 100% !important;
+}
+
+/* Senarai analytics: newest-announcement flash + row transition */
+#announced-table.dataTable tbody tr {
+    transition: background-color 0.6s ease;
+}
+
+#announced-table.dataTable tbody tr.kawalan-dt-row-flash {
+    background-color: color-mix(in srgb, var(--primary) 14%, transparent) !important;
+}
+
 /* Toolbar: length + search (Cleopatra user-filters) */
 .kawalan-dt-toolbar .dataTables_length,
 .kawalan-dt-toolbar .dataTables_filter {

@@ -12,6 +12,7 @@ class DashboardLayout extends Component
     public function __construct(
         public string $title = '',
         public string $role = 'user',
+        public bool $fillHeight = false,
     ) {}
 
     public function render(): View

@@ -35,6 +35,22 @@ class SesiMajlisController extends Controller
         return response()->json(['success' => true, 'mode' => $validated['mode']]);
     }
 
+    /**
+     * @return array{total: int, pagi: int, petang: int, active: array<int, string>, late: array<int, string>}
+     */
+    private function stats(): array
+    {
+        $sesi = SesiMajlis::query()->get(['sesi', 'is_active', 'is_late', 's_kehadiran']);
+
+        return [
+            'total' => $sesi->count(),
+            'pagi' => $sesi->where('s_kehadiran', SesiMajlis::S_KEHADIRAN_PAGI)->count(),
+            'petang' => $sesi->where('s_kehadiran', SesiMajlis::S_KEHADIRAN_PETANG)->count(),
+            'active' => $sesi->where('is_active', true)->pluck('sesi')->values()->all(),
+            'late' => $sesi->where('is_late', true)->pluck('sesi')->values()->all(),
+        ];
+    }
+
     public function datatable()
     {
         return DataTables::of(SesiMajlis::query())
@@ -72,6 +88,7 @@ class SesiMajlisController extends Controller
                     .$label
                     .'</span>';
             })
+            ->addColumn('is_active_raw', fn (SesiMajlis $sesi) => $sesi->is_active ? 1 : 0)
             ->addColumn('countdown_start_late', fn (SesiMajlis $sesi) => $sesi->countdown_start_late ?? '-')
             ->addColumn('seat_offset', fn (SesiMajlis $sesi) => e((string) ($sesi->seat_offset ?? 0)))
             ->addColumn('s_kehadiran_label', function (SesiMajlis $sesi) {
@@ -84,6 +101,7 @@ class SesiMajlisController extends Controller
             ->addColumn('created_at', fn (SesiMajlis $sesi) => $sesi->created_at?->format('d M Y') ?? '')
             ->addColumn('action', fn (SesiMajlis $sesi) => view('admin::kawalan.sesi-majlis.actions', ['sesiMajlis' => $sesi])->render())
             ->rawColumns(['action', 'is_active_label', 'is_late_label'])
+            ->with('stats', $this->stats())
             ->make(true);
     }
 

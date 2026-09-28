@@ -14,6 +14,8 @@
         class="relative inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground lg:hidden"
         x-on:click="sidebarOpen = !sidebarOpen"
         aria-label="{{ __('Toggle menu') }}"
+        aria-controls="app-sidebar"
+        :aria-expanded="sidebarOpen ? 'true' : 'false'"
     >
         <i
             class="ri-menu-line absolute text-xl"

@@ -8,6 +8,7 @@ use App\Models\AnnouncedOfficer;
 use App\Models\Pegawai;
 use App\Models\SenaraiProgress;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 class SenaraiProgressService
@@ -60,6 +61,11 @@ class SenaraiProgressService
         );
 
         return $this->getProgress($sesiId, $totalOfficers);
+    }
+
+    public function announcedOfficersQuery(?int $sesiId): Builder
+    {
+        return AnnouncedOfficer::query()->where('scope_key', $this->scopeKey($sesiId));
     }
 
     public function getAnnouncedOfficers(?int $sesiId): Collection

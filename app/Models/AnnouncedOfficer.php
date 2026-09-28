@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AnnouncedOfficer extends Model
 {
@@ -21,5 +22,10 @@ class AnnouncedOfficer extends Model
             'pegawai_id' => 'integer',
             'sesi_majlis_id' => 'integer',
         ];
+    }
+
+    public function pegawai(): BelongsTo
+    {
+        return $this->belongsTo(Pegawai::class);
     }
 }
