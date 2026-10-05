@@ -48,31 +48,6 @@ function createPegawaiForTest(): Pegawai
     ]);
 }
 
-function adminUser(): User
-{
-    return User::query()->create([
-        'name' => 'Admin Ujian',
-        'username' => 'admin_ujian',
-        'password' => Hash::make('password'),
-        'role' => User::ROLE_ADMIN,
-    ]);
-}
-
-function mediaUser(): User
-{
-    return User::query()->create([
-        'name' => 'Media Ujian',
-        'username' => 'media_ujian',
-        'password' => Hash::make('password'),
-        'role' => User::ROLE_MEDIA,
-    ]);
-}
-
-function plainUser(): User
-{
-    return User::factory()->create(['role' => User::ROLE_USER]);
-}
-
 it('assigns late calling number when late session is on air', function (): void {
     $admin = adminUser();
     $pegawai = createPegawaiForTest();

@@ -1,173 +1,119 @@
 import ApexCharts from 'apexcharts';
-import Chart from 'chart.js/auto';
 
-function chartColor(varName, fallback) {
-    const v = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+function cssVar(name, fallback) {
+    const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
     return v || fallback;
 }
 
+function isDark() {
+    return document.documentElement.classList.contains('dark');
+}
+
+function hasData(spec) {
+    if (spec.type === 'donut') {
+        return (spec.series || []).some((v) => Number(v) > 0);
+    }
+    return (spec.categories || []).length > 0;
+}
+
+function buildOptions(spec, noDataText) {
+    const muted = cssVar('--muted-foreground', '#666');
+    const border = cssVar('--border', '#e5e7eb');
+    const palette = [1, 2, 3, 4, 5].map((n, i) =>
+        cssVar(`--chart-${n}`, ['#3b82f6', '#22c55e', '#eab308', '#a855f7', '#f97316'][i]),
+    );
+    const theme = isDark() ? 'dark' : 'light';
+
+    const base = {
+        chart: {
+            fontFamily: 'inherit',
+            height: 280,
+            background: 'transparent',
+            toolbar: { show: false },
+            zoom: { enabled: false },
+            animations: { enabled: true, easing: 'easeinout', speed: 600, dynamicAnimationSpeed: 300 },
+        },
+        theme: { mode: theme },
+        colors: palette,
+        dataLabels: { enabled: false },
+        legend: { position: 'bottom', labels: { colors: muted } },
+        tooltip: { theme },
+        noData: { text: noDataText, style: { color: muted } },
+    };
+
+    if (spec.type === 'donut') {
+        const show = hasData(spec);
+        return {
+            ...base,
+            chart: { ...base.chart, type: 'donut' },
+            labels: show ? spec.labels : [],
+            series: show ? spec.series.map(Number) : [],
+            stroke: { colors: [cssVar('--card', '#fff')] },
+            plotOptions: { pie: { donut: { labels: { show: true, total: { show: true, label: 'Total', color: muted } } } } },
+        };
+    }
+
+    const axis = { labels: { style: { colors: muted } } };
+
+    return {
+        ...base,
+        chart: { ...base.chart, type: spec.type, stacked: Boolean(spec.stacked) },
+        series: hasData(spec) ? spec.series : [{ name: spec.series?.[0]?.name ?? '', data: [] }],
+        xaxis: { categories: spec.categories || [], ...axis },
+        yaxis: { ...axis, labels: { ...axis.labels, formatter: (v) => String(Math.round(v)) }, min: 0 },
+        grid: { borderColor: border },
+        stroke: spec.type === 'area' ? { curve: 'smooth', width: 2 } : { width: 0 },
+        fill:
+            spec.type === 'area'
+                ? { type: 'gradient', gradient: { opacityFrom: 0.4, opacityTo: 0.02, stops: [0, 90, 100] } }
+                : { opacity: 1 },
+        plotOptions: { bar: { horizontal: Boolean(spec.horizontal), borderRadius: 4, columnWidth: '55%' } },
+        legend: { ...base.legend, show: spec.type === 'bar' && (spec.series || []).length > 1 },
+    };
+}
+
 /**
- * @param {Record<string, unknown>|null|undefined} data
+ * Renders every `[data-dashboard-chart=key]` element from its spec and keeps them in sync.
+ *
+ * @param {Record<string, object>} specs
+ * @param {string} noDataText
  */
-export function initDashboardCharts(data) {
-    if (!data || typeof data !== 'object') {
-        return;
+export function createDashboardCharts(specs, noDataText) {
+    let current = specs;
+    const charts = new Map();
+
+    function render() {
+        charts.forEach((chart) => chart.destroy());
+        charts.clear();
+
+        document.querySelectorAll('[data-dashboard-chart]').forEach((el) => {
+            const spec = current[el.dataset.dashboardChart];
+            if (!spec) {
+                return;
+            }
+            const chart = new ApexCharts(el, buildOptions(spec, noDataText));
+            chart.render().then(() => el.classList.add('is-ready'));
+            charts.set(el.dataset.dashboardChart, chart);
+        });
     }
 
-    const sales = /** @type {{ categories?: string[], series?: number[] }} */ (data.sales);
-    const category = /** @type {{ labels?: string[], series?: number[] }} */ (data.category);
-    const traffic = /** @type {{ labels?: string[], values?: number[] }} */ (data.traffic);
-    const distribution = /** @type {{ labels?: string[], values?: number[] }} */ (data.distribution);
-
-    const fg = chartColor('--foreground', '#111');
-    const muted = chartColor('--muted-foreground', '#666');
-    const border = chartColor('--border', '#e5e7eb');
-    const c1 = chartColor('--chart-1', '#3b82f6');
-    const c2 = chartColor('--chart-2', '#22c55e');
-    const c3 = chartColor('--chart-3', '#eab308');
-    const c4 = chartColor('--chart-4', '#a855f7');
-    const c5 = chartColor('--chart-5', '#f97316');
-
-    if (sales?.categories && sales?.series) {
-        const el = document.querySelector('#dash-sales-chart');
-        if (el) {
-            const chart = new ApexCharts(el, {
-                chart: {
-                    type: 'area',
-                    height: 280,
-                    fontFamily: 'inherit',
-                    toolbar: { show: false },
-                    zoom: { enabled: false },
-                },
-                series: [{ name: 'Series', data: sales.series }],
-                xaxis: {
-                    categories: sales.categories,
-                    labels: { style: { colors: muted } },
-                },
-                yaxis: { labels: { style: { colors: muted } } },
-                grid: { borderColor: border },
-                dataLabels: { enabled: false },
-                stroke: { curve: 'smooth', width: 2, colors: [c1] },
-                fill: {
-                    type: 'gradient',
-                    gradient: {
-                        shadeIntensity: 1,
-                        opacityFrom: 0.35,
-                        opacityTo: 0.05,
-                        stops: [0, 90, 100],
-                        colorStops: [
-                            { offset: 0, color: c1, opacity: 0.4 },
-                            { offset: 100, color: c1, opacity: 0 },
-                        ],
-                    },
-                },
-                colors: [c1],
-                tooltip: { theme: document.documentElement.classList.contains('dark') ? 'dark' : 'light' },
-            });
-            chart.render();
-        }
+    function update(next) {
+        current = next;
+        charts.forEach((chart, key) => {
+            const spec = next[key];
+            if (spec) {
+                chart.updateOptions(buildOptions(spec, noDataText), false, true);
+            }
+        });
     }
 
-    if (category?.labels && category?.series) {
-        const el = document.querySelector('#dash-category-chart');
-        if (el) {
-            const chart = new ApexCharts(el, {
-                chart: { type: 'donut', height: 280, fontFamily: 'inherit' },
-                labels: category.labels,
-                series: category.series,
-                colors: [c1, c2, c3],
-                legend: { position: 'bottom', labels: { colors: muted } },
-                plotOptions: {
-                    pie: {
-                        donut: {
-                            labels: {
-                                show: true,
-                                total: {
-                                    show: true,
-                                    label: 'Total',
-                                    color: muted,
-                                },
-                            },
-                        },
-                    },
-                },
-                dataLabels: { style: { colors: [fg] } },
-                stroke: { colors: [chartColor('--card', '#fff')] },
-                tooltip: { theme: document.documentElement.classList.contains('dark') ? 'dark' : 'light' },
-            });
-            chart.render();
-        }
-    }
+    render();
 
-    if (traffic?.labels && traffic?.values) {
-        const canvas = document.createElement('canvas');
-        const wrap = document.querySelector('#dash-traffic-chart');
-        if (wrap) {
-            wrap.innerHTML = '';
-            wrap.appendChild(canvas);
-            new Chart(canvas, {
-                type: 'bar',
-                data: {
-                    labels: traffic.labels,
-                    datasets: [
-                        {
-                            label: 'Traffic',
-                            data: traffic.values,
-                            backgroundColor: c1,
-                            borderRadius: 6,
-                        },
-                    ],
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                    },
-                    scales: {
-                        x: {
-                            ticks: { color: muted },
-                            grid: { color: border },
-                        },
-                        y: {
-                            ticks: { color: muted },
-                            grid: { color: border },
-                        },
-                    },
-                },
-            });
-        }
-    }
+    // Re-theme when the dark class toggles on <html>.
+    new MutationObserver(render).observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['class'],
+    });
 
-    if (distribution?.labels && distribution?.values) {
-        const el = document.querySelector('#dash-distribution-chart');
-        if (el) {
-            const canvas = document.createElement('canvas');
-            el.innerHTML = '';
-            el.appendChild(canvas);
-            new Chart(canvas, {
-                type: 'doughnut',
-                data: {
-                    labels: distribution.labels,
-                    datasets: [
-                        {
-                            data: distribution.values,
-                            backgroundColor: [c1, c2, c3, c4, c5],
-                            borderWidth: 0,
-                        },
-                    ],
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: { color: muted },
-                        },
-                    },
-                },
-            });
-        }
-    }
+    return { update };
 }

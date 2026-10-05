@@ -1,6 +1,8 @@
 <?php
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 /*
@@ -47,4 +49,29 @@ expect()->extend('toBeOne', function () {
 function something()
 {
     // ..
+}
+
+function adminUser(): User
+{
+    return User::query()->create([
+        'name' => 'Admin Ujian',
+        'username' => 'admin_ujian',
+        'password' => Hash::make('password'),
+        'role' => User::ROLE_ADMIN,
+    ]);
+}
+
+function mediaUser(): User
+{
+    return User::query()->create([
+        'name' => 'Media Ujian',
+        'username' => 'media_ujian',
+        'password' => Hash::make('password'),
+        'role' => User::ROLE_MEDIA,
+    ]);
+}
+
+function plainUser(): User
+{
+    return User::factory()->create(['role' => User::ROLE_USER]);
 }

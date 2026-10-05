@@ -125,10 +125,6 @@ late arrivals without confusion, and no auditable record of who was actually ann
 | `PresentationProfile` | Saved presentation font-size/position style presets |
 | `SystemSetting` | Generic typed key/value application settings store |
 
-### Known limitations
-- The `admin`, `media`, and `user` dashboard landing pages (`DashboardController@index`) currently
-  show placeholder statistics and are not yet wired to live data.
-
 ## Tech stack
 
 | Layer | Technology |

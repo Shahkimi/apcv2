@@ -4,49 +4,58 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\User;
 
-use App\Http\Controllers\Controller;
-use Illuminate\View\View;
+use App\Http\Controllers\Dashboard\AbstractDashboardController;
 
-class DashboardController extends Controller
+class DashboardController extends AbstractDashboardController
 {
-    public function index(): View
+    protected function role(): string
     {
-        return view('user::dashboard', [
-            'title' => __('User Dashboard'),
-            'stats' => [
-                ['label' => __('My requests'), 'value' => '12', 'hint' => __('Open items')],
-                ['label' => __('Completed'), 'value' => '48', 'hint' => __('This year')],
-                ['label' => __('Hours saved'), 'value' => '36h', 'hint' => __('Est.')],
-                ['label' => __('Account'), 'value' => __('Active'), 'hint' => __('Status')],
+        return 'user';
+    }
+
+    protected function title(): string
+    {
+        return __('User Dashboard');
+    }
+
+    protected function subtitle(): string
+    {
+        return __('Ringkasan pengesahan kehadiran');
+    }
+
+    protected function payload(?int $sesiId): array
+    {
+        return $this->dashboardStats->forUser($sesiId);
+    }
+
+    protected function layout(): array
+    {
+        return [
+            'hero' => ['key' => 'hadir', 'label' => __('Kehadiran'), 'icon' => 'ri-user-follow-line'],
+            'cards' => [
+                ['key' => 'rsvp', 'label' => __('RSVP'), 'icon' => 'ri-mail-check-line'],
+                ['key' => 'belum_hadir', 'label' => __('Belum hadir'), 'icon' => 'ri-user-unfollow-line'],
+                ['key' => 'lewat', 'label' => __('Lewat'), 'icon' => 'ri-time-line'],
             ],
-            'recentRows' => [
-                ['#1042', __('Document review'), '2026-04-18', __('Done')],
-                ['#1041', __('Access request'), '2026-04-17', __('Pending')],
-                ['#1040', __('Support ticket'), '2026-04-16', __('Open')],
+            'charts' => [
+                ['key' => 'timeline', 'title' => __('Ketibaan mengikut masa (15 minit)'), 'size' => 'lg'],
+                ['key' => 'sesi', 'title' => __('Kehadiran mengikut sesi'), 'size' => 'sm'],
             ],
-            'chartData' => [
-                'sales' => [
-                    'categories' => ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-                    'series' => [12, 18, 15, 22, 19, 24],
-                ],
-                'category' => [
-                    'labels' => [__('Tasks'), __('Requests'), __('Other')],
-                    'series' => [44, 32, 24],
-                ],
-                'traffic' => [
-                    'labels' => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-                    'values' => [12, 19, 14, 22, 18],
-                ],
-                'distribution' => [
-                    'labels' => [__('Web'), __('Mobile'), __('Desk')],
-                    'values' => [55, 25, 20],
+            'tables' => [
+                [
+                    'key' => 'checkins',
+                    'title' => __('Pengesahan kehadiran terkini'),
+                    'columns' => [__('Nama'), __('PTJ'), __('Sesi'), __('Masa')],
                 ],
             ],
-            'quickActions' => [
-                ['label' => __('New request'), 'icon' => 'ri-add-line'],
-                ['label' => __('View profile'), 'icon' => 'ri-user-line'],
-                ['label' => __('Help'), 'icon' => 'ri-question-line'],
+            'statusRows' => [
+                ['key' => 'sesi', 'label' => __('Sesi di udara')],
+                ['key' => 'late', 'label' => __('Jenis sesi')],
+                ['key' => 'next_late', 'label' => __('No. panggilan lewat seterusnya')],
             ],
-        ]);
+            'actions' => [
+                ['label' => __('Pengesahan kehadiran'), 'icon' => 'ri-user-follow-line', 'href' => route('user.kehadiran.index')],
+            ],
+        ];
     }
 }

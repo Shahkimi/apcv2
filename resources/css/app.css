@@ -10,6 +10,7 @@
 @import './navbar.css';
 @import './sidebar.css';
 @import './home.css';
+@import './dashboard.css';
 
 @tailwind base;
 @tailwind components;

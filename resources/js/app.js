@@ -17,9 +17,9 @@ Alpine.start();
 initModal();
 
 document.addEventListener('DOMContentLoaded', () => {
-    if (window.__dashboardChartData) {
-        import('./charts.js').then(({ initDashboardCharts }) => {
-            initDashboardCharts(window.__dashboardChartData);
+    if (window.__dashboard) {
+        import('./dashboard.js').then(({ initDashboard }) => {
+            initDashboard(window.__dashboard);
         });
     }
 });

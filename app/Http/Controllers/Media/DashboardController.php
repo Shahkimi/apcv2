@@ -4,49 +4,61 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Media;
 
-use App\Http\Controllers\Controller;
-use Illuminate\View\View;
+use App\Http\Controllers\Dashboard\AbstractDashboardController;
 
-class DashboardController extends Controller
+class DashboardController extends AbstractDashboardController
 {
-    public function index(): View
+    protected function role(): string
     {
-        return view('media::dashboard', [
-            'title' => __('Media Dashboard'),
-            'stats' => [
-                ['label' => __('Total files'), 'value' => '1,248', 'hint' => __('Library')],
-                ['label' => __('Storage'), 'value' => '186 GB', 'hint' => __('Used')],
-                ['label' => __('Uploads (7d)'), 'value' => '42', 'hint' => __('Recent')],
-                ['label' => __('Processing'), 'value' => '3', 'hint' => __('Queue')],
+        return 'media';
+    }
+
+    protected function title(): string
+    {
+        return __('Media Dashboard');
+    }
+
+    protected function subtitle(): string
+    {
+        return __('Kemajuan pengumuman pegawai');
+    }
+
+    protected function payload(?int $sesiId): array
+    {
+        return $this->dashboardStats->forMedia($sesiId);
+    }
+
+    protected function layout(): array
+    {
+        return [
+            'hero' => ['key' => 'announced', 'label' => __('Telah diumumkan'), 'icon' => 'ri-megaphone-line'],
+            'cards' => [
+                ['key' => 'hadir', 'label' => __('Hadir'), 'icon' => 'ri-user-follow-line'],
+                ['key' => 'baki', 'label' => __('Baki diumumkan'), 'icon' => 'ri-hourglass-line'],
+                ['key' => 'progress', 'label' => __('Kemajuan'), 'icon' => 'ri-line-chart-line'],
             ],
-            'recentRows' => [
-                ['IMG-902', 'hero-banner.jpg', '2026-04-19', __('Published')],
-                ['VID-441', 'promo-cut.mp4', '2026-04-18', __('Encoding')],
-                ['DOC-118', 'press-kit.pdf', '2026-04-17', __('Draft')],
+            'charts' => [
+                ['key' => 'announce_timeline', 'title' => __('Pengumuman mengikut masa (15 minit)'), 'size' => 'lg'],
+                ['key' => 'announce_split', 'title' => __('Diumumkan berbanding baki'), 'size' => 'sm'],
             ],
-            'chartData' => [
-                'sales' => [
-                    'categories' => ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-                    'series' => [28, 35, 42, 38, 45, 52],
-                ],
-                'category' => [
-                    'labels' => [__('Images'), __('Video'), __('Docs')],
-                    'series' => [52, 28, 20],
-                ],
-                'traffic' => [
-                    'labels' => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-                    'values' => [22, 28, 24, 30, 26],
-                ],
-                'distribution' => [
-                    'labels' => [__('Public'), __('Internal'), __('Archive')],
-                    'values' => [45, 35, 20],
+            'tables' => [
+                [
+                    'key' => 'announcements',
+                    'title' => __('Pengumuman terkini'),
+                    'columns' => [__('Nama'), __('PTJ'), __('Masa')],
                 ],
             ],
-            'quickActions' => [
-                ['label' => __('Upload'), 'icon' => 'ri-upload-cloud-line'],
-                ['label' => __('Gallery'), 'icon' => 'ri-gallery-line'],
-                ['label' => __('Reports'), 'icon' => 'ri-bar-chart-line'],
+            'statusRows' => [
+                ['key' => 'sesi', 'label' => __('Sesi di udara')],
+                ['key' => 'late', 'label' => __('Jenis sesi')],
+                ['key' => 'next_late', 'label' => __('No. panggilan lewat seterusnya')],
             ],
-        ]);
+            'actions' => [
+                ['label' => __('Persembahan senarai'), 'icon' => 'ri-slideshow-3-line', 'href' => route('media.senarai.present')],
+                ['label' => __('Paparan'), 'icon' => 'ri-slideshow-line', 'href' => route('media.paparan.index')],
+                ['label' => __('Analitik senarai'), 'icon' => 'ri-line-chart-line', 'href' => route('media.senarai.analytics')],
+                ['label' => __('Tetapan persembahan'), 'icon' => 'ri-palette-line', 'href' => route('media.kawalan.presentation.index')],
+            ],
+        ];
     }
 }

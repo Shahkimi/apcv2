@@ -24,8 +24,8 @@
             {{ $value }}
         @endif
     </p>
-    @if ($hint)
-        <p class="mt-1 text-xs text-muted-foreground">{{ $hint }}</p>
+    @if ($hint !== null)
+        <p class="mt-1 text-xs text-muted-foreground" @if ($statKey) data-stat-hint="{{ $statKey }}" @endif>{{ $hint }}</p>
     @endif
     @if ($icon)
             </div>

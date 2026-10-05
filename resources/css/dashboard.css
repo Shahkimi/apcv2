@@ -1,0 +1,245 @@
+/* Bento dashboard — tiles, motion and live-update effects. Scoped under .dash-bento. */
+
+.dash-bento .bento-tile {
+    --tile-accent: var(--chart-1);
+    position: relative;
+    min-width: 0;
+    border: 1px solid var(--border);
+    border-radius: 1.25rem;
+    background: var(--card);
+    color: var(--card-foreground);
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--foreground) 6%, transparent);
+    overflow: hidden;
+    transition:
+        transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1),
+        box-shadow 0.25s ease,
+        border-color 0.25s ease;
+    animation: bento-in 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    animation-delay: calc(var(--i, 0) * 60ms);
+}
+
+.dash-bento .bento-tile:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--tile-accent) 35%, var(--border));
+    box-shadow:
+        0 10px 30px -12px color-mix(in srgb, var(--tile-accent) 35%, transparent),
+        0 2px 6px color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+
+@keyframes bento-in {
+    from {
+        opacity: 0;
+        transform: translateY(14px) scale(0.98);
+    }
+}
+
+/* Icon chip, tinted by the tile accent */
+.dash-bento .bento-chip {
+    display: inline-flex;
+    height: 2.75rem;
+    width: 2.75rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.875rem;
+    color: var(--tile-accent);
+    background: color-mix(in srgb, var(--tile-accent) 16%, transparent);
+    transition: transform 0.3s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.dash-bento .bento-tile:hover .bento-chip {
+    transform: scale(1.1) rotate(-6deg);
+}
+
+/* Thin fill bar under KPI tiles */
+.dash-bento .bento-bar {
+    height: 0.375rem;
+    overflow: hidden;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--tile-accent) 14%, transparent);
+}
+
+.dash-bento .bento-bar > span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--tile-accent);
+    transform-origin: left center;
+    transition: width 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
+    animation: bento-bar 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    animation-delay: calc(var(--i, 0) * 60ms + 250ms);
+}
+
+@keyframes bento-bar {
+    from {
+        transform: scaleX(0);
+    }
+}
+
+/* Hero */
+.dash-bento .bento-hero {
+    background:
+        linear-gradient(135deg, color-mix(in srgb, var(--tile-accent) 16%, var(--card)) 0%, var(--card) 65%);
+}
+
+.dash-bento .bento-blob {
+    position: absolute;
+    top: -3rem;
+    right: -3rem;
+    height: 14rem;
+    width: 14rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--tile-accent) 30%, transparent);
+    filter: blur(48px);
+    pointer-events: none;
+    animation: bento-blob 14s ease-in-out infinite alternate;
+}
+
+@keyframes bento-blob {
+    0% {
+        transform: translate(0, 0) scale(1);
+    }
+    100% {
+        transform: translate(-30px, 40px) scale(1.15);
+    }
+}
+
+.dash-bento .bento-ring-track {
+    stroke: color-mix(in srgb, var(--tile-accent) 15%, transparent);
+}
+
+.dash-bento .bento-ring {
+    stroke: var(--tile-accent);
+    transition: stroke-dashoffset 0.9s cubic-bezier(0.2, 0.7, 0.2, 1);
+    animation: bento-ring 1.2s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    animation-delay: 300ms;
+}
+
+@keyframes bento-ring {
+    from {
+        stroke-dashoffset: var(--circ);
+    }
+}
+
+/* Live pill and ping */
+.dash-bento .bento-live-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: 999px;
+    padding: 0.25rem 0.625rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--card-foreground);
+    background: color-mix(in srgb, var(--foreground) 6%, transparent);
+    box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.dash-bento .bento-ping {
+    opacity: 0.6;
+    animation: bento-ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes bento-ping {
+    75%,
+    100% {
+        transform: scale(2.6);
+        opacity: 0;
+    }
+}
+
+/* Status values */
+.dash-bento .bento-pill {
+    max-width: 65%;
+    overflow-wrap: anywhere;
+}
+
+/* Change flash and delta badge, triggered from JS on polled updates.
+   The flash lives on ::after so it never replaces the tile's entrance animation. */
+.dash-bento .bento-tile::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+}
+
+.dash-bento .bento-tile.bento-flash::after {
+    animation: bento-flash 1.4s ease-out;
+}
+
+@keyframes bento-flash {
+    0% {
+        box-shadow:
+            inset 0 0 0 2px color-mix(in srgb, var(--tile-accent) 70%, transparent),
+            inset 0 0 36px color-mix(in srgb, var(--tile-accent) 35%, transparent);
+    }
+    100% {
+        box-shadow: inset 0 0 0 2px transparent, inset 0 0 0 transparent;
+    }
+}
+
+.dash-bento .bento-delta {
+    display: inline-block;
+    min-height: 1.25rem;
+    border-radius: 999px;
+    padding: 0 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.25rem;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.dash-bento .bento-delta.is-show {
+    opacity: 1;
+    transform: none;
+}
+
+.dash-bento .bento-delta.is-up {
+    color: #059669;
+    background: color-mix(in srgb, #10b981 16%, transparent);
+}
+
+.dash-bento .bento-delta.is-down {
+    color: #dc2626;
+    background: color-mix(in srgb, #ef4444 16%, transparent);
+}
+
+/* Charts fade in once rendered */
+.dash-bento [data-dashboard-chart] {
+    opacity: 0;
+    transition: opacity 0.6s ease;
+}
+
+.dash-bento [data-dashboard-chart].is-ready {
+    opacity: 1;
+}
+
+/* Table rows that appear via polling */
+.dash-bento .bento-row-in {
+    animation: bento-row-in 0.6s ease-out both;
+}
+
+@keyframes bento-row-in {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+        background-color: color-mix(in srgb, var(--chart-1) 18%, transparent);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dash-bento *,
+    .dash-bento *::before,
+    .dash-bento *::after {
+        animation: none !important;
+        transition: none !important;
+    }
+
+    .dash-bento [data-dashboard-chart] {
+        opacity: 1;
+    }
+}

@@ -52,6 +52,7 @@ Route::middleware('auth')->group(function () {
         ->name('user.')
         ->group(function () {
             Route::get('/dashboard', [UserDashboardController::class, 'index'])->name('dashboard');
+            Route::get('/dashboard/stats', [UserDashboardController::class, 'stats'])->name('dashboard.stats');
 
             Route::prefix('kehadiran')->name('kehadiran.')->group(function () {
                 Route::get('/', [UserKehadiranController::class, 'index'])->name('index');
@@ -67,6 +68,7 @@ Route::middleware('auth')->group(function () {
         ->name('media.')
         ->group(function () {
             Route::get('/dashboard', [MediaDashboardController::class, 'index'])->name('dashboard');
+            Route::get('/dashboard/stats', [MediaDashboardController::class, 'stats'])->name('dashboard.stats');
             Route::get('/paparan', [MediaPaparanController::class, 'index'])->name('paparan.index');
             Route::get('/paparan/datatable', [MediaPaparanController::class, 'datatable'])->name('paparan.datatable');
             Route::get('/paparan/stats', [MediaPaparanController::class, 'stats'])->name('paparan.stats');
@@ -97,6 +99,7 @@ Route::middleware('auth')->group(function () {
         ->name('admin.')
         ->group(function () {
             Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+            Route::get('/dashboard/stats', [AdminDashboardController::class, 'stats'])->name('dashboard.stats');
             Route::get('/senarai/analytics', [AdminSenaraiAnalyticsController::class, 'index'])->name('senarai.analytics');
             Route::get('/senarai/progress/analytics', [MediaSenaraiProgressController::class, 'analytics'])->name('senarai.progress.analytics');
             Route::get('/senarai/progress/announced', [MediaSenaraiProgressController::class, 'announcedDatatable'])->name('senarai.progress.announced');
