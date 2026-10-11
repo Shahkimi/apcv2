@@ -771,6 +771,22 @@ it('renders renamed media sidebar labels', function (): void {
         ->assertSee('ri-bug-line', false);
 });
 
+it('keeps sidebar item active on sub-pages and links brand to dashboard', function (): void {
+    $this->actingAs(adminUser())
+        ->get(route('admin.kawalan.ptj.index'))
+        ->assertOk()
+        ->assertSee('is-group-active', false)
+        ->assertSee('href="'.route('admin.kawalan.ptj.index').'"', false)
+        ->assertSee('aria-current="page"', false)
+        ->assertSee('href="'.route('admin.dashboard').'"', false);
+
+    $this->actingAs(mediaUser())
+        ->get(route('media.dashboard'))
+        ->assertOk()
+        ->assertSee('data-sb-link', false)
+        ->assertSee('href="'.route('media.dashboard').'"', false);
+});
+
 it('user role can open kehadiran index', function (): void {
     $user = plainUser();
 

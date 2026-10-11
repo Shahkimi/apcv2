@@ -28,29 +28,29 @@ class MejaController extends Controller
     public function datatable()
     {
         return DataTables::of(Meja::query())
-        ->addColumn('seats_display', function (Meja $meja) {
-            $n = e((string) $meja->sizing);
-        
-            return '<div class="inline-flex items-center gap-3 py-1">'
-        
-                // Icon container — slightly larger, deeper gradient, softer shadow
-                . '<span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl '
-                .     'bg-gradient-to-br from-primary/20 via-primary/10 to-transparent '
-                .     'text-primary shadow ring-1 ring-inset ring-primary/25 '
-                .     'dark:from-primary/25 dark:via-primary/15 dark:to-transparent">'
-                .     '<i class="ri-armchair-line text-lg leading-none" aria-hidden="true"></i>'
-                . '</span>'
-        
-                // Badge pill wrapping both number + label
-                . '<span class="inline-flex items-baseline gap-1.5 rounded-full '
-                .     'bg-primary/8 px-3 py-1 ring-1 ring-inset ring-primary/15 '
-                .     'dark:bg-primary/12 dark:ring-primary/20">'
-                .     '<span class="text-base font-bold tabular-nums tracking-tight text-foreground">' . $n . '</span>'
-                .     '<span class="text-xs font-medium uppercase tracking-wide text-primary/70">' . e(__('kerusi')) . '</span>'
-                . '</span>'
-        
-                . '</div>';
-        })
+            ->addColumn('seats_display', function (Meja $meja) {
+                $n = e((string) $meja->sizing);
+
+                return '<div class="inline-flex items-center gap-3 py-1">'
+
+                    // Icon container — slightly larger, deeper gradient, softer shadow
+                    .'<span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl '
+                    .'bg-gradient-to-br from-primary/20 via-primary/10 to-transparent '
+                    .'text-primary shadow ring-1 ring-inset ring-primary/25 '
+                    .'dark:from-primary/25 dark:via-primary/15 dark:to-transparent">'
+                    .'<i class="ri-armchair-line text-lg leading-none" aria-hidden="true"></i>'
+                    .'</span>'
+
+                    // Badge pill wrapping both number + label
+                    .'<span class="inline-flex items-baseline gap-1.5 rounded-full '
+                    .'bg-primary/8 px-3 py-1 ring-1 ring-inset ring-primary/15 '
+                    .'dark:bg-primary/12 dark:ring-primary/20">'
+                    .'<span class="text-base font-bold tabular-nums tracking-tight text-foreground">'.$n.'</span>'
+                    .'<span class="text-xs font-medium uppercase tracking-wide text-primary/70">'.e(__('kerusi')).'</span>'
+                    .'</span>'
+
+                    .'</div>';
+            })
             ->addColumn('created_at', fn (Meja $meja) => $meja->created_at?->format('d M Y') ?? '')
             ->addColumn('action', fn (Meja $meja) => view('admin::kawalan.meja.actions', ['meja' => $meja])->render())
             ->rawColumns(['action', 'seats_display'])

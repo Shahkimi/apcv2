@@ -18,7 +18,7 @@ it('returns jasamu fields in kehadiran details when event mode is jasamu', funct
     $pegawai->update([
         'tarikh_bersara' => '2026-12-31',
         'bersara_id' => $bersara->id,
-        'tempoh_berkhidmat' => 28,
+        'tempoh_berkhidmat' => '28 tahun',
     ]);
 
     $this->actingAs($admin)
@@ -27,7 +27,7 @@ it('returns jasamu fields in kehadiran details when event mode is jasamu', funct
         ->assertJsonPath('event_mode', 'jasamu')
         ->assertJsonPath('pegawai.tarikh_bersara', '31/12/2026')
         ->assertJsonPath('pegawai.bersara_name', 'Wajib')
-        ->assertJsonPath('pegawai.tempoh_berkhidmat', 28);
+        ->assertJsonPath('pegawai.tempoh_berkhidmat', '28 tahun');
 });
 
 it('shows the persaraan column in debug paparan when event mode is jasamu', function (): void {
@@ -42,7 +42,7 @@ it('shows the persaraan column in debug paparan when event mode is jasamu', func
         'sesi_majlis_id' => $sesi->id,
         'tarikh_bersara' => '2026-12-31',
         'bersara_id' => $bersara->id,
-        'tempoh_berkhidmat' => 28,
+        'tempoh_berkhidmat' => '28 tahun',
     ]);
 
     $this->actingAs($admin)
@@ -54,7 +54,7 @@ it('shows the persaraan column in debug paparan when event mode is jasamu', func
         ->getJson(route('admin.paparan.datatable').'?'.paparanDatatableQuery())
         ->assertOk();
 
-    expect($response->json('data.0.persaraan'))->toContain('31/12/2026');
+    expect($response->json('data.0.persaraan'))->toContain('31/12/2026')->toContain('28 tahun');
 });
 
 it('hides the persaraan column in debug paparan when event mode is apc', function (): void {
@@ -77,7 +77,7 @@ it('presents jasamu fields on the presentation slide screen when event mode is j
         'sesi_majlis_id' => $sesi->id,
         'tarikh_bersara' => '2026-12-31',
         'bersara_id' => $bersara->id,
-        'tempoh_berkhidmat' => 28,
+        'tempoh_berkhidmat' => '28 tahun',
     ]);
 
     $this->actingAs($media)
@@ -111,7 +111,7 @@ it('includes jasamu columns in report datatable and preview when event mode is j
         'is_late' => false,
         'tarikh_bersara' => '2026-12-31',
         'bersara_id' => $bersara->id,
-        'tempoh_berkhidmat' => 28,
+        'tempoh_berkhidmat' => '28 tahun',
     ]);
 
     $this->actingAs($admin)

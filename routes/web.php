@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\Kawalan\BackdropController as KawalanBackdropController;
+use App\Http\Controllers\Admin\SidebarStatusController;
 use App\Http\Controllers\Admin\Kawalan\BersaraController as KawalanBersaraController;
 use App\Http\Controllers\Admin\Kawalan\DatabaseImportController as KawalanDatabaseImportController;
 use App\Http\Controllers\Admin\Kawalan\GredController as KawalanGredController;
 use App\Http\Controllers\Admin\Kawalan\JawatanController as KawalanJawatanController;
+use App\Http\Controllers\Admin\Kawalan\LookupImportController as KawalanLookupImportController;
 use App\Http\Controllers\Admin\Kawalan\MejaController as KawalanMejaController;
 use App\Http\Controllers\Admin\Kawalan\PtjController as KawalanPtjController;
 use App\Http\Controllers\Admin\Kawalan\SesiMajlisController as KawalanSesiMajlisController;
@@ -100,6 +102,7 @@ Route::middleware('auth')->group(function () {
         ->group(function () {
             Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
             Route::get('/dashboard/stats', [AdminDashboardController::class, 'stats'])->name('dashboard.stats');
+            Route::get('/sidebar-status', SidebarStatusController::class)->name('sidebar-status');
             Route::get('/senarai/analytics', [AdminSenaraiAnalyticsController::class, 'index'])->name('senarai.analytics');
             Route::get('/senarai/progress/analytics', [MediaSenaraiProgressController::class, 'analytics'])->name('senarai.progress.analytics');
             Route::get('/senarai/progress/announced', [MediaSenaraiProgressController::class, 'announcedDatatable'])->name('senarai.progress.announced');
@@ -176,6 +179,16 @@ Route::middleware('auth')->group(function () {
                 Route::post('database/upload', [KawalanDatabaseImportController::class, 'upload'])->name('database.upload');
                 Route::post('database/preview', [KawalanDatabaseImportController::class, 'preview'])->name('database.preview');
                 Route::post('database/import', [KawalanDatabaseImportController::class, 'import'])->name('database.import');
+
+                Route::prefix('database/{dataset}')
+                    ->whereIn('dataset', ['jawatan', 'bersara'])
+                    ->name('database.lookup.')
+                    ->group(function () {
+                        Route::get('template', [KawalanLookupImportController::class, 'template'])->name('template');
+                        Route::post('upload', [KawalanLookupImportController::class, 'upload'])->name('upload');
+                        Route::post('preview', [KawalanLookupImportController::class, 'preview'])->name('preview');
+                        Route::post('import', [KawalanLookupImportController::class, 'import'])->name('import');
+                    });
 
                 Route::get('system', [KawalanSystemController::class, 'index'])->name('system.index');
                 Route::post('system/reset', [KawalanSystemController::class, 'reset'])

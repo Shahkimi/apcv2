@@ -162,7 +162,7 @@ abstract class AbstractPaparanController extends Controller
     {
         $tarikh = $pegawai->tarikh_bersara?->format('d/m/Y') ?? '—';
         $jenis = $pegawai->bersara?->jenis_bersara ?? '—';
-        $tempoh = $pegawai->tempoh_berkhidmat !== null ? $pegawai->tempoh_berkhidmat.' '.__('tahun') : '—';
+        $tempoh = $pegawai->tempoh_berkhidmat ?? '—';
 
         return '<div class="flex flex-col items-center gap-0.5 text-xs">'
             .'<span class="font-semibold tabular-nums text-foreground">'.e($tarikh).'</span>'

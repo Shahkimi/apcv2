@@ -24,7 +24,24 @@
         class="relative h-full min-h-0 w-full max-w-full overflow-hidden"
         x-data="{
             sidebarOpen: false,
+            isDesktop: window.matchMedia('(min-width: 1024px)').matches,
             collapsed: document.documentElement.classList.contains('sidebar-collapsed'),
+            init() {
+                const mq = window.matchMedia('(min-width: 1024px)');
+                mq.addEventListener('change', (e) => {
+                    this.isDesktop = e.matches;
+                    if (e.matches) this.sidebarOpen = false;
+                });
+                this.$watch('sidebarOpen', (open) => {
+                    if (this.isDesktop) return;
+                    this.$nextTick(() => document.getElementById(open ? 'sb-close' : 'sb-toggle')?.focus());
+                });
+            },
+            onKey(e) {
+                if (e.key !== '[' || e.ctrlKey || e.metaKey || e.altKey || ! this.isDesktop) return;
+                if (e.target.closest && e.target.closest('input, textarea, select, [contenteditable]')) return;
+                this.toggleCollapsed();
+            },
             toggleCollapsed() {
                 this.collapsed = ! this.collapsed;
                 document.documentElement.classList.toggle('sidebar-collapsed', this.collapsed);
@@ -32,6 +49,7 @@
             },
         }"
         x-on:keydown.escape.window="sidebarOpen = false"
+        x-on:keydown.window="onKey($event)"
     >
         <x-dashboard-sidebar :role="$role" />
 
@@ -50,7 +68,7 @@
         ></div>
 
         {{-- Main column: offset for fixed sidebar on lg (width tracks collapse state via sb-main); only this column scrolls inside <main> --}}
-        <div class="sb-main flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
+        <div class="sb-main flex h-full min-h-0 min-w-0 flex-col overflow-hidden" x-bind:inert="! isDesktop && sidebarOpen">
             <x-dashboard-navbar :title="$title" />
 
             <main
@@ -116,7 +134,104 @@
             });
             aside.addEventListener('focusout', hide);
             aside.addEventListener('click', hide);
-            aside.querySelector('nav')?.addEventListener('scroll', hide, { passive: true });
+
+            var nav = aside.querySelector('nav');
+
+            function fade() {
+                if (!nav) {
+                    return;
+                }
+                nav.toggleAttribute('data-fade-top', nav.scrollTop > 4);
+                nav.toggleAttribute('data-fade-bottom', nav.scrollTop + nav.clientHeight < nav.scrollHeight - 4);
+            }
+
+            nav?.addEventListener('scroll', function () {
+                hide();
+                fade();
+                window.dispatchEvent(new Event('sb-scroll'));
+            }, { passive: true });
+            nav?.addEventListener('click', function () { setTimeout(fade, 300); });
+            window.addEventListener('resize', fade);
+            window.addEventListener('load', function () {
+                var active = nav?.querySelector('[aria-current="page"]');
+                if (active) {
+                    // Vertical only: scrollIntoView would also shift the overflow-x:hidden nav sideways
+                    var a = active.getBoundingClientRect();
+                    var n = nav.getBoundingClientRect();
+                    if (a.bottom > n.bottom) {
+                        nav.scrollTop += a.bottom - n.bottom + 16;
+                    } else if (a.top < n.top) {
+                        nav.scrollTop -= n.top - a.top + 16;
+                    }
+                }
+                nav.scrollLeft = 0;
+                fade();
+            });
+            fade();
+
+            // Live session / event-mode badge (admin) without page refresh
+            var status = document.getElementById('sb-status');
+            if (status) {
+                var busy = false;
+                var refreshStatus = function () {
+                    if (busy || document.hidden) {
+                        return;
+                    }
+                    busy = true;
+                    fetch(status.dataset.url, { headers: { Accept: 'application/json' }, cache: 'no-store' })
+                        .then(function (r) { return r.ok ? r.json() : null; })
+                        .then(function (d) {
+                            if (!d) {
+                                return;
+                            }
+                            var name = d.sesi || status.dataset.empty;
+                            var mode = d.mode || '';
+                            var text = name + (mode ? ' · ' + mode : '');
+                            var dot = document.getElementById('sb-status-dot');
+                            var modeEl = document.getElementById('sb-status-mode');
+                            document.getElementById('sb-status-sesi').textContent = name;
+                            modeEl.textContent = mode;
+                            modeEl.classList.toggle('hidden', !mode);
+                            dot.classList.toggle('animate-pulse', !!d.sesi);
+                            dot.classList.toggle('bg-emerald-500', !!d.sesi);
+                            dot.classList.toggle('bg-sidebar-foreground/30', !d.sesi);
+                            status.setAttribute('aria-label', text);
+                            status.setAttribute('data-tooltip', text);
+                        })
+                        .catch(function () {})
+                        .finally(function () { busy = false; });
+                };
+                setInterval(refreshStatus, 10000);
+                document.addEventListener('visibilitychange', refreshStatus);
+                window.refreshSidebarStatus = refreshStatus;
+                // Refresh right after any session / event-mode change made through jQuery AJAX
+                if (window.jQuery) {
+                    window.jQuery(document).ajaxSuccess(function (e, xhr, settings) {
+                        if (settings.type && settings.type.toUpperCase() !== 'GET' && /sesi-majlis/.test(settings.url || '')) {
+                            refreshStatus();
+                        }
+                    });
+                }
+            }
+
+            // Instant feedback while the next full page loads
+            document.addEventListener('click', function (e) {
+                var a = e.target.closest ? e.target.closest('a[data-sb-link]') : null;
+                if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || a.target === '_blank') {
+                    return;
+                }
+                a.classList.add('is-pending');
+                a.setAttribute('aria-busy', 'true');
+            });
+            window.addEventListener('pageshow', function (e) {
+                if (!e.persisted) {
+                    return;
+                }
+                document.querySelectorAll('[data-sb-link].is-pending').forEach(function (el) {
+                    el.classList.remove('is-pending');
+                    el.removeAttribute('aria-busy');
+                });
+            });
         })();
     </script>
     @stack('scripts')

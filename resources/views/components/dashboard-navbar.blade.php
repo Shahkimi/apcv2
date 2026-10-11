@@ -11,6 +11,7 @@
 <header class="nav-fade-in z-30 flex h-16 w-full shrink-0 items-center gap-3 border-b border-border bg-card px-4 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/95 sm:px-6">
     <button
         type="button"
+        id="sb-toggle"
         class="relative inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground lg:hidden"
         x-on:click="sidebarOpen = !sidebarOpen"
         aria-label="{{ __('Toggle menu') }}"

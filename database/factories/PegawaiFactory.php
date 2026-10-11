@@ -45,7 +45,7 @@ class PegawaiFactory extends Factory
         return $this->state(fn (): array => [
             'tarikh_bersara' => now()->addDays(fake()->numberBetween(0, 730))->toDateString(),
             'bersara_id' => $bersaraId ?? Bersara::query()->firstOrCreate(['jenis_bersara' => 'Wajib'])->id,
-            'tempoh_berkhidmat' => fake()->numberBetween(10, 40),
+            'tempoh_berkhidmat' => fake()->numberBetween(10, 40).' tahun',
         ]);
     }
 }

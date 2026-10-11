@@ -48,7 +48,7 @@ class SenaraiController extends Controller
                 'ptj' => $o->ptj?->nama_ptj ?? '—',
                 'tarikh_bersara' => $o->tarikh_bersara?->format('d/m/Y') ?? '—',
                 'bersara' => $o->bersara?->jenis_bersara ?? '—',
-                'tempoh' => $o->tempoh_berkhidmat !== null ? $o->tempoh_berkhidmat.' '.__('tahun') : '—',
+                'tempoh' => $o->tempoh_berkhidmat ?? '—',
             ])->values(),
             'backdrop' => $backdrop,
             'sesiId' => $viewData['selectedSesi']?->id,

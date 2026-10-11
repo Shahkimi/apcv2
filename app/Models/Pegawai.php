@@ -52,7 +52,7 @@ class Pegawai extends Model
             'no_panggilan_lewat' => 'integer',
             's_kehadiran' => 'integer',
             'tarikh_bersara' => 'date',
-            'tempoh_berkhidmat' => 'integer',
+            'tempoh_berkhidmat' => 'string',
         ];
     }
 

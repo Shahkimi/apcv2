@@ -1,4 +1,4 @@
-/* Dashboard sidebar — collapsible icon rail (desktop) + floating tooltips */
+/* Dashboard sidebar — collapsible icon rail (desktop) + floating tooltips + group flyout */
 
 :root {
     --sidebar-w: 16rem;
@@ -16,6 +16,29 @@ html.sidebar-collapsed {
     position: relative;
 }
 
+/* Fade edges when nav content is scrolled (toggled from layout script) */
+.sb-nav {
+    --sb-fade-t: 0px;
+    --sb-fade-b: 0px;
+    mask-image: linear-gradient(
+        to bottom,
+        transparent 0,
+        #000 var(--sb-fade-t),
+        #000 calc(100% - var(--sb-fade-b)),
+        transparent 100%
+    );
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, currentColor 25%, transparent) transparent;
+}
+
+.sb-nav[data-fade-top] {
+    --sb-fade-t: 1.25rem;
+}
+
+.sb-nav[data-fade-bottom] {
+    --sb-fade-b: 1.25rem;
+}
+
 @media (min-width: 1024px) {
     .sb-aside {
         width: var(--sidebar-w);
@@ -27,13 +50,14 @@ html.sidebar-collapsed {
         transition: margin-left 0.2s ease;
     }
 
-    html.sidebar-collapsed .sb-label,
-    html.sidebar-collapsed .sb-section-title,
-    html.sidebar-collapsed .sb-chevron,
-    html.sidebar-collapsed .sb-brand,
-    html.sidebar-collapsed .sb-user-text,
-    html.sidebar-collapsed .sb-status-text,
-    html.sidebar-collapsed .sb-children {
+    /* Scoped to the aside so the teleported group flyout keeps its labels */
+    html.sidebar-collapsed .sb-aside .sb-label,
+    html.sidebar-collapsed .sb-aside .sb-section-title,
+    html.sidebar-collapsed .sb-aside .sb-chevron,
+    html.sidebar-collapsed .sb-aside .sb-brand,
+    html.sidebar-collapsed .sb-aside .sb-user-text,
+    html.sidebar-collapsed .sb-aside .sb-status-text,
+    html.sidebar-collapsed .sb-aside .sb-children {
         display: none;
     }
 
@@ -47,7 +71,9 @@ html.sidebar-collapsed {
         margin-left: 0;
     }
 
-    html.sidebar-collapsed .sb-item {
+    /* Nav items keep their padding so icons stay put while the rail animates;
+       footer items (avatar) are centred instead. */
+    html.sidebar-collapsed .sb-footer .sb-item {
         justify-content: center;
         padding-left: 0;
         padding-right: 0;
@@ -60,9 +86,16 @@ html.sidebar-collapsed {
     html.sidebar-collapsed .sb-footer-row {
         flex-direction: column;
     }
+
+    /* Rail: show the active branch of a group on the group button */
+    html.sidebar-collapsed .sb-aside .sb-item.is-group-active::before {
+        content: '';
+    }
 }
 
-.sb-item[aria-current='page']::before {
+/* Active indicator bar */
+.sb-item[aria-current='page']::before,
+.sb-item.is-group-active::before {
     content: '';
     position: absolute;
     left: 0;
@@ -71,6 +104,41 @@ html.sidebar-collapsed {
     width: 3px;
     border-radius: 9999px;
     background: var(--primary);
+    transform-origin: center;
+    animation: sb-bar-in 0.18s ease-out;
+}
+
+/* Outside rail mode the group button needs no bar; its active child shows it */
+html:not(.sidebar-collapsed) .sb-item.is-group-active::before {
+    content: none;
+}
+
+@media (max-width: 1023.98px) {
+    .sb-item.is-group-active::before {
+        content: none;
+    }
+}
+
+@keyframes sb-bar-in {
+    from {
+        transform: scaleY(0);
+        opacity: 0;
+    }
+    to {
+        transform: scaleY(1);
+        opacity: 1;
+    }
+}
+
+/* Link clicked, next page loading */
+.sb-item.is-pending > i:first-child {
+    animation: sb-pending 0.9s ease-in-out infinite;
+}
+
+@keyframes sb-pending {
+    50% {
+        opacity: 0.3;
+    }
 }
 
 /* Single floating tooltip, lives outside the aside so overflow/transform never clip it */
@@ -92,6 +160,17 @@ html.sidebar-collapsed {
     .sb-aside,
     .sb-main,
     #sb-tooltip {
+        transition: none;
+    }
+
+    .sb-item[aria-current='page']::before,
+    .sb-item.is-group-active::before,
+    .sb-item.is-pending > i:first-child {
+        animation: none;
+    }
+
+    .sb-chevron,
+    .sb-brand span {
         transition: none;
     }
 }

@@ -14,7 +14,7 @@
                 @if ($isJasamu)
                     <th class="w-tarikh">{{ __('Tarikh Bersara') }}</th>
                     <th class="w-jenis">{{ __('Jenis Persaraan') }}</th>
-                    <th class="w-tempoh">{{ __('Tempoh (thn)') }}</th>
+                    <th class="w-tempoh">{{ __('Tempoh berkhidmat') }}</th>
                 @endif
                 <th class="w-kerusi">{{ __('No. Kerusi / No. Sijil') }}</th>
                 <th class="w-meja">{{ __('Meja') }}</th>

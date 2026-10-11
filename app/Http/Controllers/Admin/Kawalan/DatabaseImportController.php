@@ -8,19 +8,62 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\Kawalan\DatabaseImportMapRequest;
 use App\Http\Requests\Admin\Kawalan\DatabaseImportUploadRequest;
 use App\Services\DatabaseImportService;
+use App\Services\Import\LookupDataset;
+use App\Services\Import\LookupImportService;
+use App\Services\Kehadiran\KehadiranCallingService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\Response;
 
 class DatabaseImportController extends Controller
 {
-    public function index(DatabaseImportService $service): View
-    {
+    public function index(
+        Request $request,
+        DatabaseImportService $service,
+        LookupImportService $lookupService,
+        KehadiranCallingService $calling,
+    ): View {
+        $key = (string) $request->query('dataset', 'pegawai');
+        $lookup = in_array($key, LookupDataset::keys(), true) ? LookupDataset::find($key) : null;
+
+        if ($lookup === null) {
+            return view('admin::kawalan.database.index', [
+                'dataset' => 'pegawai',
+                'lookup' => null,
+                'urls' => [
+                    'upload' => route('admin.kawalan.database.upload'),
+                    'preview' => route('admin.kawalan.database.preview'),
+                    'import' => route('admin.kawalan.database.import'),
+                ],
+                'fillableFields' => $service->fillableFields(),
+                'requiredMapped' => $service->requiredMappedFields(),
+                'optionalPolicyFields' => $service->optionalPolicyFields(),
+                'jasamuFields' => DatabaseImportService::JASAMU_FIELDS,
+            ]);
+        }
+
         return view('admin::kawalan.database.index', [
-            'fillableFields' => $service->fillableFields(),
-            'requiredMapped' => $service->requiredMappedFields(),
-            'optionalPolicyFields' => $service->optionalPolicyFields(),
-            'jasamuFields' => DatabaseImportService::JASAMU_FIELDS,
+            'dataset' => $lookup->key,
+            'lookup' => [
+                'key' => $lookup->key,
+                'label' => $lookup->label,
+                'column' => $lookup->column,
+                'columnLabel' => $lookup->columnLabel,
+                'aliases' => $lookup->aliases,
+                'impact' => $lookupService->impact($lookup),
+                'activeSesi' => $calling->activeOnAirSesi()?->sesi,
+                'template' => route('admin.kawalan.database.lookup.template', $lookup->key),
+            ],
+            'urls' => [
+                'upload' => route('admin.kawalan.database.lookup.upload', $lookup->key),
+                'preview' => route('admin.kawalan.database.lookup.preview', $lookup->key),
+                'import' => route('admin.kawalan.database.lookup.import', $lookup->key),
+            ],
+            'fillableFields' => [$lookup->column],
+            'requiredMapped' => [$lookup->column],
+            'optionalPolicyFields' => [],
+            'jasamuFields' => [],
         ]);
     }
 

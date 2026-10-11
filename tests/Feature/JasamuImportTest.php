@@ -55,12 +55,12 @@ it('imports jasamu fields with mixed date formats', function (): void {
         'no_kp' => '800101011111',
         'tarikh_bersara' => '2026-12-31',
         'bersara_id' => $bersara->id,
-        'tempoh_berkhidmat' => 25,
+        'tempoh_berkhidmat' => '25',
     ]);
     $this->assertDatabaseHas('pegawais', [
         'no_kp' => '800101012222',
         'tarikh_bersara' => '2027-01-15',
-        'tempoh_berkhidmat' => 30,
+        'tempoh_berkhidmat' => '30',
     ]);
 });
 
@@ -216,6 +216,95 @@ it('imports tarikh_bersara from an excel date cell', function (): void {
     $this->assertDatabaseHas('pegawais', [
         'no_kp' => '850101011234',
         'tarikh_bersara' => '2026-12-31',
-        'tempoh_berkhidmat' => 25,
+        'tempoh_berkhidmat' => '25',
     ]);
+});
+
+it('offers only the jasamu dikenang fields for mapping in jasamu mode', function (): void {
+    app(EventModeService::class)->set(EventModeService::MODE_JASAMU);
+
+    expect(DatabaseImportService::fillableFieldsFor(EventModeService::MODE_JASAMU))->toBe([
+        'nama', 'no_kp', 'ptj_id', 'jawatan_id', 'gred_id', 'tarikh_bersara',
+        'tempoh_berkhidmat', 'bersara_id', 'rsvp', 'no_kerusi', 'no_meja',
+    ]);
+    expect(DatabaseImportService::optionalPolicyFieldsFor(EventModeService::MODE_JASAMU))
+        ->toBe(['rsvp', 'no_kerusi', 'no_meja']);
+
+    $response = $this->actingAs(adminUser())
+        ->get(route('admin.kawalan.database.index'))
+        ->assertOk();
+
+    foreach (DatabaseImportService::JASAMU_FILLABLE as $field) {
+        $response->assertSee("x-model=\"mapping['{$field}']\"", false);
+    }
+    foreach (['sesi_majlis_id', 'no_sijil', 'no_panggilan_lewat', 'is_attend', 'is_late', 's_kehadiran'] as $field) {
+        $response->assertDontSee("x-model=\"mapping['{$field}']\"", false);
+    }
+});
+
+it('imports free-text tempoh_berkhidmat and leaves hidden columns at their defaults', function (): void {
+    app(EventModeService::class)->set(EventModeService::MODE_JASAMU);
+    $ptj = Ptj::query()->create(['nama_ptj' => 'PTJ Ujian']);
+    $jawatan = Jawatan::query()->create(['desc_jawatan' => 'Jawatan Ujian']);
+    $gred = Gred::query()->create(['desc_gred' => 'Gred Ujian']);
+    $bersara = Bersara::query()->create(['jenis_bersara' => 'Wajib']);
+
+    $csv = "Nama,KP,PTJ,Jawatan,Gred,TarikhBersara,Tempoh,BersaraId,RSVP,Kerusi,Meja\n"
+        ."A,800101011111,{$ptj->id},{$jawatan->id},{$gred->id},31122026,25 tahun 3 bulan,{$bersara->id},1,7,2\n";
+
+    $this->actingAs(adminUser());
+    $this->post(route('admin.kawalan.database.upload'), [
+        'file' => UploadedFile::fake()->createWithContent('jasamu-slim.csv', $csv),
+    ])->assertOk();
+
+    $mapping = [
+        'nama' => 'Nama', 'no_kp' => 'KP', 'ptj_id' => 'PTJ', 'jawatan_id' => 'Jawatan', 'gred_id' => 'Gred',
+        'tarikh_bersara' => 'TarikhBersara', 'tempoh_berkhidmat' => 'Tempoh', 'bersara_id' => 'BersaraId',
+        'rsvp' => 'RSVP', 'no_kerusi' => 'Kerusi', 'no_meja' => 'Meja',
+    ];
+    $emptyPolicy = array_fill_keys(DatabaseImportService::JASAMU_OPTIONAL_POLICY_FIELDS, DatabaseImportService::POLICY_NULL);
+
+    $this->postJson(route('admin.kawalan.database.import'), [
+        'mapping' => $mapping,
+        'empty_policy' => $emptyPolicy,
+    ])->assertOk()->assertJsonPath('imported', 1);
+
+    $pegawai = Pegawai::query()->where('no_kp', '800101011111')->firstOrFail();
+    expect($pegawai->tempoh_berkhidmat)->toBe('25 tahun 3 bulan')
+        ->and($pegawai->rsvp)->toBeTrue()
+        ->and($pegawai->no_kerusi)->toBe(7)
+        ->and($pegawai->no_meja)->toBe(2)
+        ->and($pegawai->is_attend)->toBeFalse()
+        ->and($pegawai->is_late)->toBeFalse()
+        ->and($pegawai->s_kehadiran)->toBe(0)
+        ->and($pegawai->sesi_majlis_id)->toBeNull()
+        ->and($pegawai->no_sijil)->toBeNull();
+});
+
+it('rejects a tempoh_berkhidmat longer than 100 characters', function (): void {
+    app(EventModeService::class)->set(EventModeService::MODE_JASAMU);
+    $ptj = Ptj::query()->create(['nama_ptj' => 'PTJ Ujian']);
+    $jawatan = Jawatan::query()->create(['desc_jawatan' => 'Jawatan Ujian']);
+    $gred = Gred::query()->create(['desc_gred' => 'Gred Ujian']);
+    $bersara = Bersara::query()->create(['jenis_bersara' => 'Wajib']);
+
+    $long = str_repeat('x', 101);
+    $csv = "Nama,KP,PTJ,Jawatan,Gred,TarikhBersara,BersaraId,Tempoh\n"
+        ."A,800101011111,{$ptj->id},{$jawatan->id},{$gred->id},31122026,{$bersara->id},{$long}\n";
+
+    $this->actingAs(adminUser());
+    $this->post(route('admin.kawalan.database.upload'), [
+        'file' => UploadedFile::fake()->createWithContent('long-tempoh.csv', $csv),
+    ])->assertOk();
+
+    $mapping = array_fill_keys(DatabaseImportService::fillableFieldsFor(EventModeService::MODE_JASAMU), '');
+    $mapping = [...$mapping, 'nama' => 'Nama', 'no_kp' => 'KP', 'ptj_id' => 'PTJ', 'jawatan_id' => 'Jawatan', 'gred_id' => 'Gred',
+        'tarikh_bersara' => 'TarikhBersara', 'bersara_id' => 'BersaraId', 'tempoh_berkhidmat' => 'Tempoh'];
+
+    $errors = $this->postJson(route('admin.kawalan.database.preview'), [
+        'mapping' => $mapping,
+        'empty_policy' => array_fill_keys(DatabaseImportService::JASAMU_OPTIONAL_POLICY_FIELDS, DatabaseImportService::POLICY_ZERO),
+    ])->assertOk()->json('errors');
+
+    expect($errors)->toHaveCount(1)->and($errors[0])->toContain('tempoh_berkhidmat');
 });

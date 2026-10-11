@@ -119,7 +119,7 @@
                 </div>
                 <div>
                     <p class="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{{ __('Tempoh Berkhidmat') }}</p>
-                    <p class="mt-0.5 truncate text-sm font-semibold text-foreground">${pegawai.tempoh_berkhidmat === '-' ? '-' : esc(pegawai.tempoh_berkhidmat) + ' {{ __('tahun') }}'}</p>
+                    <p class="mt-0.5 truncate text-sm font-semibold text-foreground">${esc(pegawai.tempoh_berkhidmat ?? '-')}</p>
                 </div>
             `
             : '';
