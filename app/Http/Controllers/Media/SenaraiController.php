@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Media;
 
 use App\Http\Controllers\Controller;
 use App\Models\Backdrop;
+use App\Services\EventModeService;
 use App\Services\Kehadiran\PaparanViewDataBuilder;
 use App\Services\Presentation\PresentationDisplayConfigService;
 use Illuminate\Http\Request;
@@ -16,6 +17,7 @@ class SenaraiController extends Controller
     public function __construct(
         private readonly PaparanViewDataBuilder $paparanViewData,
         private readonly PresentationDisplayConfigService $displayConfig,
+        private readonly EventModeService $eventMode,
     ) {}
 
     public function index(Request $request): View
@@ -38,21 +40,20 @@ class SenaraiController extends Controller
             ->first();
 
         $pegawais = $viewData['pegawais'];
+        $displaySettings = $this->displayConfig->live();
 
         return view('media::senarai.present', [
             'pegawais' => $pegawais,
-            'officerSlides' => $pegawais->map(static fn ($o) => [
+            'officerSlides' => $pegawais->map(fn ($o) => [
                 'id' => $o->id,
                 'nama' => $o->nama,
-                'jawatan' => $o->jawatan?->desc_jawatan ?? '—',
-                'ptj' => $o->ptj?->nama_ptj ?? '—',
-                'tarikh_bersara' => $o->tarikh_bersara?->format('d/m/Y') ?? '—',
-                'bersara' => $o->bersara?->jenis_bersara ?? '—',
-                'tempoh' => $o->tempoh_berkhidmat ?? '—',
+                ...$this->displayConfig->fieldValues($o),
             ])->values(),
+            'visibleFields' => $this->displayConfig->visibleFields($displaySettings, $this->eventMode->current()),
+            'hideEmpty' => $displaySettings['hide_empty'],
             'backdrop' => $backdrop,
             'sesiId' => $viewData['selectedSesi']?->id,
-            'displaySettings' => $this->displayConfig->withPx($this->displayConfig->live()),
+            'displaySettings' => $this->displayConfig->withPx($displaySettings),
         ]);
     }
 }

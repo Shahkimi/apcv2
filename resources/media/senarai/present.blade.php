@@ -155,14 +155,9 @@
         <div class="officer-display-wrap relative z-10 w-full max-w-6xl px-4 text-center sm:px-12">
             <div id="officer-display" class="transition-content space-y-1 sm:space-y-2">
                 <h1 id="officer-name" class="transition-content"></h1>
-                <p id="officer-jawatan" class="transition-content"></p>
-                @if ($isJasamu)
-                    <p id="officer-tarikh" class="officer-line transition-content"></p>
-                    <p id="officer-bersara" class="officer-line transition-content"></p>
-                    <p id="officer-tempoh" class="officer-line transition-content"></p>
-                @else
-                    <p id="officer-ptj" class="officer-line"></p>
-                @endif
+                @foreach ($visibleFields as $line)
+                    <p id="officer-{{ $line['key'] }}" class="{{ $line['key'] === 'jawatan' ? '' : 'officer-line ' }}transition-content"></p>
+                @endforeach
             </div>
         </div>
     </div>
@@ -173,14 +168,8 @@
         const progressReadUrl = @json(route('media.senarai.progress.show'));
         const progressUpdateUrl = @json(route('media.senarai.progress.update'));
         const sesiId = @json($sesiId);
-        const isJasamu = @json($isJasamu);
-        const extraLines = isJasamu
-            ? [
-                ['officer-tarikh', (o) => `{{ __('Tarikh bersara') }}: ${o.tarikh_bersara}`],
-                ['officer-bersara', (o) => `{{ __('Bersara') }}: ${o.bersara}`],
-                ['officer-tempoh', (o) => `{{ __('Tempoh berkhidmat') }}: ${o.tempoh}`],
-            ]
-            : [['officer-ptj', (o) => o.ptj]];
+        const fieldLines = @json($visibleFields);
+        const hideEmpty = @json($hideEmpty);
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
         const storageKey = `senarai_position_${sesiId ?? 'all'}`;
 
@@ -203,16 +192,30 @@
         }
 
         const nameEl = document.getElementById('officer-name');
-        const jawatanEl = document.getElementById('officer-jawatan');
-        const extraEls = extraLines.map(([id]) => document.getElementById(id)).filter(Boolean);
+        const lineEls = fieldLines
+            .map((line) => ({ ...line, el: document.getElementById('officer-' + line.key) }))
+            .filter((line) => line.el);
 
-        function fillExtras(officer) {
-            extraLines.forEach(([id, getText]) => {
-                const el = document.getElementById(id);
-                if (el) {
-                    el.textContent = getText(officer);
+        function fillLines(officer) {
+            lineEls.forEach((line) => {
+                const raw = officer[line.key];
+                const empty = raw === null || raw === undefined || String(raw).trim() === '';
+
+                if (empty && hideEmpty) {
+                    line.el.hidden = true;
+                    line.el.textContent = '';
+                    return;
                 }
+
+                const value = empty ? '—' : String(raw);
+                line.el.hidden = false;
+                line.el.textContent = line.prefix ? line.prefix + ': ' + value : value;
             });
+        }
+
+        function setLineState(line, visible) {
+            line.el.style.opacity = visible ? '1' : '0';
+            line.el.style.transform = visible ? 'translateY(0)' : 'translateY(20px)';
         }
 
         function normalizeIndex(index) {
@@ -289,25 +292,14 @@
 
             if (!animate) {
                 nameEl.textContent = officer.nama;
-                jawatanEl.textContent = officer.jawatan;
-                fillExtras(officer);
+                fillLines(officer);
                 nameEl.style.opacity = '1';
-                jawatanEl.style.opacity = '1';
                 nameEl.style.transform = 'translateY(0)';
-                jawatanEl.style.transform = 'translateY(0)';
-                extraEls.forEach(function(el) {
-                    el.style.opacity = '1';
-                    el.style.transform = 'translateY(0)';
-                });
+                lineEls.forEach((line) => setLineState(line, true));
             } else {
                 nameEl.style.opacity = '0';
                 nameEl.style.transform = 'translateY(20px)';
-                jawatanEl.style.opacity = '0';
-                jawatanEl.style.transform = 'translateY(20px)';
-                extraEls.forEach(function(el) {
-                    el.style.opacity = '0';
-                    el.style.transform = 'translateY(20px)';
-                });
+                lineEls.forEach((line) => setLineState(line, false));
 
                 setTimeout(function() {
                     if (gen !== displayGeneration) {
@@ -315,31 +307,20 @@
                     }
 
                     nameEl.textContent = officer.nama;
-                    jawatanEl.textContent = officer.jawatan;
-                    fillExtras(officer);
+                    fillLines(officer);
 
                     nameEl.style.opacity = '1';
                     nameEl.style.transform = 'translateY(0)';
 
-                    setTimeout(function() {
-                        if (gen !== displayGeneration) {
-                            return;
-                        }
+                    lineEls.forEach(function(line, i) {
+                        setTimeout(function() {
+                            if (gen !== displayGeneration) {
+                                return;
+                            }
 
-                        jawatanEl.style.opacity = '1';
-                        jawatanEl.style.transform = 'translateY(0)';
-                    }, 120);
-
-                    setTimeout(function() {
-                        if (gen !== displayGeneration) {
-                            return;
-                        }
-
-                        extraEls.forEach(function(el) {
-                            el.style.opacity = '1';
-                            el.style.transform = 'translateY(0)';
-                        });
-                    }, 240);
+                            setLineState(line, true);
+                        }, 120 + i * 80);
+                    });
                 }, 250);
             }
 

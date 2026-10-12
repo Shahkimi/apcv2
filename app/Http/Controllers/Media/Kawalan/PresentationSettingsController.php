@@ -6,7 +6,9 @@ namespace App\Http\Controllers\Media\Kawalan;
 
 use App\Http\Controllers\Controller;
 use App\Models\Backdrop;
+use App\Models\Pegawai;
 use App\Models\PresentationProfile;
+use App\Services\EventModeService;
 use App\Services\Presentation\PresentationDisplayConfigService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -17,6 +19,7 @@ class PresentationSettingsController extends Controller
 {
     public function __construct(
         private readonly PresentationDisplayConfigService $displayConfig,
+        private readonly EventModeService $eventMode,
     ) {}
 
     public function index(): View
@@ -51,6 +54,10 @@ class PresentationSettingsController extends Controller
             'activeProfileId' => $this->displayConfig->activeProfileId(),
             'maxProfiles' => PresentationProfile::MAX_PROFILES,
             'backdrop' => $backdrop,
+            'fieldDefs' => $this->displayConfig->fieldDefinitions(),
+            'fieldDefaults' => $this->displayConfig->fieldDefaults(),
+            'currentMode' => $this->eventMode->current(),
+            'previewOfficer' => $this->previewOfficer(),
         ]);
     }
 
@@ -61,12 +68,12 @@ class PresentationSettingsController extends Controller
             ['profile_id' => ['nullable', 'integer', 'exists:presentation_profiles,id']],
         ));
 
-        /** @var array{position: array<string, int|string>, fonts: array<string, int|string>} $configInput */
-        $configInput = [
+        $config = $this->displayConfig->normalize([
             'position' => $validated['position'],
             'fonts' => $validated['fonts'],
-        ];
-        $config = $this->displayConfig->normalize($configInput);
+            'fields' => $validated['fields'] ?? null,
+            'hide_empty' => $validated['hide_empty'] ?? null,
+        ]);
 
         $this->displayConfig->saveLive($config);
         $this->displayConfig->setActiveProfileId(
@@ -85,5 +92,76 @@ class PresentationSettingsController extends Controller
         }
 
         return back()->with('status', __('Tetapan paparan berjaya disimpan.'));
+    }
+
+    /**
+     * Auto-save endpoint for the "Data Dipaparkan" section: replaces only the
+     * field selection on the live config, keeping saved position/font values.
+     */
+    public function updateFields(Request $request): JsonResponse
+    {
+        $validated = $request->validate($this->displayConfig->fieldRules(required: true));
+
+        $config = $this->displayConfig->withFields(
+            $this->displayConfig->live(),
+            $validated['fields'],
+            $validated['hide_empty'],
+        );
+
+        $this->displayConfig->saveLive($config);
+        $this->displayConfig->setActiveProfileId($this->matchingProfileId($config));
+
+        return response()->json([
+            'success' => true,
+            'message' => __('Pilihan data dikemas kini.'),
+            'form_values' => $this->displayConfig->toFormValues($config),
+            'active_profile_id' => $this->displayConfig->activeProfileId(),
+        ]);
+    }
+
+    /**
+     * Keep the active-profile marker honest after a partial update: stay on the
+     * current profile if it still matches the live config, else any matching one.
+     *
+     * @param  array<string, mixed>  $config
+     */
+    private function matchingProfileId(array $config): ?int
+    {
+        $activeId = $this->displayConfig->activeProfileId();
+
+        $matching = PresentationProfile::query()
+            ->orderBy('name')
+            ->get()
+            ->filter(fn (PresentationProfile $profile) => $this->displayConfig->resolve($profile->config) === $config);
+
+        return ($matching->firstWhere('id', $activeId) ?? $matching->first())?->id;
+    }
+
+    /**
+     * A real officer (latest attendee, else any) used to preview the screen with
+     * actual data. Null when there are no officers yet — the page then falls back
+     * to the registry's sample values.
+     *
+     * @return array{nama: string, values: array<string, string|null>}|null
+     */
+    private function previewOfficer(): ?array
+    {
+        $relations = ['jawatan', 'ptj', 'bersara'];
+
+        $pegawai = Pegawai::query()
+            ->with($relations)
+            ->where('is_attend', true)
+            ->latest('hadir_at')
+            ->first()
+            ?? Pegawai::query()->with($relations)->orderBy('id')->first();
+
+        if ($pegawai === null) {
+            return null;
+        }
+
+        return [
+            'nama' => (string) $pegawai->nama,
+            'values' => $this->displayConfig->fieldValues($pegawai),
+        ];
     }
 }

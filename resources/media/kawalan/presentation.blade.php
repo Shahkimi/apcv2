@@ -1,16 +1,27 @@
 <x-dashboard-layout :title="__('Kawalan Paparan Presentasi')" role="media">
     <x-kawalan-shell>
         <div>
-            <a
-                href="{{ route('media.senarai.index') }}"
-                class="mb-3 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
-            >
-                <i class="ri-arrow-left-line" aria-hidden="true"></i>
-                {{ __('Kembali ke Senarai') }}
-            </a>
+            <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <a
+                    href="{{ route('media.senarai.index') }}"
+                    class="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+                >
+                    <i class="ri-arrow-left-line" aria-hidden="true"></i>
+                    {{ __('Kembali ke Senarai') }}
+                </a>
+                <a
+                    href="{{ route('media.senarai.present') }}"
+                    target="_blank"
+                    rel="noopener"
+                    class="btn btn-outline btn-sm gap-1.5"
+                >
+                    <i class="ri-slideshow-3-line" aria-hidden="true"></i>
+                    {{ __('Buka skrin presentasi') }}
+                </a>
+            </div>
             <x-crud-header
                 :title="__('Kawalan Paparan Presentasi')"
-                :description="__('Ubah kedudukan teks dan saiz fon untuk skrin presentasi senarai kehadiran.')"
+                :description="__('Pilih data yang dipaparkan di bawah nama pegawai, serta ubah kedudukan teks dan saiz fon untuk skrin presentasi senarai kehadiran.')"
                 :show-create="false"
             />
         </div>
@@ -21,14 +32,24 @@
                 'sm' => ['label' => __('Tablet'), 'hint' => '≥ 640px'],
                 'md' => ['label' => __('Desktop'), 'hint' => '≥ 768px'],
             ];
-            $fontRows = [
-                ['icon' => 'ri-user-line', 'label' => __('Nama'), 'key' => 'fonts_name', 'name' => 'fonts[name_%s]', 'min' => 10, 'max' => 200],
-                ['icon' => 'ri-briefcase-line', 'label' => __('Jawatan'), 'key' => 'fonts_jawatan', 'name' => 'fonts[jawatan_%s]', 'min' => 10, 'max' => 200],
+            $tabs = [
+                'data' => ['label' => __('Data Dipaparkan'), 'icon' => 'ri-list-check-2', 'dirty' => null],
+                'kedudukan' => ['label' => __('Kedudukan Teks'), 'icon' => 'ri-align-top', 'dirty' => 'position_'],
+                'fon' => ['label' => __('Saiz Fon'), 'icon' => 'ri-font-size', 'dirty' => 'fonts_'],
             ];
-            if ($isJasamu) {
-                $fontRows[] = ['icon' => 'ri-calendar-check-line', 'label' => __('Tarikh bersara'), 'key' => 'fonts_tarikh', 'name' => 'fonts[tarikh_%s]', 'min' => 10, 'max' => 200];
-                $fontRows[] = ['icon' => 'ri-user-heart-line', 'label' => __('Bersara'), 'key' => 'fonts_bersara', 'name' => 'fonts[bersara_%s]', 'min' => 10, 'max' => 200];
-                $fontRows[] = ['icon' => 'ri-history-line', 'label' => __('Tempoh berkhidmat'), 'key' => 'fonts_tempoh', 'name' => 'fonts[tempoh_%s]', 'min' => 10, 'max' => 200];
+            $modeTabs = ['apc' => 'APC', 'jasamu' => 'Jasamu'];
+            $fontRows = [
+                ['type' => 'px', 'field' => null, 'icon' => 'ri-user-line', 'label' => __('Nama'), 'key' => 'fonts_name', 'name' => 'fonts[name_%s]'],
+            ];
+            foreach (['jawatan', 'ptj', 'tarikh', 'bersara', 'tempoh'] as $fieldKey) {
+                $fontRows[] = [
+                    'type' => $fieldKey === 'ptj' ? 'ptj' : 'px',
+                    'field' => $fieldKey,
+                    'icon' => $fieldDefs[$fieldKey]['icon'],
+                    'label' => $fieldDefs[$fieldKey]['label'],
+                    'key' => 'fonts_'.$fieldKey,
+                    'name' => 'fonts['.$fieldKey.'_%s]',
+                ];
             }
             $mtRow = ['icon' => 'ri-align-top', 'label' => __('Margin atas'), 'key' => 'position_mt', 'name' => 'position[mt_%s]', 'min' => 0, 'max' => 2000];
         @endphp
@@ -41,8 +62,14 @@
                 'max' => $maxProfiles,
                 'ptjPx' => $ptjFontPx,
                 'backdropUrl' => $backdrop?->file_path ? $backdrop->image_url : null,
+                'fieldDefs' => $fieldDefs,
+                'fieldDefaults' => $fieldDefaults,
+                'currentMode' => $currentMode,
+                'previewOfficer' => $previewOfficer,
+                'sampleName' => __('Nama Pegawai Contoh'),
                 'routes' => [
                     'update' => route('media.kawalan.presentation.update'),
+                    'fieldsUpdate' => route('media.kawalan.presentation.fields.update'),
                     'profilesStore' => route('media.kawalan.presentation.profiles.store'),
                     'profilesUpdate' => route('media.kawalan.presentation.profiles.update', ['presentationProfile' => '__ID__']),
                     'profilesDestroy' => route('media.kawalan.presentation.profiles.destroy', ['presentationProfile' => '__ID__']),
@@ -70,7 +97,7 @@
 
                     {{-- Live preview --}}
                     <section class="space-y-3">
-                        <div class="flex items-center justify-between">
+                        <div class="flex items-center justify-between gap-2">
                             <h2 class="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                                 {{ __('Pratonton') }}
                             </h2>
@@ -85,19 +112,28 @@
                                 >
                                     <div class="officer-display-wrap w-full max-w-6xl text-center">
                                         <div class="officer-display">
-                                            <div class="officer-name">{{ __('Nama Pegawai Contoh') }}</div>
-                                            <div class="officer-jawatan">{{ __('Pegawai Teknologi Maklumat') }}</div>
-                                            @if ($isJasamu)
-                                                <div class="officer-tarikh">{{ __('Tarikh bersara: 31/12/2026') }}</div>
-                                                <div class="officer-bersara">{{ __('Bersara: Wajib') }}</div>
-                                                <div class="officer-tempoh">{{ __('Tempoh berkhidmat: 25 tahun') }}</div>
-                                            @else
-                                                <div class="officer-ptj">{{ __('PTJ Contoh') }}</div>
-                                            @endif
+                                            <div class="officer-name" x-text="previewName()"></div>
+                                            <template x-for="line in previewLines()" :key="line.key">
+                                                <div :class="'officer-' + line.key" x-text="line.text"></div>
+                                            </template>
                                         </div>
                                     </div>
                                 </div>
                             </div>
+                        </div>
+
+                        <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                            <span>
+                                <span x-text="dataCaption()"></span>
+                            </span>
+                            <button
+                                type="button"
+                                x-show="preview !== null"
+                                x-cloak
+                                class="font-medium text-primary hover:underline"
+                                @click="previewSource = previewSource === 'real' ? 'sample' : 'real'"
+                                x-text="sourceToggleText()"
+                            ></button>
                         </div>
                         <p class="text-[11px] text-muted-foreground">
                             {{ __('Pratonton anggaran — skrin sebenar bergantung pada resolusi.') }}
@@ -168,16 +204,221 @@
                 </aside>
 
                 {{-- Main column: matrix settings --}}
-                <div class="space-y-12 lg:order-1">
+                <div class="space-y-6 lg:order-1">
+
+                    {{-- Tabs --}}
+                    <div
+                        class="grid grid-cols-3 gap-1 rounded-xl border border-input bg-muted/30 p-1"
+                        role="tablist"
+                        aria-label="{{ __('Tetapan paparan') }}"
+                        @keydown.arrow-right.prevent="focusTab(1)"
+                        @keydown.arrow-left.prevent="focusTab(-1)"
+                        @keydown.home.prevent="focusTab('first')"
+                        @keydown.end.prevent="focusTab('last')"
+                    >
+                        @foreach ($tabs as $tabKey => $tabMeta)
+                            <button
+                                type="button"
+                                role="tab"
+                                id="tab-{{ $tabKey }}"
+                                aria-controls="tabpanel-{{ $tabKey }}"
+                                :aria-selected="tab === '{{ $tabKey }}'"
+                                :tabindex="tab === '{{ $tabKey }}' ? 0 : -1"
+                                class="relative inline-flex flex-col items-center justify-center gap-1 rounded-lg px-2 py-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex-row sm:gap-2 sm:px-3 sm:text-sm"
+                                :class="tab === '{{ $tabKey }}' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+                                @click="setTab('{{ $tabKey }}')"
+                            >
+                                <i class="{{ $tabMeta['icon'] }}" aria-hidden="true"></i>
+                                <span class="text-center leading-tight">{{ $tabMeta['label'] }}</span>
+                                @if ($tabKey === 'data')
+                                    <i
+                                        x-show="fieldSaveState !== 'idle'"
+                                        x-cloak
+                                        class="text-xs"
+                                        :class="[fieldSaveIcon(), fieldSaveState === 'error' ? 'text-destructive' : fieldSaveState === 'saved' ? 'text-emerald-600' : 'text-muted-foreground']"
+                                        aria-hidden="true"
+                                    ></i>
+                                @else
+                                    <span
+                                        x-show="isGroupDirty('{{ $tabMeta['dirty'] }}')"
+                                        x-cloak
+                                        class="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-amber-500"
+                                        title="{{ __('Perubahan belum disimpan') }}"
+                                    ></span>
+                                @endif
+                            </button>
+                        @endforeach
+                    </div>
+
+                    {{-- Data dipaparkan --}}
+                    <section
+                        id="tabpanel-data"
+                        role="tabpanel"
+                        aria-labelledby="tab-data"
+                        x-show="tab === 'data'"
+                        x-cloak
+                        class="space-y-4"
+                    >
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span
+                                        class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors"
+                                        :class="fieldSaveClass()"
+                                        role="status"
+                                        aria-live="polite"
+                                    >
+                                        <i :class="fieldSaveIcon()" aria-hidden="true"></i>
+                                        <span x-text="fieldSaveText()"></span>
+                                    </span>
+                                    <button
+                                        type="button"
+                                        x-show="fieldSaveState === 'error'"
+                                        x-cloak
+                                        class="text-[11px] font-medium text-destructive underline-offset-2 hover:underline"
+                                        @click="persistFields()"
+                                    >
+                                        {{ __('Cuba lagi') }}
+                                    </button>
+                                </div>
+                                <p class="mt-1 text-sm text-muted-foreground">
+                                    {{ __('Tanda data yang mahu dipaparkan di bawah nama pegawai pada skrin utama. Guna anak panah untuk menyusun turutan. Perubahan di bahagian ini disimpan secara automatik.') }}
+                                </p>
+                            </div>
+                            <div class="inline-flex shrink-0 rounded-lg border border-input bg-muted/30 p-0.5" role="group" aria-label="{{ __('Mod acara') }}">
+                                @foreach ($modeTabs as $modeKey => $modeLabel)
+                                    <button
+                                        type="button"
+                                        class="inline-flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-semibold transition-colors"
+                                        :class="fieldMode === '{{ $modeKey }}' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+                                        :aria-pressed="fieldMode === '{{ $modeKey }}'"
+                                        @click="fieldMode = '{{ $modeKey }}'"
+                                    >
+                                        {{ $modeLabel }}
+                                        @if ($modeKey === $currentMode)
+                                            <span class="rounded-full bg-primary/10 px-1.5 py-px text-[10px] font-semibold uppercase tracking-wide text-primary">{{ __('Aktif') }}</span>
+                                        @endif
+                                    </button>
+                                @endforeach
+                            </div>
+                        </div>
+
+                        <p
+                            x-show="fieldMode !== currentMode"
+                            x-cloak
+                            class="flex items-start gap-2 rounded-md border border-amber-300/70 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
+                        >
+                            <i class="ri-information-line mt-px" aria-hidden="true"></i>
+                            <span>{{ __('Anda sedang mengedit tetapan untuk mod yang tidak aktif. Ia digunakan apabila mod acara ditukar.') }}</span>
+                        </p>
+
+                        <ul class="divide-y divide-border/50 overflow-hidden rounded-xl border border-border/70 bg-card">
+                            <li class="flex items-center gap-3 bg-muted/30 px-3 py-2.5">
+                                <i class="ri-lock-2-line text-base text-muted-foreground" aria-hidden="true"></i>
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-sm font-medium text-foreground">{{ __('Nama Pegawai') }}</p>
+                                    <p class="text-xs text-muted-foreground">{{ __('Sentiasa dipaparkan') }}</p>
+                                </div>
+                            </li>
+
+                            <template x-for="(field, i) in currentFields()" :key="field.key">
+                                <li class="flex items-center gap-2 px-3 py-2.5 transition-colors sm:gap-3" :class="field.visible ? '' : 'bg-muted/20'">
+                                    <label class="flex min-w-0 flex-1 cursor-pointer items-center gap-3">
+                                        <input type="checkbox" class="peer sr-only" :checked="field.visible" @change="toggleField(i)">
+                                        <span
+                                            class="field-switch"
+                                            aria-hidden="true"
+                                        ></span>
+                                        <i class="text-base" :class="[defs[field.key].icon, field.visible ? 'text-foreground' : 'text-muted-foreground']" aria-hidden="true"></i>
+                                        <span class="min-w-0">
+                                            <span class="block truncate text-sm font-medium" :class="field.visible ? 'text-foreground' : 'text-muted-foreground'" x-text="defs[field.key].label"></span>
+                                            <span
+                                                class="block truncate pr-0.5 text-xs"
+                                                :class="sampleValue(field.key) === null ? 'italic text-amber-600 dark:text-amber-400' : 'text-muted-foreground'"
+                                                x-text="sampleValue(field.key) ?? noDataText"
+                                            ></span>
+                                        </span>
+                                    </label>
+
+                                    <button
+                                        type="button"
+                                        class="inline-flex h-7 shrink-0 items-center gap-1 rounded-md border px-2 text-[11px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+                                        :class="field.label ? 'border-primary/30 bg-primary/10 text-primary' : 'border-input text-muted-foreground hover:bg-accent'"
+                                        :disabled="!field.visible"
+                                        :aria-pressed="field.label"
+                                        :title="labelTitle(field)"
+                                        @click="toggleLabel(i)"
+                                    >
+                                        <i class="ri-price-tag-3-line" aria-hidden="true"></i>
+                                        <span class="hidden sm:inline">{{ __('Label') }}</span>
+                                    </button>
+
+                                    <div class="flex shrink-0 items-center">
+                                        <button
+                                            type="button"
+                                            class="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30 disabled:hover:bg-transparent"
+                                            :disabled="i === 0"
+                                            :aria-label="moveLabel(field, -1)"
+                                            :title="moveLabel(field, -1)"
+                                            @click="moveField(i, -1)"
+                                        >
+                                            <i class="ri-arrow-up-s-line" aria-hidden="true"></i>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30 disabled:hover:bg-transparent"
+                                            :disabled="i === currentFields().length - 1"
+                                            :aria-label="moveLabel(field, 1)"
+                                            :title="moveLabel(field, 1)"
+                                            @click="moveField(i, 1)"
+                                        >
+                                            <i class="ri-arrow-down-s-line" aria-hidden="true"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                            </template>
+                        </ul>
+
+                        <p x-show="visibleCount() === 0" x-cloak class="text-xs text-muted-foreground">
+                            {{ __('Tiada data dipilih — hanya nama pegawai akan dipaparkan.') }}
+                        </p>
+
+                        <div class="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+                            <label class="inline-flex cursor-pointer items-center gap-3">
+                                <input type="checkbox" class="peer sr-only" x-model="values.hide_empty" @change="queueFieldSave()">
+                                <span
+                                    class="field-switch"
+                                    aria-hidden="true"
+                                ></span>
+                                <span class="text-sm text-foreground">
+                                    {{ __('Sembunyi baris tanpa data') }}
+                                    <span class="block text-xs text-muted-foreground">{{ __('Elak tanda "—" pada skrin apabila data kosong.') }}</span>
+                                </span>
+                            </label>
+
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs tabular-nums text-muted-foreground" x-text="countText()"></span>
+                                <button
+                                    type="button"
+                                    class="text-xs font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                                    @click="resetFields()"
+                                >
+                                    {{ __('Tetap semula lalai') }}
+                                </button>
+                            </div>
+                        </div>
+                    </section>
 
                     {{-- Kedudukan --}}
-                    <section class="space-y-5">
-                        <div>
-                            <h2 class="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                                {{ __('Kedudukan Teks') }}
-                            </h2>
-                            <p class="mt-1 text-sm text-muted-foreground">{{ __('Semua nilai kedudukan menggunakan unit px. Pratonton memaparkan nilai Desktop.') }}</p>
-                        </div>
+                    <section
+                        id="tabpanel-kedudukan"
+                        role="tabpanel"
+                        aria-labelledby="tab-kedudukan"
+                        x-show="tab === 'kedudukan'"
+                        x-cloak
+                        class="space-y-5"
+                    >
+                        <p class="text-sm text-muted-foreground">{{ __('Semua nilai kedudukan menggunakan unit px. Pratonton memaparkan nilai Desktop.') }}</p>
 
                         <div class="grid grid-cols-[minmax(5.5rem,8rem)_repeat(3,minmax(0,1fr))] gap-x-3 gap-y-4 sm:gap-x-4">
                             <div></div>
@@ -262,17 +503,17 @@
                     </section>
 
                     {{-- Saiz fon --}}
-                    <section class="space-y-5">
-                        <div>
-                            <h2 class="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                                {{ __('Saiz Fon') }}
-                            </h2>
-                            <p class="mt-1 text-sm text-muted-foreground">
-                                {{ $isJasamu
-                                    ? __('Semua baris (nama, jawatan, tarikh bersara, bersara, tempoh berkhidmat) guna unit px.')
-                                    : __('Nama dan jawatan guna unit px. PTJ guna kelas Tailwind untuk responsif.') }}
-                            </p>
-                        </div>
+                    <section
+                        id="tabpanel-fon"
+                        role="tabpanel"
+                        aria-labelledby="tab-fon"
+                        x-show="tab === 'fon'"
+                        x-cloak
+                        class="space-y-5"
+                    >
+                        <p class="text-sm text-muted-foreground">
+                            {{ __('Hanya baris yang ditanda pada tab dipilih ditunjukkan. Saiz dalam unit px; PTJ guna kelas Tailwind untuk responsif.') }}
+                        </p>
 
                         <div class="grid grid-cols-[minmax(5.5rem,8rem)_repeat(3,minmax(0,1fr))] gap-x-3 gap-y-4 sm:gap-x-4">
                             <div></div>
@@ -284,89 +525,88 @@
                             @endforeach
 
                             @foreach ($fontRows as $row)
-                                <div class="flex items-center gap-2 pt-2 text-sm font-medium text-foreground">
-                                    <i class="{{ $row['icon'] }} text-muted-foreground" aria-hidden="true"></i>
-                                    {{ $row['label'] }}
-                                </div>
-                                @foreach (array_keys($bps) as $bp)
-                                    @php $key = $row['key'].'_'.$bp; $name = sprintf($row['name'], $bp); @endphp
-                                    <div class="min-w-0">
-                                        <div class="relative">
-                                            <input
-                                                type="number"
-                                                id="{{ $key }}"
-                                                name="{{ $name }}"
-                                                min="{{ $row['min'] }}"
-                                                max="{{ $row['max'] }}"
-                                                step="1"
-                                                value="{{ $formValues[$key] }}"
-                                                x-model.number="values.{{ $key }}"
-                                                class="matrix-number h-9 w-full rounded-md border border-input bg-background pl-3 pr-8 text-sm tabular-nums focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
-                                                :class="errors.{{ $key }} ? 'border-destructive' : ''"
-                                            >
-                                            <span class="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-[11px] text-muted-foreground">px</span>
-                                        </div>
-                                        <input
-                                            type="range"
-                                            min="{{ $row['min'] }}"
-                                            max="{{ $row['max'] }}"
-                                            step="1"
-                                            x-model.number="values.{{ $key }}"
-                                            class="matrix-range mt-2 w-full"
-                                            aria-label="{{ $row['label'] }} {{ $bps[$bp]['label'] }}"
-                                        >
-                                        <template x-if="errors.{{ $key }}">
-                                            <p class="mt-1 text-xs text-destructive" x-text="errors.{{ $key }}"></p>
-                                        </template>
+                                <div class="contents" @if ($row['field']) x-show="isFieldVisible('{{ $row['field'] }}')" @endif>
+                                    <div class="flex items-center gap-2 pt-2 text-sm font-medium text-foreground">
+                                        <i class="{{ $row['icon'] }} text-muted-foreground" aria-hidden="true"></i>
+                                        {{ $row['label'] }}
                                     </div>
-                                @endforeach
-                            @endforeach
 
-                            @unless ($isJasamu)
-                                <div class="flex items-center gap-2 pt-2 text-sm font-medium text-foreground">
-                                    <i class="ri-building-line text-muted-foreground" aria-hidden="true"></i>
-                                    {{ __('PTJ') }}
-                                </div>
-                                <div class="min-w-0">
-                                    <select
-                                        id="fonts_ptj_base"
-                                        name="fonts[ptj_base]"
-                                        x-model="values.fonts_ptj_base"
-                                        class="h-9 w-full rounded-md border border-input bg-background px-2.5 text-sm"
-                                        :class="errors.fonts_ptj_base ? 'border-destructive' : ''"
-                                    >
-                                        @foreach ($ptjFontOptions as $option)
-                                            <option value="{{ $option }}" @selected($formValues['fonts_ptj_base'] === $option)>{{ $option }}</option>
+                                    @if ($row['type'] === 'ptj')
+                                        <div class="min-w-0">
+                                            <select
+                                                id="fonts_ptj_base"
+                                                name="fonts[ptj_base]"
+                                                x-model="values.fonts_ptj_base"
+                                                class="h-9 w-full rounded-md border border-input bg-background px-2.5 text-sm"
+                                                :class="errors.fonts_ptj_base ? 'border-destructive' : ''"
+                                            >
+                                                @foreach ($ptjFontOptions as $option)
+                                                    <option value="{{ $option }}" @selected($formValues['fonts_ptj_base'] === $option)>{{ $option }}</option>
+                                                @endforeach
+                                            </select>
+                                            <template x-if="errors.fonts_ptj_base">
+                                                <p class="mt-1 text-xs text-destructive" x-text="errors.fonts_ptj_base"></p>
+                                            </template>
+                                        </div>
+                                        <div class="col-span-2 min-w-0">
+                                            <select
+                                                id="fonts_ptj_sm"
+                                                name="fonts[ptj_sm]"
+                                                x-model="values.fonts_ptj_sm"
+                                                class="h-9 w-full rounded-md border border-input bg-background px-2.5 text-sm"
+                                                :class="errors.fonts_ptj_sm ? 'border-destructive' : ''"
+                                            >
+                                                @foreach ($ptjFontOptions as $option)
+                                                    <option value="{{ $option }}" @selected($formValues['fonts_ptj_sm'] === $option)>{{ $option }}</option>
+                                                @endforeach
+                                            </select>
+                                            <p class="mt-1 text-[11px] text-muted-foreground">{{ __('Tablet & Desktop') }}</p>
+                                            <template x-if="errors.fonts_ptj_sm">
+                                                <p class="mt-1 text-xs text-destructive" x-text="errors.fonts_ptj_sm"></p>
+                                            </template>
+                                        </div>
+                                    @else
+                                        @foreach (array_keys($bps) as $bp)
+                                            @php $key = $row['key'].'_'.$bp; $name = sprintf($row['name'], $bp); @endphp
+                                            <div class="min-w-0">
+                                                <div class="relative">
+                                                    <input
+                                                        type="number"
+                                                        id="{{ $key }}"
+                                                        name="{{ $name }}"
+                                                        min="10"
+                                                        max="200"
+                                                        step="1"
+                                                        value="{{ $formValues[$key] }}"
+                                                        x-model.number="values.{{ $key }}"
+                                                        class="matrix-number h-9 w-full rounded-md border border-input bg-background pl-3 pr-8 text-sm tabular-nums focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+                                                        :class="errors.{{ $key }} ? 'border-destructive' : ''"
+                                                    >
+                                                    <span class="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-[11px] text-muted-foreground">px</span>
+                                                </div>
+                                                <input
+                                                    type="range"
+                                                    min="10"
+                                                    max="200"
+                                                    step="1"
+                                                    x-model.number="values.{{ $key }}"
+                                                    class="matrix-range mt-2 w-full"
+                                                    aria-label="{{ $row['label'] }} {{ $bps[$bp]['label'] }}"
+                                                >
+                                                <template x-if="errors.{{ $key }}">
+                                                    <p class="mt-1 text-xs text-destructive" x-text="errors.{{ $key }}"></p>
+                                                </template>
+                                            </div>
                                         @endforeach
-                                    </select>
-                                    <template x-if="errors.fonts_ptj_base">
-                                        <p class="mt-1 text-xs text-destructive" x-text="errors.fonts_ptj_base"></p>
-                                    </template>
+                                    @endif
                                 </div>
-                                <div class="col-span-2 min-w-0">
-                                    <select
-                                        id="fonts_ptj_sm"
-                                        name="fonts[ptj_sm]"
-                                        x-model="values.fonts_ptj_sm"
-                                        class="h-9 w-full rounded-md border border-input bg-background px-2.5 text-sm"
-                                        :class="errors.fonts_ptj_sm ? 'border-destructive' : ''"
-                                    >
-                                        @foreach ($ptjFontOptions as $option)
-                                            <option value="{{ $option }}" @selected($formValues['fonts_ptj_sm'] === $option)>{{ $option }}</option>
-                                        @endforeach
-                                    </select>
-                                    <p class="mt-1 text-[11px] text-muted-foreground">{{ __('Tablet & Desktop') }}</p>
-                                    <template x-if="errors.fonts_ptj_sm">
-                                        <p class="mt-1 text-xs text-destructive" x-text="errors.fonts_ptj_sm"></p>
-                                    </template>
-                                </div>
-                            @endunless
+                            @endforeach
                         </div>
                     </section>
                 </div>
 
-                {{-- Sticky action bar --}}
-                <div class="sticky bottom-4 z-10 mt-10 lg:order-3 lg:col-span-2">
+                {{-- Sticky action bar — position/font tabs only; Data Dipaparkan auto-saves --}}
+                <div x-show="tab !== 'data'" x-cloak class="sticky bottom-4 z-10 mt-10 lg:order-3 lg:col-span-2">
                     <div class="flex h-14 items-center justify-between rounded-xl border border-border/70 bg-card/95 px-4 shadow-lg backdrop-blur">
                         <div class="flex min-w-0 items-center gap-2 text-sm">
                             <span class="h-2 w-2 shrink-0 rounded-full" :class="isDirty() ? 'bg-amber-500' : 'bg-emerald-500'"></span>
@@ -390,9 +630,11 @@
 
     @push('scripts')
         <script>
+            const clonePlain = (value) => JSON.parse(JSON.stringify(value));
+
             window.presentationSettings = (init) => ({
-                values: { ...init.formValues },
-                saved: { ...init.formValues },
+                values: clonePlain(init.formValues),
+                saved: clonePlain(init.formValues),
                 profiles: init.profiles,
                 activeProfileId: init.activeProfileId,
                 loadedProfileId: init.activeProfileId,
@@ -401,11 +643,67 @@
                 errors: {},
                 busy: false,
 
+                // Data lines — each event mode keeps its own selection; the picker follows the selected tab
+                defs: init.fieldDefs,
+                fieldDefaults: init.fieldDefaults,
+                currentMode: init.currentMode,
+                fieldMode: init.currentMode,
+                sampleValues: Object.fromEntries(Object.entries(init.fieldDefs).map(([key, def]) => [key, def.sample])),
+                noDataText: @json(__('Tiada data pada pegawai ini')),
+                tabs: ['data', 'kedudukan', 'fon'],
+                tab: 'data',
+                fieldSaveState: 'idle',
+                fieldSaving: false,
+                fieldSaveQueued: false,
+                fieldSaveTimer: null,
+                fieldSavedTimer: null,
+
                 // Live preview — Desktop (md ≥ 768px) only, virtual stage 1280×720
-                previewWidth: 0,
                 stage: { w: 1280, h: 720 },
+                previewWidth: 0,
+                previewSource: init.previewOfficer ? 'real' : 'sample',
+                preview: init.previewOfficer,
+                sampleName: init.sampleName,
                 ptjPx: init.ptjPx,
                 backdropUrl: init.backdropUrl,
+
+                init() {
+                    window.addEventListener('beforeunload', (e) => {
+                        if (this.isDirty() || this.fieldSaving || this.fieldSaveState === 'pending') {
+                            e.preventDefault();
+                            e.returnValue = '';
+                        }
+                    });
+
+                    const hashTab = window.location.hash.replace('#', '');
+                    if (this.tabs.includes(hashTab)) {
+                        this.tab = hashTab;
+                    }
+
+                    window.addEventListener('keydown', (e) => {
+                        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+                            e.preventDefault();
+                            this.save();
+                        }
+                    });
+                },
+
+                setTab(key, focus = false) {
+                    this.tab = key;
+                    history.replaceState(null, '', '#' + key);
+
+                    if (focus) {
+                        this.$nextTick(() => document.getElementById('tab-' + key)?.focus());
+                    }
+                },
+
+                focusTab(step) {
+                    const last = this.tabs.length - 1;
+                    const current = this.tabs.indexOf(this.tab);
+                    const next = step === 'first' ? 0 : step === 'last' ? last : (current + step + last + 1) % (last + 1);
+
+                    this.setTab(this.tabs[next], true);
+                },
 
                 initPreview(el) {
                     this.previewWidth = el.clientWidth - 24;
@@ -420,6 +718,7 @@
 
                 previewFrameStyle() {
                     const k = this.previewScale();
+
                     return { width: `${this.stage.w * k}px`, height: `${this.stage.h * k}px` };
                 },
 
@@ -453,13 +752,205 @@
                     };
                 },
 
+                usingRealData() {
+                    return this.preview !== null && this.previewSource === 'real';
+                },
+
+                previewName() {
+                    return this.usingRealData() ? this.preview.nama : this.sampleName;
+                },
+
+                previewValues() {
+                    return this.usingRealData() ? this.preview.values : this.sampleValues;
+                },
+
+                sampleValue(key) {
+                    const raw = this.previewValues()[key];
+
+                    return raw === null || raw === undefined || String(raw).trim() === '' ? null : String(raw);
+                },
+
+                previewLines() {
+                    const hide = !!this.values.hide_empty;
+
+                    return this.currentFields()
+                        .filter((field) => field.visible)
+                        .map((field) => {
+                            const value = this.sampleValue(field.key);
+
+                            return { field, value };
+                        })
+                        .filter(({ value }) => value !== null || !hide)
+                        .map(({ field, value }) => {
+                            const text = value ?? '—';
+
+                            return { key: field.key, text: field.label ? `${this.defs[field.key].label}: ${text}` : text };
+                        });
+                },
+
+                dataCaption() {
+                    return this.usingRealData() ? @json(__('Data')) + ': ' + this.preview.nama : @json(__('Data contoh'));
+                },
+
+                sourceToggleText() {
+                    return this.previewSource === 'real' ? @json(__('Guna data contoh')) : @json(__('Guna data sebenar'));
+                },
+
+                currentFields() {
+                    return this.values['fields_' + this.fieldMode];
+                },
+
+                visibleCount() {
+                    return this.currentFields().filter((field) => field.visible).length;
+                },
+
+                countText() {
+                    return this.visibleCount() + ' / ' + this.currentFields().length + ' ' + @json(__('dipaparkan'));
+                },
+
+                isFieldVisible(key) {
+                    return this.currentFields().some((field) => field.key === key && field.visible);
+                },
+
+                toggleField(index) {
+                    const field = this.currentFields()[index];
+                    field.visible = !field.visible;
+                    this.queueFieldSave();
+                },
+
+                toggleLabel(index) {
+                    const field = this.currentFields()[index];
+                    field.label = !field.label;
+                    this.queueFieldSave();
+                },
+
+                moveField(index, direction) {
+                    const list = this.currentFields();
+                    const target = index + direction;
+
+                    if (target < 0 || target >= list.length) return;
+
+                    list.splice(target, 0, list.splice(index, 1)[0]);
+                    this.queueFieldSave();
+                },
+
+                resetFields() {
+                    this.values['fields_' + this.fieldMode] = clonePlain(this.fieldDefaults[this.fieldMode]);
+                    this.queueFieldSave();
+                },
+
+                // Data Dipaparkan auto-save: debounce rapid toggles, never run two requests at once
+                queueFieldSave() {
+                    this.fieldSaveState = 'pending';
+                    clearTimeout(this.fieldSaveTimer);
+                    this.fieldSaveTimer = setTimeout(() => this.persistFields(), 400);
+                },
+
+                async persistFields() {
+                    if (this.fieldSaving) {
+                        this.fieldSaveQueued = true;
+                        return;
+                    }
+
+                    this.fieldSaving = true;
+                    this.fieldSaveState = 'saving';
+
+                    const snapshot = {};
+                    this.autoKeys().forEach((key) => {
+                        snapshot[key] = clonePlain(this.values[key]);
+                    });
+
+                    try {
+                        const fields = {};
+                        Object.keys(this.fieldDefaults).forEach((mode) => {
+                            fields[mode] = snapshot['fields_' + mode];
+                        });
+
+                        const { data } = await window.axios.put(this.routes.fieldsUpdate, {
+                            fields,
+                            hide_empty: !!snapshot.hide_empty,
+                        });
+
+                        Object.assign(this.saved, snapshot);
+                        this.activeProfileId = data.active_profile_id;
+                        this.loadedProfileId = data.active_profile_id;
+                        this.fieldSaveState = 'saved';
+
+                        clearTimeout(this.fieldSavedTimer);
+                        this.fieldSavedTimer = setTimeout(() => {
+                            if (this.fieldSaveState === 'saved') this.fieldSaveState = 'idle';
+                        }, 2000);
+                    } catch (e) {
+                        this.fieldSaveState = 'error';
+                        this.toastFromException(e);
+                    } finally {
+                        this.fieldSaving = false;
+
+                        if (this.fieldSaveQueued) {
+                            this.fieldSaveQueued = false;
+                            this.persistFields();
+                        }
+                    }
+                },
+
+                fieldSaveText() {
+                    return {
+                        pending: @json(__('Menyimpan…')),
+                        saving: @json(__('Menyimpan…')),
+                        saved: @json(__('Disimpan')),
+                        error: @json(__('Gagal disimpan')),
+                    }[this.fieldSaveState] ?? @json(__('Simpan automatik'));
+                },
+
+                fieldSaveIcon() {
+                    return {
+                        pending: 'ri-loader-4-line animate-spin',
+                        saving: 'ri-loader-4-line animate-spin',
+                        saved: 'ri-check-line',
+                        error: 'ri-error-warning-line',
+                    }[this.fieldSaveState] ?? 'ri-cloud-line';
+                },
+
+                fieldSaveClass() {
+                    return {
+                        saved: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+                        error: 'bg-destructive/10 text-destructive',
+                    }[this.fieldSaveState] ?? 'bg-muted text-muted-foreground';
+                },
+
+                labelTitle(field) {
+                    return @json(__('Papar awalan')) + ' "' + this.defs[field.key].label + ':"';
+                },
+
+                moveLabel(field, direction) {
+                    return (direction < 0 ? @json(__('Naikkan')) : @json(__('Turunkan'))) + ' ' + this.defs[field.key].label;
+                },
+
                 nudge(key, delta, min, max) {
                     const v = Number(this.values[key]) || 0;
                     this.values[key] = Math.min(max, Math.max(min, v + delta));
                 },
 
+                autoKeys() {
+                    return Object.keys(this.fieldDefaults).map((mode) => 'fields_' + mode).concat('hide_empty');
+                },
+
+                withoutAutoKeys(state) {
+                    const copy = { ...state };
+                    this.autoKeys().forEach((key) => delete copy[key]);
+
+                    return copy;
+                },
+
+                // Data Dipaparkan saves itself, so only position/font edits count as unsaved
+                isGroupDirty(prefix) {
+                    return Object.keys(this.values).some(
+                        (key) => key.startsWith(prefix) && JSON.stringify(this.values[key]) !== JSON.stringify(this.saved[key])
+                    );
+                },
+
                 isDirty() {
-                    return JSON.stringify(this.values) !== JSON.stringify(this.saved);
+                    return JSON.stringify(this.withoutAutoKeys(this.values)) !== JSON.stringify(this.withoutAutoKeys(this.saved));
                 },
 
                 statusText() {
@@ -476,37 +967,41 @@
                 },
 
                 revert() {
-                    this.values = { ...this.saved };
+                    const current = this.values;
+                    this.values = clonePlain(this.saved);
+                    this.autoKeys().forEach((key) => {
+                        this.values[key] = clonePlain(current[key]);
+                    });
                     this.errors = {};
                 },
 
                 buildConfigPayload() {
+                    const v = this.values;
+                    const fonts = {};
+
+                    ['name', 'jawatan', 'tarikh', 'bersara', 'tempoh'].forEach((row) => {
+                        ['base', 'sm', 'md'].forEach((bp) => {
+                            fonts[`${row}_${bp}`] = v[`fonts_${row}_${bp}`];
+                        });
+                    });
+                    fonts.ptj_base = v.fonts_ptj_base;
+                    fonts.ptj_sm = v.fonts_ptj_sm;
+
+                    const fields = {};
+                    Object.keys(this.fieldDefaults).forEach((mode) => {
+                        fields[mode] = clonePlain(v['fields_' + mode]);
+                    });
+
                     return {
                         position: {
-                            mt_base: this.values.position_mt_base,
-                            mt_sm: this.values.position_mt_sm,
-                            mt_md: this.values.position_mt_md,
-                            translate_y: this.values.position_translate_y,
+                            mt_base: v.position_mt_base,
+                            mt_sm: v.position_mt_sm,
+                            mt_md: v.position_mt_md,
+                            translate_y: v.position_translate_y,
                         },
-                        fonts: {
-                            name_base: this.values.fonts_name_base,
-                            name_sm: this.values.fonts_name_sm,
-                            name_md: this.values.fonts_name_md,
-                            jawatan_base: this.values.fonts_jawatan_base,
-                            jawatan_sm: this.values.fonts_jawatan_sm,
-                            jawatan_md: this.values.fonts_jawatan_md,
-                            ptj_base: this.values.fonts_ptj_base,
-                            ptj_sm: this.values.fonts_ptj_sm,
-                            tarikh_base: this.values.fonts_tarikh_base,
-                            tarikh_sm: this.values.fonts_tarikh_sm,
-                            tarikh_md: this.values.fonts_tarikh_md,
-                            bersara_base: this.values.fonts_bersara_base,
-                            bersara_sm: this.values.fonts_bersara_sm,
-                            bersara_md: this.values.fonts_bersara_md,
-                            tempoh_base: this.values.fonts_tempoh_base,
-                            tempoh_sm: this.values.fonts_tempoh_sm,
-                            tempoh_md: this.values.fonts_tempoh_md,
-                        },
+                        fonts,
+                        fields,
+                        hide_empty: !!v.hide_empty,
                     };
                 },
 
@@ -530,7 +1025,7 @@
                             headers: { Accept: 'application/json' },
                         });
 
-                        this.saved = { ...this.values };
+                        this.saved = clonePlain(this.values);
                         this.activeProfileId = data.active_profile_id;
                         this.loadedProfileId = data.active_profile_id;
                         this.toast('success', data.message);
@@ -592,8 +1087,8 @@
                     try {
                         const { data } = await window.axios.post(this.routes.profilesApply.replace('__ID__', profile.id));
 
-                        this.values = { ...data.form_values };
-                        this.saved = { ...data.form_values };
+                        this.values = clonePlain(data.form_values);
+                        this.saved = clonePlain(data.form_values);
                         this.loadedProfileId = data.active_profile_id;
                         this.activeProfileId = data.active_profile_id;
                         this.profiles = data.profiles;
@@ -723,11 +1218,20 @@
                             flat[key.replace('.', '_')] = e.response.data.errors[key][0];
                         });
                         this.errors = flat;
+                        this.showFirstErrorTab(Object.keys(flat));
                         this.toast('error', @json(__('Sila semak semula nilai yang dimasukkan.')));
                         return;
                     }
 
                     this.toastFromException(e);
+                },
+
+                // A validation error can sit on a hidden tab — jump to the one holding it
+                showFirstErrorTab(keys) {
+                    const first = keys[0] ?? '';
+
+                    if (first.startsWith('position_')) this.setTab('kedudukan');
+                    else if (first.startsWith('fonts_')) this.setTab('fon');
                 },
 
                 toastFromException(e) {

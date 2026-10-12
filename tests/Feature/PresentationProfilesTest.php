@@ -266,29 +266,6 @@ it('resolves display settings for the presentation screen after the refactor', f
         ->assertSee('61px', false);
 });
 
-it('shows jasamu font rows instead of the ptj select when event mode is jasamu', function (): void {
-    app(EventModeService::class)->set(EventModeService::MODE_JASAMU);
-    $media = presentationMediaUser();
-
-    $this->actingAs($media)
-        ->get(route('media.kawalan.presentation.index'))
-        ->assertOk()
-        ->assertSee('id="fonts_tarikh_md"', false)
-        ->assertSee('id="fonts_bersara_md"', false)
-        ->assertSee('id="fonts_tempoh_md"', false)
-        ->assertDontSee('id="fonts_ptj_sm"', false);
-});
-
-it('shows the ptj select instead of jasamu font rows when event mode is apc', function (): void {
-    $media = presentationMediaUser();
-
-    $this->actingAs($media)
-        ->get(route('media.kawalan.presentation.index'))
-        ->assertOk()
-        ->assertSee('id="fonts_ptj_sm"', false)
-        ->assertDontSee('id="fonts_tarikh_md"', false);
-});
-
 it('saves and reflects jasamu font sizes on the presentation screen', function (): void {
     app(EventModeService::class)->set(EventModeService::MODE_JASAMU);
     $media = presentationMediaUser();
@@ -334,4 +311,290 @@ it('falls back to default jasamu font sizes when an old payload omits them', fun
     expect($live['fonts']['tarikh_md'])->toBe(36);
     expect($live['fonts']['bersara_md'])->toBe(36);
     expect($live['fonts']['tempoh_md'])->toBe(36);
+});
+
+it('renders the data field picker and every font row regardless of event mode', function (): void {
+    $media = presentationMediaUser();
+
+    $this->actingAs($media)
+        ->get(route('media.kawalan.presentation.index'))
+        ->assertOk()
+        ->assertSee('Data Dipaparkan')
+        ->assertSee('id="fonts_ptj_sm"', false)
+        ->assertSee('id="fonts_tarikh_md"', false)
+        ->assertSee('id="fonts_bersara_md"', false)
+        ->assertSee('id="fonts_tempoh_md"', false);
+});
+
+function presentationFields(array $overrides = []): array
+{
+    return array_replace([
+        'apc' => [
+            ['key' => 'tarikh', 'visible' => true, 'label' => true],
+            ['key' => 'jawatan', 'visible' => true, 'label' => false],
+            ['key' => 'ptj', 'visible' => false, 'label' => false],
+            ['key' => 'bersara', 'visible' => false, 'label' => true],
+            ['key' => 'tempoh', 'visible' => false, 'label' => true],
+        ],
+        'jasamu' => [
+            ['key' => 'jawatan', 'visible' => true, 'label' => false],
+            ['key' => 'tempoh', 'visible' => true, 'label' => false],
+            ['key' => 'tarikh', 'visible' => false, 'label' => true],
+            ['key' => 'bersara', 'visible' => false, 'label' => true],
+            ['key' => 'ptj', 'visible' => false, 'label' => false],
+        ],
+    ], $overrides);
+}
+
+it('defaults to the original per-mode layout when no fields are stored', function (): void {
+    $config = app(PresentationDisplayConfigService::class)->live();
+
+    $apc = collect($config['fields']['apc'])->where('visible', true)->pluck('key')->all();
+    $jasamu = collect($config['fields']['jasamu'])->where('visible', true)->pluck('key')->all();
+
+    expect($apc)->toBe(['jawatan', 'ptj']);
+    expect($jasamu)->toBe(['jawatan', 'tarikh', 'bersara', 'tempoh']);
+    expect($config['hide_empty'])->toBeTrue();
+});
+
+it('saves field selection and hide_empty and returns them in form values', function (): void {
+    $media = presentationMediaUser();
+    $payload = presentationConfigPayload();
+    $payload['fields'] = presentationFields();
+    $payload['hide_empty'] = false;
+
+    $response = $this->actingAs($media)
+        ->putJson(route('media.kawalan.presentation.update'), $payload)
+        ->assertOk()
+        ->assertJsonPath('success', true)
+        ->assertJsonPath('form_values.hide_empty', false)
+        ->assertJsonPath('form_values.fields_apc.0.key', 'tarikh')
+        ->assertJsonPath('form_values.fields_apc.0.label', true)
+        ->assertJsonPath('form_values.fields_jasamu.1.key', 'tempoh');
+
+    expect($response->json('form_values.fields_apc'))->toHaveCount(5);
+
+    $live = app(PresentationDisplayConfigService::class)->live();
+    expect($live['hide_empty'])->toBeFalse();
+    expect($live['fields']['apc'][0])->toBe(['key' => 'tarikh', 'visible' => true, 'label' => true]);
+});
+
+it('rejects an unknown field key', function (): void {
+    $media = presentationMediaUser();
+    $payload = presentationConfigPayload();
+    $payload['fields'] = presentationFields(['apc' => [['key' => 'gaji', 'visible' => true, 'label' => false]]]);
+
+    $this->actingAs($media)
+        ->putJson(route('media.kawalan.presentation.update'), $payload)
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['fields.apc.0.key']);
+});
+
+it('drops duplicate keys and appends missing fields as hidden', function (): void {
+    $media = presentationMediaUser();
+    $payload = presentationConfigPayload();
+    $payload['fields'] = presentationFields(['apc' => [
+        ['key' => 'ptj', 'visible' => true, 'label' => false],
+        ['key' => 'ptj', 'visible' => false, 'label' => true],
+    ]]);
+
+    $this->actingAs($media)
+        ->putJson(route('media.kawalan.presentation.update'), $payload)
+        ->assertOk();
+
+    $apc = app(PresentationDisplayConfigService::class)->live()['fields']['apc'];
+
+    expect(array_column($apc, 'key'))->toBe(['ptj', 'jawatan', 'tarikh', 'bersara', 'tempoh']);
+    expect($apc[0]['visible'])->toBeTrue();
+    expect($apc[1]['visible'])->toBeFalse();
+});
+
+it('falls back to per-mode default fields when a legacy payload omits them', function (): void {
+    $media = presentationMediaUser();
+
+    $this->actingAs($media)
+        ->putJson(route('media.kawalan.presentation.update'), presentationConfigPayload())
+        ->assertOk()
+        ->assertJsonPath('form_values.hide_empty', true)
+        ->assertJsonPath('form_values.fields_apc.1.key', 'ptj')
+        ->assertJsonPath('form_values.fields_apc.1.visible', true)
+        ->assertJsonPath('form_values.fields_jasamu.1.key', 'tarikh');
+});
+
+it('stores field selection in profiles and restores it on apply', function (): void {
+    $media = presentationMediaUser();
+    $config = presentationConfigPayload();
+    $config['fields'] = presentationFields();
+    $config['hide_empty'] = false;
+
+    $created = $this->actingAs($media)
+        ->postJson(route('media.kawalan.presentation.profiles.store'), ['name' => 'Tarikh Dahulu', 'config' => $config])
+        ->assertOk()
+        ->assertJsonPath('profile.form_values.fields_apc.0.key', 'tarikh');
+
+    $this->actingAs($media)
+        ->postJson(route('media.kawalan.presentation.profiles.apply', $created->json('profile.id')))
+        ->assertOk()
+        ->assertJsonPath('form_values.hide_empty', false)
+        ->assertJsonPath('form_values.fields_apc.0.key', 'tarikh');
+
+    $live = app(PresentationDisplayConfigService::class)->live();
+    expect(array_column($live['fields']['apc'], 'key'))->toBe(['tarikh', 'jawatan', 'ptj', 'bersara', 'tempoh']);
+});
+
+it('opens an old profile without fields using default fields', function (): void {
+    $media = presentationMediaUser();
+    $profile = PresentationProfile::query()->create([
+        'name' => 'Lama',
+        'config' => presentationConfigPayload(),
+    ]);
+
+    $this->actingAs($media)
+        ->postJson(route('media.kawalan.presentation.profiles.apply', $profile))
+        ->assertOk()
+        ->assertJsonPath('form_values.fields_jasamu.0.key', 'jawatan')
+        ->assertJsonPath('form_values.hide_empty', true);
+});
+
+it('renders only the visible lines in the configured order on the presentation screen', function (): void {
+    $media = presentationMediaUser();
+    $payload = presentationConfigPayload();
+    $payload['fields'] = presentationFields();
+    $this->actingAs($media)->putJson(route('media.kawalan.presentation.update'), $payload)->assertOk();
+
+    $sesi = activeSesiForKehadiran();
+    createPegawaiForTest()->update(['is_attend' => true, 'sesi_majlis_id' => $sesi->id]);
+
+    $this->actingAs($media)
+        ->get(route('media.senarai.present'))
+        ->assertOk()
+        ->assertSeeInOrder(['id="officer-tarikh"', 'id="officer-jawatan"'], false)
+        ->assertDontSee('id="officer-ptj"', false)
+        ->assertDontSee('id="officer-bersara"', false)
+        ->assertSee('Tarikh bersara');
+});
+
+it('keeps field selection separate per event mode on the presentation screen', function (): void {
+    $media = presentationMediaUser();
+    $payload = presentationConfigPayload();
+    $payload['fields'] = presentationFields();
+    $this->actingAs($media)->putJson(route('media.kawalan.presentation.update'), $payload)->assertOk();
+
+    $sesi = activeSesiForKehadiran();
+    createPegawaiForTest()->update(['is_attend' => true, 'sesi_majlis_id' => $sesi->id]);
+
+    app(EventModeService::class)->set(EventModeService::MODE_JASAMU);
+
+    $this->actingAs($media)
+        ->get(route('media.senarai.present'))
+        ->assertOk()
+        ->assertSeeInOrder(['id="officer-jawatan"', 'id="officer-tempoh"'], false)
+        ->assertDontSee('id="officer-tarikh"', false)
+        ->assertDontSee('id="officer-ptj"', false);
+});
+
+it('exposes the hide_empty flag to the presentation screen script', function (): void {
+    $media = presentationMediaUser();
+    $sesi = activeSesiForKehadiran();
+    createPegawaiForTest()->update(['is_attend' => true, 'sesi_majlis_id' => $sesi->id, 'tarikh_bersara' => null]);
+
+    $this->actingAs($media)
+        ->get(route('media.senarai.present'))
+        ->assertOk()
+        ->assertSee('const hideEmpty = true', false);
+});
+
+it('shows a real officer in the settings preview data', function (): void {
+    $media = presentationMediaUser();
+    $sesi = activeSesiForKehadiran();
+    $pegawai = createPegawaiForTest();
+    $pegawai->update(['is_attend' => true, 'sesi_majlis_id' => $sesi->id, 'hadir_at' => now()]);
+
+    $this->actingAs($media)
+        ->get(route('media.kawalan.presentation.index'))
+        ->assertOk()
+        ->assertSee($pegawai->nama);
+});
+
+it('auto-saves field selection without touching saved position and fonts', function (): void {
+    $media = presentationMediaUser();
+    $this->actingAs($media)
+        ->putJson(route('media.kawalan.presentation.update'), presentationConfigPayload(['position' => ['mt_base' => 321]]))
+        ->assertOk();
+
+    $this->actingAs($media)
+        ->putJson(route('media.kawalan.presentation.fields.update'), ['fields' => presentationFields(), 'hide_empty' => false])
+        ->assertOk()
+        ->assertJsonPath('success', true)
+        ->assertJsonPath('form_values.position_mt_base', 321)
+        ->assertJsonPath('form_values.fields_apc.0.key', 'tarikh')
+        ->assertJsonPath('form_values.hide_empty', false);
+
+    $live = app(PresentationDisplayConfigService::class)->live();
+    expect($live['position']['mt_base'])->toBe('321px');
+    expect($live['hide_empty'])->toBeFalse();
+    expect(array_column($live['fields']['jasamu'], 'key'))->toBe(['jawatan', 'tempoh', 'tarikh', 'bersara', 'ptj']);
+});
+
+it('requires both fields and hide_empty on the auto-save endpoint', function (): void {
+    $this->actingAs(presentationMediaUser())
+        ->putJson(route('media.kawalan.presentation.fields.update'), [])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['fields', 'hide_empty']);
+});
+
+it('forbids non-media roles from the field auto-save endpoint', function (): void {
+    $this->actingAs(User::factory()->create(['role' => User::ROLE_ADMIN]))
+        ->putJson(route('media.kawalan.presentation.fields.update'), ['fields' => presentationFields(), 'hide_empty' => true])
+        ->assertForbidden();
+});
+
+it('clears the active profile when auto-saved fields no longer match it', function (): void {
+    $media = presentationMediaUser();
+    $profile = PresentationProfile::query()->create(['name' => 'Asal', 'config' => presentationConfigPayload()]);
+    $this->actingAs($media)->postJson(route('media.kawalan.presentation.profiles.apply', $profile))->assertOk();
+
+    $this->actingAs($media)
+        ->putJson(route('media.kawalan.presentation.fields.update'), ['fields' => presentationFields(), 'hide_empty' => true])
+        ->assertOk()
+        ->assertJsonPath('active_profile_id', null);
+});
+
+it('keeps the active profile when auto-saved fields still match it', function (): void {
+    $media = presentationMediaUser();
+    $config = presentationConfigPayload();
+    $config['fields'] = presentationFields();
+    $config['hide_empty'] = false;
+    $profile = PresentationProfile::query()->create([
+        'name' => 'Sepadan',
+        'config' => app(PresentationDisplayConfigService::class)->normalize($config),
+    ]);
+    $this->actingAs($media)->postJson(route('media.kawalan.presentation.profiles.apply', $profile))->assertOk();
+
+    $this->actingAs($media)
+        ->putJson(route('media.kawalan.presentation.fields.update'), ['fields' => presentationFields(), 'hide_empty' => false])
+        ->assertOk()
+        ->assertJsonPath('active_profile_id', $profile->id);
+});
+
+it('groups the settings into data, position and font tabs without removing any inputs', function (): void {
+    $this->actingAs(presentationMediaUser())
+        ->get(route('media.kawalan.presentation.index'))
+        ->assertOk()
+        ->assertSee('role="tablist"', false)
+        ->assertSee('id="tab-data"', false)
+        ->assertSee('id="tab-kedudukan"', false)
+        ->assertSee('id="tab-fon"', false)
+        ->assertSee('id="tabpanel-data"', false)
+        ->assertSee('id="tabpanel-kedudukan"', false)
+        ->assertSee('id="tabpanel-fon"', false)
+        ->assertSee('id="position_mt_md"', false)
+        ->assertSee('id="fonts_name_md"', false);
+});
+
+it('hides the save bar on the data tab because that tab auto-saves', function (): void {
+    $this->actingAs(presentationMediaUser())
+        ->get(route('media.kawalan.presentation.index'))
+        ->assertOk()
+        ->assertSee('x-show="tab !== \'data\'"', false);
 });

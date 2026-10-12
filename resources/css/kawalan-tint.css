@@ -68,3 +68,15 @@
 .ring-primary\/30 {
     --tw-ring-color: color-mix(in oklab, var(--primary) 30%, transparent);
 }
+
+.bg-muted\/30 {
+    background-color: color-mix(in oklab, var(--muted) 30%, transparent);
+}
+
+.border-primary\/30 {
+    border-color: color-mix(in oklab, var(--primary) 30%, transparent);
+}
+
+.divide-border\/50 > :not([hidden]) ~ :not([hidden]) {
+    border-color: color-mix(in oklab, var(--border) 50%, transparent);
+}

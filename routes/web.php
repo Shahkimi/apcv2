@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\Kawalan\BackdropController as KawalanBackdropController;
-use App\Http\Controllers\Admin\SidebarStatusController;
 use App\Http\Controllers\Admin\Kawalan\BersaraController as KawalanBersaraController;
 use App\Http\Controllers\Admin\Kawalan\DatabaseImportController as KawalanDatabaseImportController;
 use App\Http\Controllers\Admin\Kawalan\GredController as KawalanGredController;
@@ -19,6 +18,7 @@ use App\Http\Controllers\Admin\KehadiranController as AdminKehadiranController;
 use App\Http\Controllers\Admin\PaparanController as AdminPaparanController;
 use App\Http\Controllers\Admin\ReportController as AdminReportController;
 use App\Http\Controllers\Admin\SenaraiAnalyticsController as AdminSenaraiAnalyticsController;
+use App\Http\Controllers\Admin\SidebarStatusController;
 use App\Http\Controllers\Media\DashboardController as MediaDashboardController;
 use App\Http\Controllers\Media\Kawalan\PresentationProfileController as MediaPresentationProfileController;
 use App\Http\Controllers\Media\Kawalan\PresentationSettingsController as MediaPresentationSettingsController;
@@ -85,6 +85,7 @@ Route::middleware('auth')->group(function () {
             Route::prefix('kawalan')->name('kawalan.')->group(function () {
                 Route::get('/presentation', [MediaPresentationSettingsController::class, 'index'])->name('presentation.index');
                 Route::put('/presentation', [MediaPresentationSettingsController::class, 'update'])->name('presentation.update');
+                Route::put('/presentation/fields', [MediaPresentationSettingsController::class, 'updateFields'])->name('presentation.fields.update');
 
                 Route::prefix('presentation/profiles')->name('presentation.profiles.')->group(function () {
                     Route::get('/', [MediaPresentationProfileController::class, 'index'])->name('index');
