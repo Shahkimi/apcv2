@@ -32,6 +32,10 @@ class LookupImportMapRequest extends FormRequest
             'mapping.'.$this->dataset()->column => ['required', 'string', 'min:1', 'max:255'],
         ];
 
+        if ($this->dataset()->importsIds) {
+            $rules['mapping.'.LookupDataset::ID_FIELD] = ['nullable', 'string', 'max:255'];
+        }
+
         if ($this->isImport()) {
             $rules['confirm'] = ['required', 'string', 'in:'.self::CONFIRM_WORD];
         }
@@ -62,7 +66,31 @@ class LookupImportMapRequest extends FormRequest
                     __('Lajur ":header" tidak wujud dalam fail.', ['header' => $header])
                 );
             }
+
+            $idHeader = $this->idHeader();
+            if ($idHeader === null) {
+                return;
+            }
+            $idKey = 'mapping.'.LookupDataset::ID_FIELD;
+            if (is_array($headers) && $headers !== [] && ! in_array($idHeader, $headers, true)) {
+                $validator->errors()->add($idKey, __('Lajur ":header" tidak wujud dalam fail.', ['header' => $idHeader]));
+            } elseif ($idHeader === $header) {
+                $validator->errors()->add($idKey, __('Lajur ID dan nama mesti berbeza.'));
+            }
         });
+    }
+
+    /**
+     * Mapped id column, only for datasets that take ids from the sheet; null keeps ids 1..N.
+     */
+    public function idHeader(): ?string
+    {
+        if (! $this->dataset()->importsIds) {
+            return null;
+        }
+        $header = $this->input('mapping.'.LookupDataset::ID_FIELD);
+
+        return is_string($header) && trim($header) !== '' ? $header : null;
     }
 
     private function isImport(): bool

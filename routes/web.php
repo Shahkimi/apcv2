@@ -30,6 +30,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\User\DashboardController as UserDashboardController;
 use App\Http\Controllers\User\KehadiranController as UserKehadiranController;
 use App\Models\User;
+use App\Services\Import\LookupDataset;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -62,6 +63,13 @@ Route::middleware('auth')->group(function () {
                 Route::get('/stats', [UserKehadiranController::class, 'stats'])->name('stats');
                 Route::get('/{pegawai}/details', [UserKehadiranController::class, 'getDetails'])->name('details');
                 Route::put('/{pegawai}/verify', [UserKehadiranController::class, 'verify'])->name('verify');
+            });
+
+            Route::prefix('kiosk')->name('kiosk.')->group(function () {
+                Route::get('/', [UserKehadiranController::class, 'kiosk'])->name('index');
+                Route::post('/lookup', [UserKehadiranController::class, 'kioskLookup'])
+                    ->middleware('throttle:60,1')
+                    ->name('lookup');
             });
         });
 
@@ -182,7 +190,7 @@ Route::middleware('auth')->group(function () {
                 Route::post('database/import', [KawalanDatabaseImportController::class, 'import'])->name('database.import');
 
                 Route::prefix('database/{dataset}')
-                    ->whereIn('dataset', ['jawatan', 'bersara'])
+                    ->whereIn('dataset', LookupDataset::keys())
                     ->name('database.lookup.')
                     ->group(function () {
                         Route::get('template', [KawalanLookupImportController::class, 'template'])->name('template');
@@ -195,6 +203,9 @@ Route::middleware('auth')->group(function () {
                 Route::post('system/reset', [KawalanSystemController::class, 'reset'])
                     ->middleware('throttle:10,1')
                     ->name('system.reset');
+                Route::post('system/wipe', [KawalanSystemController::class, 'wipe'])
+                    ->middleware('throttle:10,1')
+                    ->name('system.wipe');
             });
         });
 

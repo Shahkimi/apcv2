@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Import;
 
+use App\Support\IdCounter;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -11,7 +12,7 @@ use Illuminate\Support\Facades\Storage;
 
 /**
  * Replaces a whole lookup table (Jawatan / Bersara) from CSV/XLSX.
- * Name column only; ids are reassigned 1..N in file order.
+ * Ids come from the optional id column (datasets with importsIds), otherwise 1..N in file order.
  */
 final class LookupImportService
 {
@@ -38,17 +39,22 @@ final class LookupImportService
      * @param  list<string>  $headers
      * @return array{errors: list<string>, preview: list<array{id: int, name: string}>, rows: list<array{id: int, name: string}>, impact: array<string, mixed>}
      */
-    public function preview(string $relativePath, array $headers, string $header, LookupDataset $dataset, int $previewLimit = 100): array
+    public function preview(string $relativePath, array $headers, string $header, LookupDataset $dataset, int $previewLimit = 100, ?string $idHeader = null): array
     {
         $dataRows = $this->reader->dataRows(Storage::disk('local')->path($relativePath));
-        $index = $this->reader->headerIndexMap($headers)[$header] ?? null;
+        $indexMap = $this->reader->headerIndexMap($headers);
+        $index = $indexMap[$header] ?? null;
+        $idIndex = $idHeader !== null ? ($indexMap[$idHeader] ?? null) : null;
 
         $errors = [];
         $rows = [];
         $seen = [];
+        $seenIds = [];
 
         if ($index === null) {
             $errors[] = "Lajur '{$header}' tidak wujud dalam fail.";
+        } elseif ($idHeader !== null && $idIndex === null) {
+            $errors[] = "Lajur '{$idHeader}' tidak wujud dalam fail.";
         } else {
             foreach ($dataRows as $i => $dataRow) {
                 $line = $i + 2;
@@ -73,7 +79,32 @@ final class LookupImportService
                 }
                 $seen[$key] = $line;
 
-                $rows[] = ['id' => count($rows) + 1, 'name' => $name];
+                if ($idIndex === null) {
+                    $rows[] = ['id' => count($rows) + 1, 'name' => $name];
+
+                    continue;
+                }
+
+                $rawId = trim((string) ($dataRow[$idIndex] ?? ''));
+                $id = $this->parseId($rawId);
+                if ($rawId === '') {
+                    $errors[] = "Baris {$line}: '".LookupDataset::ID_FIELD."' diperlukan.";
+
+                    continue;
+                }
+                if ($id === null) {
+                    $errors[] = "Baris {$line}: id '{$rawId}' mesti integer positif.";
+
+                    continue;
+                }
+                if (isset($seenIds[$id])) {
+                    $errors[] = "Baris {$line}: id '{$rawId}' pendua (pertama pada baris {$seenIds[$id]}).";
+
+                    continue;
+                }
+                $seenIds[$id] = $line;
+
+                $rows[] = ['id' => $id, 'name' => $name];
             }
 
             if ($rows === [] && $errors === []) {
@@ -109,9 +140,9 @@ final class LookupImportService
      * @param  list<string>  $headers
      * @return array{ok: true, imported: int, replaced: int, pegawai: int, deletes_pegawai: bool}|array{ok: false, errors: list<string>, preview: list<array{id: int, name: string}>, impact: array<string, mixed>}
      */
-    public function commitImport(string $relativePath, array $headers, string $header, LookupDataset $dataset): array
+    public function commitImport(string $relativePath, array $headers, string $header, LookupDataset $dataset, ?string $idHeader = null): array
     {
-        $result = $this->preview($relativePath, $headers, $header, $dataset);
+        $result = $this->preview($relativePath, $headers, $header, $dataset, idHeader: $idHeader);
         if ($result['errors'] !== []) {
             return ['ok' => false, 'errors' => $result['errors'], 'preview' => $result['preview'], 'impact' => $result['impact']];
         }
@@ -143,7 +174,8 @@ final class LookupImportService
             }
         });
 
-        $this->realignIdCounter($dataset->table, count($rows));
+        // Next id after the import is max(id) + 1 (N + 1 when ids were assigned 1..N).
+        IdCounter::realign($dataset->table, $rows === [] ? 0 : max(array_column($rows, 'id')));
 
         return [
             'ok' => true,
@@ -154,24 +186,23 @@ final class LookupImportService
         ];
     }
 
+    /**
+     * Positive integer id from a sheet cell (XLSX whole numbers already arrive as digit strings).
+     */
+    private function parseId(string $raw): ?int
+    {
+        if ($raw === '' || ! ctype_digit($raw) || strlen(ltrim($raw, '0')) > 18) {
+            return null;
+        }
+        $id = (int) $raw;
+
+        return $id >= 1 ? $id : null;
+    }
+
     public function deleteStoredFile(?string $relativePath): void
     {
         if ($relativePath !== null && $relativePath !== '' && Storage::disk('local')->exists($relativePath)) {
             Storage::disk('local')->delete($relativePath);
-        }
-    }
-
-    /**
-     * Next id after the import is N+1. Runs after commit: MySQL ALTER TABLE would implicitly commit mid-transaction.
-     */
-    private function realignIdCounter(string $table, int $max): void
-    {
-        $driver = DB::connection()->getDriverName();
-
-        if ($driver === 'mysql' || $driver === 'mariadb') {
-            DB::statement('ALTER TABLE `'.$table.'` AUTO_INCREMENT = '.($max + 1));
-        } elseif ($driver === 'sqlite') {
-            DB::table('sqlite_sequence')->where('name', $table)->update(['seq' => $max]);
         }
     }
 }

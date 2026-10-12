@@ -5,22 +5,29 @@ declare(strict_types=1);
 namespace App\Services\Import;
 
 use App\Models\Bersara;
+use App\Models\Gred;
 use App\Models\Jawatan;
 use App\Models\Pegawai;
 use Illuminate\Database\Eloquent\Model;
 use InvalidArgumentException;
 
 /**
- * Single-column lookup tables that can be bulk-replaced from a sheet (Jawatan, Bersara).
+ * Single-column lookup tables that can be bulk-replaced from a sheet (Jawatan, Gred, Bersara).
  */
 final class LookupDataset
 {
     public const JAWATAN = 'jawatan';
 
+    public const GRED = 'gred';
+
     public const BERSARA = 'bersara';
+
+    /** Mapping key of the optional id column (datasets with $importsIds). */
+    public const ID_FIELD = 'id';
 
     /**
      * @param  list<string>  $aliases  normalised header names used to auto-map the column
+     * @param  bool  $importsIds  ids may come from an id column in the sheet (pegawai import references them)
      */
     private function __construct(
         public readonly string $key,
@@ -31,6 +38,7 @@ final class LookupDataset
         public readonly array $aliases,
         public readonly bool $deletesPegawai,
         public readonly string $sample,
+        public readonly bool $importsIds = false,
     ) {}
 
     /**
@@ -38,7 +46,7 @@ final class LookupDataset
      */
     public static function keys(): array
     {
-        return [self::JAWATAN, self::BERSARA];
+        return [self::JAWATAN, self::GRED, self::BERSARA];
     }
 
     public static function find(string $key): self
@@ -53,6 +61,18 @@ final class LookupDataset
                 aliases: ['descjawatan', 'jawatan', 'namajawatan', 'nama', 'desc'],
                 deletesPegawai: true,
                 sample: 'Pegawai Tadbir',
+                importsIds: true,
+            ),
+            self::GRED => new self(
+                key: self::GRED,
+                label: 'Gred',
+                table: 'greds',
+                column: 'desc_gred',
+                columnLabel: 'Nama gred',
+                aliases: ['descgred', 'gred', 'namagred', 'nama', 'desc'],
+                deletesPegawai: true,
+                sample: 'N41',
+                importsIds: true,
             ),
             self::BERSARA => new self(
                 key: self::BERSARA,
@@ -84,7 +104,7 @@ final class LookupDataset
     }
 
     /**
-     * Pegawai deleted (jawatan: FK cascade) or unlinked (bersara: FK nullOnDelete) by a replace.
+     * Pegawai deleted (jawatan/gred: FK cascade) or unlinked (bersara: FK nullOnDelete) by a replace.
      */
     public function pegawaiImpact(): int
     {
@@ -98,6 +118,10 @@ final class LookupDataset
      */
     private function modelClass(): string
     {
-        return $this->key === self::JAWATAN ? Jawatan::class : Bersara::class;
+        return match ($this->key) {
+            self::JAWATAN => Jawatan::class,
+            self::GRED => Gred::class,
+            default => Bersara::class,
+        };
     }
 }

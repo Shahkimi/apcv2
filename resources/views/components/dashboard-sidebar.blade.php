@@ -69,6 +69,7 @@
                 'items' => [
                     ['label' => __('Dashboard'), 'route' => 'user.dashboard', 'icon' => 'ri-dashboard-line'],
                     ['label' => __('Kehadiran'), 'route' => 'user.kehadiran.index', 'icon' => 'ri-user-follow-line'],
+                    ['label' => __('Kiosk'), 'route' => 'user.kiosk.index', 'icon' => 'ri-keyboard-box-line'],
                 ],
             ],
         ],

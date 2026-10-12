@@ -45,7 +45,7 @@ class LookupImportController extends Controller
         }
         /** @var array{relative_path: string, headers: list<string>} $s */
         $s = session($ds->sessionKey());
-        $result = $service->preview($s['relative_path'], $s['headers'], (string) $request->validated('mapping.'.$ds->column), $ds);
+        $result = $service->preview($s['relative_path'], $s['headers'], (string) $request->validated('mapping.'.$ds->column), $ds, idHeader: $request->idHeader());
         unset($result['rows']);
 
         return response()->json($result);
@@ -59,7 +59,7 @@ class LookupImportController extends Controller
         }
         /** @var array{relative_path: string, headers: list<string>} $s */
         $s = session($ds->sessionKey());
-        $out = $service->commitImport($s['relative_path'], $s['headers'], (string) $request->validated('mapping.'.$ds->column), $ds);
+        $out = $service->commitImport($s['relative_path'], $s['headers'], (string) $request->validated('mapping.'.$ds->column), $ds, $request->idHeader());
 
         if (! $out['ok']) {
             return response()->json($out, Response::HTTP_UNPROCESSABLE_ENTITY);
@@ -83,8 +83,8 @@ class LookupImportController extends Controller
         return response()->streamDownload(function () use ($ds): void {
             $out = fopen('php://output', 'wb');
             fwrite($out, "\xEF\xBB\xBF");
-            fputcsv($out, [$ds->column]);
-            fputcsv($out, [$ds->sample]);
+            fputcsv($out, $ds->importsIds ? [LookupDataset::ID_FIELD, $ds->column] : [$ds->column]);
+            fputcsv($out, $ds->importsIds ? ['1', $ds->sample] : [$ds->sample]);
             fclose($out);
         }, 'templat-'.$ds->key.'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
     }

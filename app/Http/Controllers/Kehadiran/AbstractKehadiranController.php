@@ -22,9 +22,9 @@ abstract class AbstractKehadiranController extends Controller
     use RendersOfficerCell;
 
     public function __construct(
-        private readonly KehadiranCallingService $callingService,
-        private readonly SettingsService $settings,
-        private readonly EventModeService $eventMode,
+        protected readonly KehadiranCallingService $callingService,
+        protected readonly SettingsService $settings,
+        protected readonly EventModeService $eventMode,
     ) {}
 
     abstract protected function bladeNamespace(): string;
@@ -101,7 +101,18 @@ abstract class AbstractKehadiranController extends Controller
 
     public function getDetails(Pegawai $pegawai): JsonResponse
     {
-        $pegawai->loadMissing(['ptj:id,nama_ptj', 'sesiMajlis:id,sesi', 'bersara:id,jenis_bersara']);
+        return response()->json($this->detailsPayload($pegawai));
+    }
+
+    /**
+     * Officer + active-session snapshot shown before confirming attendance
+     * (verify dialog on the kehadiran page, confirm screen on the kiosk).
+     *
+     * @return array<string, mixed>
+     */
+    protected function detailsPayload(Pegawai $pegawai): array
+    {
+        $pegawai->loadMissing(['ptj:id,nama_ptj', 'jawatan:id,desc_jawatan', 'sesiMajlis:id,sesi', 'bersara:id,jenis_bersara']);
         $activeSesi = $this->callingService->activeOnAirSesi();
         $previewLateNumber = null;
         $previewNoMeja = $activeSesi !== null
@@ -111,7 +122,7 @@ abstract class AbstractKehadiranController extends Controller
             $previewLateNumber = $this->callingService->previewNextLateCallingNumber($activeSesi);
         }
 
-        return response()->json([
+        return [
             'success' => true,
             'show_table_number' => $this->settings->showTableNumberInDialog(),
             'active_sesi_s_kehadiran' => $activeSesi !== null ? (int) $activeSesi->s_kehadiran : null,
@@ -125,6 +136,7 @@ abstract class AbstractKehadiranController extends Controller
                 's_kehadiran' => (int) $pegawai->s_kehadiran,
                 'sesi_name' => $pegawai->sesiMajlis?->sesi ?? '—',
                 'ptj_name' => $pegawai->ptj?->nama_ptj ?? '-',
+                'jawatan_name' => $pegawai->jawatan?->desc_jawatan ?? '-',
                 'no_kerusi' => $pegawai->no_kerusi ?? '-',
                 'no_meja' => $previewNoMeja,
                 'no_panggilan_lewat' => $this->jsonNoPanggilanLewatForDetails($pegawai->no_panggilan_lewat, $previewLateNumber),
@@ -133,7 +145,7 @@ abstract class AbstractKehadiranController extends Controller
                 'bersara_name' => $pegawai->bersara?->jenis_bersara ?? '-',
                 'tempoh_berkhidmat' => $pegawai->tempoh_berkhidmat ?? '-',
             ],
-        ]);
+        ];
     }
 
     public function verify(Pegawai $pegawai): JsonResponse

@@ -30,12 +30,16 @@
     $isLookup = $lookup !== null;
     if ($isLookup) {
         $fieldLabels = [$lookup['column'] => $lookup['columnLabel']];
+        if ($lookup['importsIds']) {
+            $fieldLabels = ['id' => __('ID :name', ['name' => mb_strtolower($lookup['label'])])] + $fieldLabels;
+        }
     }
     $hasPolicyColumn = $optionalPolicyFields !== [];
 
     $tabs = [
         'pegawai' => ['label' => __('Pegawai'), 'icon' => 'ri-team-line'],
         'jawatan' => ['label' => __('Jawatan'), 'icon' => 'ri-briefcase-line'],
+        'gred' => ['label' => __('Gred'), 'icon' => 'ri-medal-line'],
         'bersara' => ['label' => __('Bersara'), 'icon' => 'ri-user-heart-line'],
     ];
 @endphp
@@ -67,7 +71,7 @@
         :show-create="false"
     />
 
-    <nav class="mb-6 inline-grid grid-cols-3 gap-1 rounded-xl bg-muted/40 p-1" aria-label="{{ __('Jenis data') }}">
+    <nav class="mb-6 inline-grid grid-cols-2 gap-1 rounded-xl bg-muted/30 p-1 sm:grid-cols-4" aria-label="{{ __('Jenis data') }}">
         @foreach ($tabs as $tabKey => $tab)
             <a
                 href="{{ route('admin.kawalan.database.index', $tabKey === 'pegawai' ? [] : ['dataset' => $tabKey]) }}"
@@ -260,7 +264,9 @@
                 </div>
 
                 <p class="mb-4 text-sm text-muted-foreground">
-                    @if ($isLookup)
+                    @if ($isLookup && $lookup['importsIds'])
+                        {{ __('Pilih lajur fail yang mengandungi nama. Lajur ID adalah pilihan: jika dipetakan, ID ikut fail supaya :field dalam import pegawai sepadan; jika tidak, ID baharu diberikan secara berurutan (1, 2, 3…) mengikut susunan fail.', ['field' => $lookup['key'].'_id']) }}
+                    @elseif ($isLookup)
                         {{ __('Pilih lajur fail yang mengandungi nama. ID baharu akan diberikan secara berurutan (1, 2, 3…) mengikut susunan fail.') }}
                     @else
                         {{ __('Medan bertanda * mesti dipetakan. Untuk medan pilihan: jika lajur kosong atau tiada pemetaan, pilih sama ada storan 0 atau NULL (mengikut jenis medan).') }}
@@ -433,18 +439,20 @@
                         </p>
                         <ul class="mt-2 list-inside list-disc space-y-1 text-destructive/90">
                             <li>
-                                {{ __('Jadual dikosongkan dahulu (') }}<b class="tabular-nums" x-text="impact.existing"></b>{{ __(' rekod sedia ada dipadam), kemudian rekod fail dimasukkan dengan ID baharu 1, 2, 3…') }}
+                                {{ __('Jadual dikosongkan dahulu (') }}<b class="tabular-nums" x-text="impact.existing"></b>{{ __(' rekod sedia ada dipadam), kemudian rekod fail dimasukkan') }}
+                                <span x-show="mapping.id">{{ __('dengan ID daripada fail.') }}</span>
+                                <span x-show="!mapping.id">{{ __('dengan ID baharu 1, 2, 3…') }}</span>
                             </li>
                             @if ($lookup['impact']['deletes_pegawai'])
                                 <li>
-                                    <b class="tabular-nums" x-text="impact.pegawai"></b> {{ __('pegawai akan DIPADAM bersama (setiap pegawai terikat kepada jawatan), termasuk senarai pengumuman.') }}
+                                    <b class="tabular-nums" x-text="impact.pegawai"></b> {{ __('pegawai akan DIPADAM bersama (setiap pegawai terikat kepada :name), termasuk senarai pengumuman.', ['name' => mb_strtolower($lookup['label'])]) }}
                                 </li>
                             @else
                                 <li>
                                     <b class="tabular-nums" x-text="impact.pegawai"></b> {{ __('pegawai akan dinyahpautkan daripada jenis persaraan (dikekalkan, tetapi medan jenis persaraan menjadi kosong).') }}
                                 </li>
                             @endif
-                            <li>{{ __('Pegawai yang diimport kemudian mesti menggunakan ID baharu ini.') }}</li>
+                            <li>{{ __('Pegawai yang diimport kemudian mesti menggunakan ID ini.') }}</li>
                             @if ($lookup['activeSesi'])
                                 <li class="font-semibold">
                                     {{ __('Sesi ":sesi" sedang aktif — import semasa majlis berlangsung amat tidak disyorkan.', ['sesi' => $lookup['activeSesi']]) }}
@@ -585,6 +593,7 @@
                     isLookup: @js($isLookup),
                     impact: @js($lookup['impact'] ?? ['existing' => 0, 'pegawai' => 0]),
                     aliases: @js($lookup['aliases'] ?? []),
+                    lookupColumn: @js($lookup['column'] ?? null),
                     confirmText: '',
                     result: {},
 
@@ -609,7 +618,9 @@
                     autoMap() {
                         let n = 0;
                         this.fillableFields.forEach((f) => {
-                            const keys = [this.norm(f), this.norm(f.replace(/_id$/, '')), this.norm(this.fieldLabels[f]), ...this.aliases.map((a) => this.norm(a))];
+                            // Lookup name aliases (jawatan, nama…) belong to the name column only, not the optional id column.
+                            const aliases = f === this.lookupColumn ? this.aliases : [];
+                            const keys = [this.norm(f), this.norm(f.replace(/_id$/, '')), this.norm(this.fieldLabels[f]), ...aliases.map((a) => this.norm(a))];
                             const match = this.headers.find((h) => keys.includes(this.norm(h)));
                             if (match) {
                                 this.mapping[f] = match;
