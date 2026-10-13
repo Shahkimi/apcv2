@@ -22,6 +22,7 @@ class Backdrop extends Model
 
     /**
      * Root-relative URL so previews work regardless of APP_URL host/port (e.g. localhost vs 127.0.0.1:8000).
+     * Prefixed with the request base path so it also works when served from a sub-path (e.g. http://<LAN IP>/apcv2).
      */
     protected function imageUrl(): Attribute
     {
@@ -33,7 +34,9 @@ class Backdrop extends Model
             $path = str_replace('\\', '/', (string) $this->file_path);
             $path = ltrim($path, '/');
 
-            return '/storage/'.$path;
+            $basePath = app()->runningInConsole() ? '' : rtrim(request()->getBasePath(), '/');
+
+            return $basePath.'/storage/'.$path;
         });
     }
 }

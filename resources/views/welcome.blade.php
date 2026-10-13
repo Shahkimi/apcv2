@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="{{ asset('favicon.ico') }}">
 
     <title>{{ config('app.name', 'Laravel') }}</title>
 
@@ -20,7 +21,7 @@
     {{-- Header --}}
     <header data-home-header class="sticky top-0 z-30 border-b border-border/60 bg-background/80 backdrop-blur transition-shadow duration-300">
         <div class="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-            <a href="/" class="flex min-w-0 items-center gap-2">
+            <a href="{{ url('/') }}" class="flex min-w-0 items-center gap-2">
                 <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-500 text-sm font-bold text-white dark:from-indigo-500 dark:via-violet-500 dark:to-fuchsia-500">
                     {{ mb_substr(config('app.name', 'A'), 0, 1) }}
                 </span>

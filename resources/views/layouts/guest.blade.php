@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="{{ asset('favicon.ico') }}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <title>{{ config('app.name', 'Laravel') }}</title>
@@ -29,7 +30,7 @@
             <div class="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/10 blur-2xl" aria-hidden="true"></div>
             <div class="pointer-events-none absolute -bottom-16 -left-10 h-56 w-56 rounded-full bg-white/10 blur-2xl" aria-hidden="true"></div>
 
-            <a href="/" class="relative flex items-center gap-2">
+            <a href="{{ url('/') }}" class="relative flex items-center gap-2">
                 <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/15 text-sm font-bold">
                     {{ mb_substr(config('app.name', 'A'), 0, 1) }}
                 </span>
@@ -64,14 +65,14 @@
         {{-- Form panel --}}
         <div class="flex min-h-screen flex-col bg-gradient-to-b from-indigo-50/50 to-background px-4 py-6 sm:px-6 lg:min-h-0 lg:justify-center lg:px-12 lg:py-10 dark:from-indigo-950/20">
             <div class="mb-8 flex items-center justify-between lg:mb-10">
-                <a href="/" class="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground">
+                <a href="{{ url('/') }}" class="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground">
                     <i class="ri-arrow-left-line" aria-hidden="true"></i>
                     {{ __('Laman utama') }}
                 </a>
                 <x-theme-toggle />
             </div>
 
-            <a href="/" class="mb-6 flex items-center gap-2 lg:hidden">
+            <a href="{{ url('/') }}" class="mb-6 flex items-center gap-2 lg:hidden">
                 <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-500 text-sm font-bold text-white">
                     {{ mb_substr(config('app.name', 'A'), 0, 1) }}
                 </span>
