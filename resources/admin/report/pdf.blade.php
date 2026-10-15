@@ -22,35 +22,24 @@
         th { background: #f3f4f6; text-align: left; font-size: 10px; }
         td { font-size: 10px; word-wrap: break-word; }
         .w-no { width: 6%; }
-        .w-name { width: 30%; }
-        .w-ptj { width: 32%; }
-        .w-kerusi { width: 16%; text-align: center; }
-        .w-meja { width: 16%; text-align: center; }
-        .w-tarikh { width: 12%; text-align: center; }
-        .w-jenis { width: 12%; }
+        .w-name { width: 28%; }
+        .w-ptj { width: 26%; }
+        .w-status { width: 12%; text-align: center; }
+        .w-kerusi { width: 14%; text-align: center; }
+        .w-meja { width: 14%; text-align: center; }
+        .w-tarikh { width: 10%; text-align: center; }
+        .w-jenis { width: 10%; }
         .w-tempoh { width: 8%; text-align: center; }
-        body.jasamu .w-name { width: 24%; }
-        body.jasamu .w-ptj { width: 20%; }
-        body.jasamu .w-kerusi { width: 9%; }
-        body.jasamu .w-meja { width: 9%; }
+        body.jasamu .w-name { width: 20%; }
+        body.jasamu .w-ptj { width: 16%; }
+        body.jasamu .w-status { width: 10%; }
+        body.jasamu .w-kerusi { width: 10%; }
+        body.jasamu .w-meja { width: 10%; }
         .empty { border: 1px dashed #9ca3af; padding: 8px; color: #6b7280; font-size: 10px; }
         .footer { margin-top: 14px; border-top: 1px solid #d1d5db; padding-top: 6px; color: #6b7280; font-size: 9px; text-align: center; }
     </style>
 </head>
 <body class="{{ $isJasamu ? 'jasamu' : '' }}">
-    @php
-        $scope = $exportType ?? 'all';
-        $showOnTime = $scope === 'all' || $scope === 'ontime';
-        $showLate = $scope === 'all' || $scope === 'late';
-        $showNotAttendSlot = $scope === 'all' || $scope === 'notattend';
-        $scopeLabel = match ($scope) {
-            'ontime' => __('Tepat Masa'),
-            'late' => __('Lewat'),
-            'notattend' => __('Tidak Hadir (Slot)'),
-            default => __('Semua'),
-        };
-    @endphp
-
     <header class="header">
         <h1 class="title">{{ __('Laporan Kehadiran Pegawai') }}</h1>
         <p class="meta">
@@ -61,26 +50,16 @@
         </p>
     </header>
 
-    @if ($showOnTime)
+    @foreach ($reportSections as $key => $section)
         <section class="section">
-            <h2 class="section-title">{{ __('Pegawai Tepat Masa') }} <span class="count">({{ $onTime->count() }} {{ __('orang') }})</span></h2>
-            @include('admin::report.partials.pdf-table', ['rows' => $onTime, 'emptyText' => __('Tiada pegawai tepat masa untuk sesi ini.')])
+            <h2 class="section-title">{{ $section['label'] }} <span class="count">({{ $section['rows']->count() }} {{ __('orang') }})</span></h2>
+            @include('admin::report.partials.pdf-table', [
+                'rows' => $section['rows'],
+                'showStatus' => $key !== \App\Services\Report\ReportPreviewTableService::SECTION_NOTATTEND,
+                'emptyText' => __('Tiada pegawai dalam kategori ini untuk sesi ini.'),
+            ])
         </section>
-    @endif
-
-    @if ($showLate)
-        <section class="section">
-            <h2 class="section-title">{{ __('Pegawai Lewat') }} <span class="count">({{ $late->count() }} {{ __('orang') }})</span></h2>
-            @include('admin::report.partials.pdf-table', ['rows' => $late, 'emptyText' => __('Tiada pegawai lewat untuk sesi ini.')])
-        </section>
-    @endif
-
-    @if ($showNotAttendSlot)
-        <section class="section">
-            <h2 class="section-title">{{ __('Pegawai Tidak Hadir (Slot Sesi)') }} <span class="count">({{ $notAttendSlot->count() }} {{ __('orang') }})</span></h2>
-            @include('admin::report.partials.pdf-table', ['rows' => $notAttendSlot, 'emptyText' => __('Tiada pegawai dalam kategori ini untuk sesi ini.')])
-        </section>
-    @endif
+    @endforeach
 
     <footer class="footer">
         {{ __('Laporan ini dijana secara automatik oleh sistem APCv2.') }}

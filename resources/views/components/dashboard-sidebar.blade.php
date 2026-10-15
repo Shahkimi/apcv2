@@ -32,6 +32,7 @@
                             ['label' => __('Bersara'), 'route' => 'admin.kawalan.bersara.index', 'icon' => 'ri-user-heart-line', 'active' => 'admin.kawalan.bersara.*'],
                             ['label' => __('Meja'), 'route' => 'admin.kawalan.meja.index', 'icon' => 'ri-table-line', 'active' => 'admin.kawalan.meja.*'],
                             ['label' => __('Sesi Majlis'), 'route' => 'admin.kawalan.sesi-majlis.index', 'icon' => 'ri-calendar-event-line', 'active' => 'admin.kawalan.sesi-majlis.*'],
+                            ['label' => __('Susunan Panggilan'), 'route' => 'admin.kawalan.susunan-panggilan.index', 'icon' => 'ri-list-ordered-2', 'active' => 'admin.kawalan.susunan-panggilan.*'],
                             ['label' => __('Backdrop'), 'route' => 'admin.kawalan.backdrop.index', 'icon' => 'ri-image-2-line', 'active' => 'admin.kawalan.backdrop.*'],
                             ['label' => __('Pengguna'), 'route' => 'admin.kawalan.user.index', 'icon' => 'ri-user-line', 'active' => 'admin.kawalan.user.*'],
                             ['label' => __('Import pangkalan'), 'route' => 'admin.kawalan.database.index', 'icon' => 'ri-database-2-line', 'active' => 'admin.kawalan.database.*'],

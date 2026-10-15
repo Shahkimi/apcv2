@@ -670,17 +670,17 @@ it('clears hadir_at when attendance is cancelled', function (): void {
     expect($pegawai->fresh()->hadir_at)->toBeNull();
 });
 
-it('orders paparan datatable by hadir_at desc with nulls last', function (): void {
+it('orders paparan datatable by calling queue, not attendance time', function (): void {
     $admin = adminUser();
     $ptj = Ptj::query()->create(['nama_ptj' => 'PTJ Paparan']);
     $jawatan = Jawatan::query()->create(['desc_jawatan' => 'Pegawai']);
     $gred = Gred::query()->create(['desc_gred' => 'Gred Ujian']);
     $base = ['ptj_id' => $ptj->id, 'jawatan_id' => $jawatan->id, 'gred_id' => $gred->id, 'rsvp' => true, 's_kehadiran' => Pegawai::S_KEHADIRAN_PAGI, 'is_attend' => true];
 
-    $oldest = Pegawai::query()->create(array_merge($base, ['nama' => 'Lama', 'no_kp' => '920101010001', 'hadir_at' => now()->subMinutes(10)]));
-    $newest = Pegawai::query()->create(array_merge($base, ['nama' => 'Terkini', 'no_kp' => '920101010002', 'hadir_at' => now()]));
-    $middle = Pegawai::query()->create(array_merge($base, ['nama' => 'Tengah', 'no_kp' => '920101010003', 'hadir_at' => now()->subMinutes(5)]));
-    $noTimestamp = Pegawai::query()->create(array_merge($base, ['nama' => 'Tiada Masa', 'no_kp' => '920101010004', 'hadir_at' => null]));
+    $oku = Pegawai::query()->create(array_merge($base, ['nama' => 'Oku', 'no_kp' => '920101010001', 'is_oku' => true, 'no_kerusi' => 1, 'hadir_at' => now()]));
+    $walkin = Pegawai::query()->create(array_merge($base, ['nama' => 'Walkin', 'no_kp' => '920101010002', 'rsvp' => false, 'is_late' => true, 'no_panggilan_lewat' => 501, 'hadir_at' => now()->subMinutes(1)]));
+    $late = Pegawai::query()->create(array_merge($base, ['nama' => 'Rsvp Lewat', 'no_kp' => '920101010003', 'is_late' => true, 'no_panggilan_lewat' => 502, 'no_kerusi' => 2, 'hadir_at' => now()->subMinutes(2)]));
+    $onTime = Pegawai::query()->create(array_merge($base, ['nama' => 'Rsvp Tepat', 'no_kp' => '920101010004', 'no_kerusi' => 9, 'hadir_at' => now()->subMinutes(10)]));
     Pegawai::query()->create(array_merge($base, ['nama' => 'Belum Hadir', 'no_kp' => '920101010005', 'is_attend' => false]));
 
     $response = $this->actingAs($admin)
@@ -690,7 +690,8 @@ it('orders paparan datatable by hadir_at desc with nulls last', function (): voi
 
     $ids = array_map(static fn (array $row): int => (int) $row['id'], $response->json('data'));
 
-    expect($ids)->toBe([$newest->id, $middle->id, $oldest->id, $noTimestamp->id]);
+    expect($ids)->toBe([$onTime->id, $late->id, $walkin->id, $oku->id]);
+    expect($response->json('data.3.kategori'))->toContain('OKU');
 });
 
 it('computes giliran from no_kerusi for on-time and no_panggilan_lewat for late', function (): void {

@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Kehadiran\Concerns\RendersOfficerCell;
 use App\Models\Pegawai;
 use App\Models\SesiMajlis;
+use App\Services\Kehadiran\CallingPriorityService;
 use App\Services\Kehadiran\KehadiranCallingService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -22,6 +23,7 @@ abstract class AbstractPaparanController extends Controller
 
     public function __construct(
         private readonly KehadiranCallingService $callingService,
+        private readonly CallingPriorityService $callingPriority,
     ) {}
 
     abstract protected function bladeNamespace(): string;
@@ -53,6 +55,7 @@ abstract class AbstractPaparanController extends Controller
         $base = Pegawai::query()
             ->select([
                 'id', 'nama', 'no_kp', 'ptj_id', 'jawatan_id', 'no_kerusi', 'no_meja', 'no_panggilan_lewat', 'is_late', 'hadir_at',
+                'rsvp', 'is_oku',
                 'tarikh_bersara', 'bersara_id', 'tempoh_berkhidmat',
             ])
             ->with(['ptj:id,nama_ptj', 'jawatan:id,desc_jawatan', 'bersara:id,jenis_bersara'])
@@ -61,7 +64,7 @@ abstract class AbstractPaparanController extends Controller
         $stats = $this->computeStats($request);
 
         return DataTables::of($base)
-            ->order(fn ($query) => $this->callingService->applyPaparanLatestFirstOrder($query))
+            ->order(fn ($query) => $this->callingService->applyCallingQueueOrder($query))
             ->filterColumn('nama', function ($query, $keyword) {
                 if (trim((string) $keyword) === '') {
                     return;
@@ -80,6 +83,9 @@ abstract class AbstractPaparanController extends Controller
                 $pegawai->is_late ? $pegawai->no_panggilan_lewat : $pegawai->no_kerusi
             ))
             ->removeColumn('no_panggilan_lewat')
+            ->addColumn('kategori', fn (Pegawai $pegawai) => $this->renderKategoriPill($pegawai))
+            ->removeColumn('rsvp')
+            ->removeColumn('is_oku')
             ->addColumn('tempat_duduk', fn (Pegawai $pegawai) => $this->renderTempatDudukCell($pegawai))
             ->removeColumn('no_kerusi')
             ->removeColumn('no_meja')
@@ -87,7 +93,7 @@ abstract class AbstractPaparanController extends Controller
             ->addColumn('persaraan', fn (Pegawai $pegawai) => $this->renderPersaraanCell($pegawai))
             ->addColumn('hadir_at_label', fn (Pegawai $pegawai) => $this->formatHadirAt($pegawai->hadir_at))
             ->addColumn('status_label', fn (Pegawai $pegawai) => $this->renderStatusPill((bool) $pegawai->is_late))
-            ->rawColumns(['nama', 'tempat_duduk', 'persaraan', 'status_label'])
+            ->rawColumns(['nama', 'kategori', 'tempat_duduk', 'persaraan', 'status_label'])
             ->with(['stats' => $stats])
             ->make(true);
     }
@@ -179,6 +185,21 @@ abstract class AbstractPaparanController extends Controller
         $carbon = $hadirAt instanceof \Illuminate\Support\Carbon ? $hadirAt : \Illuminate\Support\Carbon::parse($hadirAt);
 
         return $carbon->isToday() ? $carbon->format('H:i:s') : $carbon->format('d/m H:i');
+    }
+
+    private function renderKategoriPill(Pegawai $pegawai): string
+    {
+        $group = $this->callingPriority->groupOf($pegawai);
+        $option = CallingPriorityService::options()[$group];
+        $classes = match ($group) {
+            CallingPriorityService::GROUP_RSVP => 'bg-sky-50 text-sky-700 dark:bg-sky-950/30 dark:text-sky-300',
+            CallingPriorityService::GROUP_OKU => 'bg-violet-50 text-violet-700 dark:bg-violet-950/30 dark:text-violet-300',
+            default => 'bg-slate-100 text-slate-700 dark:bg-slate-800/50 dark:text-slate-300',
+        };
+
+        return '<span class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold '.$classes.'" title="'.e($option['label']).'">'
+            .'<i class="'.$option['icon'].' text-sm" aria-hidden="true"></i>'.e($option['short'])
+            .'</span>';
     }
 
     private function renderStatusPill(bool $isLate): string

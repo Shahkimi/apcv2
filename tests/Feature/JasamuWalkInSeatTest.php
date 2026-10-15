@@ -132,7 +132,7 @@ it('previews the jasamu walk-in seat and table before confirming', function (): 
         ->assertJsonPath('pegawai.no_meja', 51);
 });
 
-it('shows the jasamu walk-in seat and table in the report late section', function (): void {
+it('shows the jasamu walk-in seat and table in the report walk-in section', function (): void {
     $sesi = walkInSesi();
     $pegawai = walkInPegawai('900101010001');
     $admin = adminUser();
@@ -140,7 +140,7 @@ it('shows the jasamu walk-in seat and table in the report late section', functio
     $this->actingAs($admin)->putJson(route('admin.kehadiran.verify', $pegawai))->assertOk();
 
     $this->actingAs($admin)
-        ->getJson(route('admin.report.datatable', ['sesi_id' => $sesi->id, 'section' => 'late', 'draw' => 1]))
+        ->getJson(route('admin.report.datatable', ['sesi_id' => $sesi->id, 'section' => 'walkin', 'draw' => 1]))
         ->assertOk()
         ->assertJsonPath('data.0.no_kerusi', '501')
         ->assertJsonPath('data.0.no_meja', '51');

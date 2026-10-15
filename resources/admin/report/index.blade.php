@@ -18,7 +18,7 @@
                         <div class="space-y-1">
                             <h2 class="text-base font-semibold tracking-tight text-foreground sm:text-lg">{{ __('Jana laporan mengikut sesi') }}</h2>
                             <p class="text-sm leading-relaxed text-muted-foreground">
-                                {{ __('Laporan memaparkan senarai pegawai tepat masa dan lewat dalam dua bahagian berasingan.') }}
+                                {{ __('Laporan memaparkan pegawai hadir mengikut kategori susunan panggilan (RSVP, walk-in, OKU), pegawai tidak hadir, dan Senarai MC.') }}
                             </p>
                         </div>
 

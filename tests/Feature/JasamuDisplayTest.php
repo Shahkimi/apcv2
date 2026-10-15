@@ -108,6 +108,7 @@ it('includes jasamu columns in report datatable and preview when event mode is j
     $pegawai = createPegawaiForTest();
     $pegawai->update([
         'sesi_majlis_id' => $sesi->id,
+        'is_attend' => true,
         'is_late' => false,
         'tarikh_bersara' => '2026-12-31',
         'bersara_id' => $bersara->id,
@@ -120,7 +121,7 @@ it('includes jasamu columns in report datatable and preview when event mode is j
         ->assertSee('Tarikh Bersara');
 
     $response = $this->actingAs($admin)
-        ->getJson(route('admin.report.datatable', ['sesi_id' => $sesi->id, 'section' => 'ontime']))
+        ->getJson(route('admin.report.datatable', ['sesi_id' => $sesi->id, 'section' => 'rsvp']))
         ->assertOk();
 
     expect($response->json('data.0.tarikh_bersara'))->toBe('31/12/2026');
@@ -131,7 +132,7 @@ it('downloads the report pdf successfully', function (): void {
     $admin = adminUser();
     $sesi = activeSesiForKehadiran();
     $pegawai = createPegawaiForTest();
-    $pegawai->update(['sesi_majlis_id' => $sesi->id, 'is_late' => false]);
+    $pegawai->update(['sesi_majlis_id' => $sesi->id, 'is_attend' => true, 'is_late' => false]);
 
     $response = $this->actingAs($admin)
         ->get(route('admin.report.download', ['sesi_id' => $sesi->id]));

@@ -60,7 +60,7 @@ it('orders jasamu senarai as rsvp, then walk-in, then oku last', function (): vo
     $sesi = seedSenaraiHierarchy();
     $expected = ['Rsvp Tepat', 'Rsvp Lewat', 'Walkin', 'Oku Rsvp', 'Oku Walkin'];
 
-    expect(app(KehadiranCallingService::class)->attendedPegawaiForDisplay($sesi->id, true)->pluck('nama')->all())
+    expect(app(KehadiranCallingService::class)->attendedPegawaiForDisplay($sesi->id)->pluck('nama')->all())
         ->toBe($expected);
 
     $this->actingAs(mediaUser())
@@ -69,14 +69,14 @@ it('orders jasamu senarai as rsvp, then walk-in, then oku last', function (): vo
         ->assertViewHas('officerSlides', fn ($slides) => $slides->pluck('nama')->all() === $expected);
 });
 
-it('keeps the calling order on apc senarai', function (): void {
+it('applies the same priority order on apc senarai', function (): void {
     $sesi = seedSenaraiHierarchy();
 
     $this->actingAs(mediaUser())
         ->get(route('media.senarai.present', ['sesi_id' => $sesi->id]))
         ->assertOk()
         ->assertViewHas('officerSlides', fn ($slides) => $slides->pluck('nama')->all() === [
-            'Oku Rsvp', 'Rsvp Tepat', 'Rsvp Lewat', 'Walkin', 'Oku Walkin',
+            'Rsvp Tepat', 'Rsvp Lewat', 'Walkin', 'Oku Rsvp', 'Oku Walkin',
         ]);
 });
 

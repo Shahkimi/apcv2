@@ -1,19 +1,19 @@
 @php
-    $paparanColumns = [__('Bil.'), __('Giliran'), __('Nama pegawai'), __('Tempat Duduk'), __('PTJ')];
+    $paparanColumns = [__('Bil.'), __('Giliran'), __('Kategori'), __('Nama pegawai'), __('Tempat Duduk'), __('PTJ')];
     if ($isJasamu) {
         $paparanColumns[] = __('Persaraan');
     }
     $paparanColumns[] = __('Masa hadir');
     $paparanColumns[] = __('Status');
 
-    $centeredIndexes = $isJasamu ? [0, 1, 3, 5, 6, 7] : [0, 1, 3, 5, 6];
+    $centeredIndexes = $isJasamu ? [0, 1, 2, 4, 6, 7, 8] : [0, 1, 2, 4, 6, 7];
     $headerClasses = array_fill_keys($centeredIndexes, 'text-center');
 @endphp
 
 <x-kawalan-shell>
     <x-crud-header
         :title="__('Debug paparan')"
-        :description="__('Senarai pegawai yang telah disahkan hadir, disusun mengikut masa kehadiran terkini.')"
+        :description="__('Senarai pegawai yang telah disahkan hadir, disusun mengikut giliran panggilan (Kawalan → Susunan Panggilan).')"
         :show-create="false"
     />
 
@@ -44,7 +44,7 @@
         <div class="flex flex-col gap-4 border-b border-border/60 pb-5 sm:flex-row sm:items-end sm:justify-between sm:gap-6 lg:gap-8">
             <div class="min-w-0 flex-1">
                 <h2 id="paparan-table-heading" class="text-lg font-semibold tracking-tight text-foreground">
-                    {{ __('Senarai kehadiran terkini') }}
+                    {{ __('Giliran panggilan') }}
                 </h2>
                 <p class="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
                     {{ __('Cari mengikut nama atau no. KP. Jadual dimuat semula secara automatik.') }}
@@ -211,10 +211,18 @@
                         width: '8%',
                     },
                     {
+                        data: 'kategori',
+                        name: 'kategori',
+                        searchable: false,
+                        orderable: false,
+                        className: 'dt-center',
+                        width: '9%',
+                    },
+                    {
                         data: 'nama',
                         name: 'nama',
                         className: 'align-top py-3 min-w-0',
-                        width: isJasamu ? '24%' : '30%',
+                        width: isJasamu ? '20%' : '26%',
                     },
                     {
                         data: 'tempat_duduk',
@@ -230,7 +238,7 @@
                         searchable: false,
                         orderable: false,
                         className: 'text-muted-foreground min-w-0',
-                        width: isJasamu ? '16%' : '20%',
+                        width: isJasamu ? '13%' : '16%',
                     },
                     ...(isJasamu ? [{
                         data: 'persaraan',

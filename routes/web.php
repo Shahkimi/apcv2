@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\Kawalan\BackdropController as KawalanBackdropController;
 use App\Http\Controllers\Admin\Kawalan\BersaraController as KawalanBersaraController;
+use App\Http\Controllers\Admin\Kawalan\CallingPriorityController as KawalanCallingPriorityController;
 use App\Http\Controllers\Admin\Kawalan\DatabaseImportController as KawalanDatabaseImportController;
 use App\Http\Controllers\Admin\Kawalan\GredController as KawalanGredController;
 use App\Http\Controllers\Admin\Kawalan\JawatanController as KawalanJawatanController;
@@ -119,6 +120,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/report/preview', [AdminReportController::class, 'preview'])->name('report.preview');
             Route::get('/report/datatable', [AdminReportController::class, 'datatable'])->name('report.datatable');
             Route::get('/report/download', [AdminReportController::class, 'download'])->name('report.download');
+            Route::get('/report/mc-preview', [AdminReportController::class, 'mcPreview'])->name('report.mc-preview');
 
             Route::prefix('kehadiran')->name('kehadiran.')->group(function () {
                 Route::get('/', [AdminKehadiranController::class, 'index'])->name('index');
@@ -164,6 +166,9 @@ Route::middleware('auth')->group(function () {
                 Route::post('sesi-majlis', [KawalanSesiMajlisController::class, 'store'])->name('sesi-majlis.store');
                 Route::put('sesi-majlis/{sesi_majlis}', [KawalanSesiMajlisController::class, 'update'])->name('sesi-majlis.update');
                 Route::delete('sesi-majlis/{sesi_majlis}', [KawalanSesiMajlisController::class, 'destroy'])->name('sesi-majlis.destroy');
+
+                Route::get('susunan-panggilan', [KawalanCallingPriorityController::class, 'index'])->name('susunan-panggilan.index');
+                Route::put('susunan-panggilan', [KawalanCallingPriorityController::class, 'update'])->name('susunan-panggilan.update');
 
                 Route::get('bersara', [KawalanBersaraController::class, 'index'])->name('bersara.index');
                 Route::get('bersara/datatable', [KawalanBersaraController::class, 'datatable'])->name('bersara.datatable');

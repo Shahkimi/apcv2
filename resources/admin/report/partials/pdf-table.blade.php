@@ -1,5 +1,6 @@
 @php
     /** @var \Illuminate\Support\Collection $rows */
+    $showStatus = $showStatus ?? false;
 @endphp
 
 @if ($rows->isEmpty())
@@ -16,6 +17,9 @@
                     <th class="w-jenis">{{ __('Jenis Persaraan') }}</th>
                     <th class="w-tempoh">{{ __('Tempoh berkhidmat') }}</th>
                 @endif
+                @if ($showStatus)
+                    <th class="w-status">{{ __('Status') }}</th>
+                @endif
                 <th class="w-kerusi">{{ __('No. Kerusi / No. Sijil') }}</th>
                 <th class="w-meja">{{ __('Meja') }}</th>
             </tr>
@@ -30,6 +34,9 @@
                         <td class="w-tarikh">{{ $pegawai->tarikh_bersara?->format('d/m/Y') ?? '-' }}</td>
                         <td class="w-jenis">{{ $pegawai->bersara?->jenis_bersara ?? '-' }}</td>
                         <td class="w-tempoh">{{ $pegawai->tempoh_berkhidmat ?? '-' }}</td>
+                    @endif
+                    @if ($showStatus)
+                        <td class="w-status">{{ $pegawai->is_late ? __('Lewat') : __('Tepat masa') }}</td>
                     @endif
                     <td class="w-kerusi">{{ $pegawai->no_kerusi ?? '-' }}</td>
                     <td class="w-meja">{{ $pegawai->no_meja ?? '-' }}</td>

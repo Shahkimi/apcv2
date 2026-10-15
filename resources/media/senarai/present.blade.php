@@ -46,6 +46,11 @@
             --officer-translate-y: {{ $displaySettings['position']['translate_y'] }};
         }
 
+        /* Slide text is shown in capitals regardless of how names were imported. */
+        #officer-display {
+            text-transform: uppercase;
+        }
+
         #officer-name {
             font-size: var(--officer-name-font-size);
             font-weight: 700;

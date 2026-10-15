@@ -17,6 +17,8 @@ final class KehadiranCallingService
 
     private ?int $tableCapacity = null;
 
+    public function __construct(private readonly CallingPriorityService $callingPriority) {}
+
     public function lateSessionOnAirExists(): bool
     {
         $active = $this->activeOnAirSesi();
@@ -110,18 +112,18 @@ final class KehadiranCallingService
     }
 
     /**
-     * Jasamu senarai hierarchy: RSVP hadir, then walk-ins (rsvp=0), then OKU last (RSVP before walk-in).
+     * Call-out queue: category priority set in Kawalan (RSVP / walk-in / OKU), then seat / calling order.
      */
-    public function applyJasamuSenaraiGroupOrder(Builder $query): void
+    public function applyCallingQueueOrder(Builder $query): void
     {
-        $query->orderByRaw('CASE WHEN COALESCE(is_oku, 0) = 1 THEN 1 ELSE 0 END')
-            ->orderByRaw('CASE WHEN COALESCE(rsvp, 0) = 1 THEN 0 ELSE 1 END');
+        $this->callingPriority->applyGroupOrder($query);
+        $this->applyPaparanDisplayOrder($query);
     }
 
     /**
      * @return Collection<int, Pegawai>
      */
-    public function attendedPegawaiForDisplay(?int $sesiId = null, bool $jasamuHierarchy = false): Collection
+    public function attendedPegawaiForDisplay(?int $sesiId = null): Collection
     {
         $query = Pegawai::query()
             ->with(['ptj', 'sesiMajlis', 'jawatan', 'bersara'])
@@ -131,11 +133,7 @@ final class KehadiranCallingService
             $query->where('sesi_majlis_id', $sesiId);
         }
 
-        if ($jasamuHierarchy) {
-            $this->applyJasamuSenaraiGroupOrder($query);
-        }
-
-        $this->applyPaparanDisplayOrder($query);
+        $this->applyCallingQueueOrder($query);
 
         return $query->get();
     }
@@ -270,15 +268,5 @@ final class KehadiranCallingService
         $pegawai->is_late = false;
         $pegawai->sesi_majlis_id = null;
         $pegawai->hadir_at = null;
-    }
-
-    /**
-     * Debug paparan DataTable: latest attendance first; rows without hadir_at last; ties by id desc.
-     */
-    public function applyPaparanLatestFirstOrder(Builder $query): void
-    {
-        $query->orderByRaw('CASE WHEN hadir_at IS NULL THEN 1 ELSE 0 END')
-            ->orderByDesc('hadir_at')
-            ->orderByDesc('id');
     }
 }

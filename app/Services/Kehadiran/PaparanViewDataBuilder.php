@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Services\Kehadiran;
 
 use App\Models\SesiMajlis;
-use App\Services\EventModeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Config;
@@ -14,7 +13,6 @@ class PaparanViewDataBuilder
 {
     public function __construct(
         private readonly KehadiranCallingService $callingService,
-        private readonly EventModeService $eventMode,
     ) {}
 
     /**
@@ -45,7 +43,7 @@ class PaparanViewDataBuilder
             }
         }
 
-        $pegawais = $this->callingService->attendedPegawaiForDisplay($selectedSesiId, $this->eventMode->isJasamu());
+        $pegawais = $this->callingService->attendedPegawaiForDisplay($selectedSesiId);
         $ontimeCount = $pegawais->where('is_late', false)->count();
         $lateCount = $pegawais->where('is_late', true)->count();
 
