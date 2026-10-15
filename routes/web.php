@@ -21,6 +21,7 @@ use App\Http\Controllers\Admin\ReportController as AdminReportController;
 use App\Http\Controllers\Admin\SenaraiAnalyticsController as AdminSenaraiAnalyticsController;
 use App\Http\Controllers\Admin\SidebarStatusController;
 use App\Http\Controllers\Media\DashboardController as MediaDashboardController;
+use App\Http\Controllers\Media\Kawalan\PresentationFontController as MediaPresentationFontController;
 use App\Http\Controllers\Media\Kawalan\PresentationProfileController as MediaPresentationProfileController;
 use App\Http\Controllers\Media\Kawalan\PresentationSettingsController as MediaPresentationSettingsController;
 use App\Http\Controllers\Media\PaparanController as MediaPaparanController;
@@ -90,8 +91,15 @@ Route::middleware('auth')->group(function () {
             Route::post('/senarai/progress', [MediaSenaraiProgressController::class, 'update'])->name('senarai.progress.update');
             Route::get('/senarai/progress/analytics', [MediaSenaraiProgressController::class, 'analytics'])->name('senarai.progress.analytics');
             Route::get('/senarai/progress/announced', [MediaSenaraiProgressController::class, 'announcedDatatable'])->name('senarai.progress.announced');
+            Route::get('/fonts/{presentationFont}', [MediaPresentationFontController::class, 'file'])->name('fonts.file');
 
             Route::prefix('kawalan')->name('kawalan.')->group(function () {
+                Route::get('/fon', [MediaPresentationFontController::class, 'index'])->name('fon.index');
+                Route::get('/fon/list', [MediaPresentationFontController::class, 'list'])->name('fon.list');
+                Route::post('/fon', [MediaPresentationFontController::class, 'store'])->name('fon.store');
+                Route::put('/fon/{presentationFont}', [MediaPresentationFontController::class, 'update'])->name('fon.update');
+                Route::delete('/fon/{presentationFont}', [MediaPresentationFontController::class, 'destroy'])->name('fon.destroy');
+
                 Route::get('/presentation', [MediaPresentationSettingsController::class, 'index'])->name('presentation.index');
                 Route::put('/presentation', [MediaPresentationSettingsController::class, 'update'])->name('presentation.update');
                 Route::put('/presentation/fields', [MediaPresentationSettingsController::class, 'updateFields'])->name('presentation.fields.update');

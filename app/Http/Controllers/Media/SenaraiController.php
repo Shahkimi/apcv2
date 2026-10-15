@@ -9,6 +9,7 @@ use App\Models\Backdrop;
 use App\Services\EventModeService;
 use App\Services\Kehadiran\PaparanViewDataBuilder;
 use App\Services\Presentation\PresentationDisplayConfigService;
+use App\Services\Presentation\PresentationFontService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -18,6 +19,7 @@ class SenaraiController extends Controller
         private readonly PaparanViewDataBuilder $paparanViewData,
         private readonly PresentationDisplayConfigService $displayConfig,
         private readonly EventModeService $eventMode,
+        private readonly PresentationFontService $fonts,
     ) {}
 
     public function index(Request $request): View
@@ -54,6 +56,11 @@ class SenaraiController extends Controller
             'backdrop' => $backdrop,
             'sesiId' => $viewData['selectedSesi']?->id,
             'displaySettings' => $this->displayConfig->withPx($displaySettings),
+            // Only the fonts this screen actually uses are loaded.
+            'fontFaceCss' => $this->fonts->fontFaceCss(
+                $this->fonts->fontsByIds($this->displayConfig->usedFontIds($displaySettings))
+            ),
+            'typographyVars' => $this->displayConfig->typographyVars($displaySettings),
         ]);
     }
 }

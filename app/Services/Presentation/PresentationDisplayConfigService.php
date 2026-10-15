@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Services\Presentation;
 
 use App\Models\Pegawai;
+use App\Models\PresentationFont;
 use App\Services\EventModeService;
 use App\Services\SettingsService;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Canonical shape + rules for the presentation display config used by
@@ -18,7 +20,9 @@ use App\Services\SettingsService;
  * @phpstan-type FontsConfig array{name_base: int, name_sm: int, name_md: int, jawatan_base: int, jawatan_sm: int, jawatan_md: int, ptj_base: string, ptj_sm: string, tarikh_base: int, tarikh_sm: int, tarikh_md: int, bersara_base: int, bersara_sm: int, bersara_md: int, tempoh_base: int, tempoh_sm: int, tempoh_md: int}
  * @phpstan-type FieldConfig array{key: string, visible: bool, label: bool}
  * @phpstan-type FieldsConfig array{apc: list<FieldConfig>, jasamu: list<FieldConfig>}
- * @phpstan-type DisplayConfig array{position: PositionConfig, fonts: FontsConfig, fields: FieldsConfig, hide_empty: bool}
+ * @phpstan-type TypographyPart array{font_id: int|null, weight: int, italic: bool, tracking: string}
+ * @phpstan-type TypographyConfig array{name: TypographyPart, jawatan: TypographyPart, ptj: TypographyPart, tarikh: TypographyPart, bersara: TypographyPart, tempoh: TypographyPart}
+ * @phpstan-type DisplayConfig array{position: PositionConfig, fonts: FontsConfig, fields: FieldsConfig, hide_empty: bool, typography: TypographyConfig}
  */
 final class PresentationDisplayConfigService
 {
@@ -56,6 +60,28 @@ final class PresentationDisplayConfigService
     private const LABELLED_KEYS = ['tarikh', 'bersara', 'tempoh'];
 
     private const DEFAULT_HIDE_EMPTY = true;
+
+    /**
+     * Slide parts with their own font style (name + every selectable field).
+     *
+     * @var list<string>
+     */
+    public const TYPO_PARTS = ['name', 'jawatan', 'ptj', 'tarikh', 'bersara', 'tempoh'];
+
+    /** @var list<int> */
+    public const WEIGHTS = [400, 500, 600, 700, 800];
+
+    /**
+     * Letter-spacing presets => CSS value.
+     *
+     * @var array<string, string>
+     */
+    public const TRACKING = ['tight' => '-0.02em', 'normal' => '0em', 'wide' => '0.04em', 'wider' => '0.08em'];
+
+    public const DEFAULT_FONT_STACK = "'Inter Variable', 'Inter', ui-sans-serif, system-ui, sans-serif";
+
+    /** @var array<int, true>|null */
+    private ?array $fontIds = null;
 
     public function __construct(
         private readonly SettingsService $settings,
@@ -180,7 +206,45 @@ final class PresentationDisplayConfigService
             'fonts' => $fonts,
             'fields' => $this->fieldDefaults(),
             'hide_empty' => self::DEFAULT_HIDE_EMPTY,
+            'typography' => $this->typographyDefaults(),
         ];
+    }
+
+    /**
+     * Font style per slide part. Weights match the original CSS (name 700, others 500).
+     *
+     * @return TypographyConfig
+     */
+    public function typographyDefaults(): array
+    {
+        $typography = [];
+
+        foreach (self::TYPO_PARTS as $part) {
+            $typography[$part] = [
+                'font_id' => null,
+                'weight' => $part === 'name' ? 700 : 500,
+                'italic' => false,
+                'tracking' => 'normal',
+            ];
+        }
+
+        return $typography;
+    }
+
+    /**
+     * Labels for the font style rows (name + field registry labels).
+     *
+     * @return array<string, array{label: string, icon: string}>
+     */
+    public function typographyParts(): array
+    {
+        $parts = ['name' => ['label' => __('Nama Pegawai'), 'icon' => 'ri-user-star-line']];
+
+        foreach ($this->fieldDefinitions() as $key => $definition) {
+            $parts[$key] = ['label' => $definition['label'], 'icon' => $definition['icon']];
+        }
+
+        return $parts;
     }
 
     /**
@@ -212,6 +276,14 @@ final class PresentationDisplayConfigService
             foreach (self::BREAKPOINTS as $bp) {
                 $rules[$prefix."fonts.{$k}_{$bp}"] = ['sometimes', 'integer', 'min:10', 'max:200'];
             }
+        }
+
+        // Optional so older clients/profiles that predate font styles stay valid.
+        foreach (self::TYPO_PARTS as $part) {
+            $rules[$prefix."typography.{$part}.font_id"] = ['sometimes', 'nullable', 'integer', 'exists:presentation_fonts,id'];
+            $rules[$prefix."typography.{$part}.weight"] = ['sometimes', 'integer', 'in:'.implode(',', self::WEIGHTS)];
+            $rules[$prefix."typography.{$part}.italic"] = ['sometimes', 'boolean'];
+            $rules[$prefix."typography.{$part}.tracking"] = ['sometimes', 'string', 'in:'.implode(',', array_keys(self::TRACKING))];
         }
 
         // Optional so older clients/profiles that predate field selection stay valid.
@@ -247,7 +319,7 @@ final class PresentationDisplayConfigService
      * Turn validated raw (int position values) input into the stored shape
      * (position values suffixed with 'px').
      *
-     * @param  array{position: array<string, int|string>, fonts: array<string, int|string>, fields?: mixed, hide_empty?: mixed}  $validated
+     * @param  array{position: array<string, int|string>, fonts: array<string, int|string>, fields?: mixed, hide_empty?: mixed, typography?: mixed}  $validated
      * @return DisplayConfig
      */
     public function normalize(array $validated): array
@@ -282,6 +354,7 @@ final class PresentationDisplayConfigService
             'fonts' => $fonts,
             'fields' => $this->normalizeFields($validated['fields'] ?? null),
             'hide_empty' => $this->normalizeHideEmpty($validated['hide_empty'] ?? null),
+            'typography' => $this->normalizeTypography($validated['typography'] ?? null),
         ];
     }
 
@@ -330,6 +403,7 @@ final class PresentationDisplayConfigService
             'fonts' => $resolvedFonts,
             'fields' => $this->normalizeFields($stored['fields'] ?? null),
             'hide_empty' => $this->normalizeHideEmpty($stored['hide_empty'] ?? null),
+            'typography' => $this->normalizeTypography($stored['typography'] ?? null),
         ];
     }
 
@@ -400,7 +474,76 @@ final class PresentationDisplayConfigService
 
         $values['hide_empty'] = (bool) $config['hide_empty'];
 
+        foreach (self::TYPO_PARTS as $part) {
+            $style = $config['typography'][$part];
+            $values["typo_{$part}_font"] = $style['font_id'];
+            $values["typo_{$part}_weight"] = $style['weight'];
+            $values["typo_{$part}_italic"] = $style['italic'];
+            $values["typo_{$part}_tracking"] = $style['tracking'];
+        }
+
         return $values;
+    }
+
+    /**
+     * CSS custom properties per slide part: --officer-{part}-font-family / -font-weight /
+     * -font-style / -letter-spacing. Values are built from ids and constants only, so
+     * they are safe to print raw inside a <style> block.
+     *
+     * @param  DisplayConfig  $config
+     * @return array<string, string>
+     */
+    public function typographyVars(array $config): array
+    {
+        $vars = [];
+
+        foreach (self::TYPO_PARTS as $part) {
+            $style = $config['typography'][$part];
+            $vars["--officer-{$part}-font-family"] = $style['font_id'] === null
+                ? self::DEFAULT_FONT_STACK
+                : '"apcfont-'.(int) $style['font_id'].'", '.self::DEFAULT_FONT_STACK;
+            $vars["--officer-{$part}-font-weight"] = (string) (int) $style['weight'];
+            $vars["--officer-{$part}-font-style"] = $style['italic'] ? 'italic' : 'normal';
+            $vars["--officer-{$part}-letter-spacing"] = self::TRACKING[$style['tracking']] ?? self::TRACKING['normal'];
+        }
+
+        return $vars;
+    }
+
+    /**
+     * Font ids referenced by a config (used to load only the @font-face rules needed).
+     *
+     * @param  DisplayConfig  $config
+     * @return list<int>
+     */
+    public function usedFontIds(array $config): array
+    {
+        return array_values(array_unique(array_filter(
+            array_map(static fn (array $style) => $style['font_id'], $config['typography']),
+            static fn ($id) => $id !== null,
+        )));
+    }
+
+    /**
+     * Parts of a config that use the given font.
+     *
+     * @param  DisplayConfig  $config
+     * @return list<string>
+     */
+    public function partsUsingFont(array $config, int $fontId): array
+    {
+        return array_keys(array_filter(
+            $config['typography'],
+            static fn (array $style) => $style['font_id'] === $fontId,
+        ));
+    }
+
+    /**
+     * Forget the memoised list of existing font ids (after a font is added or removed).
+     */
+    public function forgetFontIds(): void
+    {
+        $this->fontIds = null;
     }
 
     /**
@@ -549,5 +692,51 @@ final class PresentationDisplayConfigService
     private function normalizeHideEmpty(mixed $value): bool
     {
         return $value === null ? self::DEFAULT_HIDE_EMPTY : filter_var($value, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    /**
+     * Canonical font style per part in fixed key order; unknown values and fonts
+     * that no longer exist fall back to the defaults.
+     *
+     * @return TypographyConfig
+     */
+    private function normalizeTypography(mixed $input): array
+    {
+        $input = is_array($input) ? $input : [];
+        $defaults = $this->typographyDefaults();
+        $existing = $this->existingFontIds();
+        $result = [];
+
+        foreach (self::TYPO_PARTS as $part) {
+            $style = is_array($input[$part] ?? null) ? $input[$part] : [];
+            $fontId = filter_var($style['font_id'] ?? null, FILTER_VALIDATE_INT);
+            $weight = filter_var($style['weight'] ?? null, FILTER_VALIDATE_INT);
+            $tracking = $style['tracking'] ?? null;
+
+            $result[$part] = [
+                'font_id' => $fontId !== false && isset($existing[$fontId]) ? $fontId : null,
+                'weight' => in_array($weight, self::WEIGHTS, true) ? $weight : $defaults[$part]['weight'],
+                'italic' => array_key_exists('italic', $style)
+                    ? filter_var($style['italic'], FILTER_VALIDATE_BOOLEAN)
+                    : $defaults[$part]['italic'],
+                'tracking' => is_string($tracking) && isset(self::TRACKING[$tracking]) ? $tracking : $defaults[$part]['tracking'],
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * @return array<int, true>
+     */
+    private function existingFontIds(): array
+    {
+        if ($this->fontIds === null) {
+            $this->fontIds = Schema::hasTable('presentation_fonts')
+                ? PresentationFont::query()->pluck('id')->mapWithKeys(fn ($id) => [(int) $id => true])->all()
+                : [];
+        }
+
+        return $this->fontIds;
     }
 }

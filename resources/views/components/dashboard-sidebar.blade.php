@@ -53,7 +53,13 @@
                 'title' => __('Presentasi'),
                 'items' => [
                     ['label' => __('Layar Utama'), 'route' => 'media.senarai.index', 'icon' => 'ri-slideshow-3-line', 'active' => ['media.senarai.index', 'media.senarai.present', 'media.senarai.progress.*']],
+                ],
+            ],
+            [
+                'title' => __('Kawalan'),
+                'items' => [
                     ['label' => __('Kawalan Presentasi'), 'route' => 'media.kawalan.presentation.index', 'icon' => 'ri-settings-4-line', 'active' => 'media.kawalan.presentation.*'],
+                    ['label' => __('Pustaka Fon'), 'route' => 'media.kawalan.fon.index', 'icon' => 'ri-font-family', 'active' => 'media.kawalan.fon.*'],
                 ],
             ],
             [

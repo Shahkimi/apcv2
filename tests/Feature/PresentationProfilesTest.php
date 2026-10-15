@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\PresentationFont;
 use App\Models\PresentationProfile;
 use App\Models\User;
 use App\Services\EventModeService;
@@ -597,4 +598,147 @@ it('hides the save bar on the data tab because that tab auto-saves', function ()
         ->get(route('media.kawalan.presentation.index'))
         ->assertOk()
         ->assertSee('x-show="tab !== \'data\'"', false);
+});
+
+function presentationTypographyFont(string $name = 'Poppins'): PresentationFont
+{
+    return PresentationFont::query()->create([
+        'name' => $name,
+        'file_path' => 'fonts/'.md5($name).'.woff2',
+        'format' => 'woff2',
+        'file_size' => 20,
+    ]);
+}
+
+it('defaults every slide part to the Inter font style when typography is missing', function (): void {
+    $config = app(PresentationDisplayConfigService::class)->resolve(presentationConfigPayload());
+
+    expect(array_keys($config['typography']))->toBe(PresentationDisplayConfigService::TYPO_PARTS)
+        ->and($config['typography']['name'])->toBe(['font_id' => null, 'weight' => 700, 'italic' => false, 'tracking' => 'normal'])
+        ->and($config['typography']['jawatan'])->toBe(['font_id' => null, 'weight' => 500, 'italic' => false, 'tracking' => 'normal']);
+});
+
+it('saves per-part font style via the live update and returns it in form values', function (): void {
+    $font = presentationTypographyFont();
+
+    $response = $this->actingAs(presentationMediaUser())
+        ->putJson(route('media.kawalan.presentation.update'), presentationConfigPayload([
+            'typography' => [
+                'jawatan' => ['font_id' => $font->id, 'weight' => 800, 'italic' => true, 'tracking' => 'wider'],
+                'name' => ['font_id' => null, 'weight' => 600, 'italic' => false, 'tracking' => 'tight'],
+            ],
+        ]))
+        ->assertOk();
+
+    expect($response->json('form_values.typo_jawatan_font'))->toBe($font->id)
+        ->and($response->json('form_values.typo_jawatan_weight'))->toBe(800)
+        ->and($response->json('form_values.typo_jawatan_italic'))->toBeTrue()
+        ->and($response->json('form_values.typo_jawatan_tracking'))->toBe('wider')
+        ->and($response->json('form_values.typo_name_weight'))->toBe(600)
+        ->and($response->json('form_values.typo_ptj_weight'))->toBe(500);
+
+    $live = app(PresentationDisplayConfigService::class)->live();
+    expect($live['typography']['jawatan'])->toBe(['font_id' => $font->id, 'weight' => 800, 'italic' => true, 'tracking' => 'wider']);
+});
+
+it('rejects an unknown font, weight or letter spacing', function (): void {
+    $this->actingAs(presentationMediaUser())
+        ->putJson(route('media.kawalan.presentation.update'), presentationConfigPayload([
+            'typography' => [
+                'jawatan' => ['font_id' => 999, 'weight' => 450, 'tracking' => 'huge'],
+            ],
+        ]))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors([
+            'typography.jawatan.font_id',
+            'typography.jawatan.weight',
+            'typography.jawatan.tracking',
+        ]);
+});
+
+it('drops a font id that no longer exists when resolving a stored config', function (): void {
+    $config = app(PresentationDisplayConfigService::class)->resolve(presentationConfigPayload([
+        'typography' => ['ptj' => ['font_id' => 4242, 'weight' => 700]],
+    ]));
+
+    expect($config['typography']['ptj'])->toBe(['font_id' => null, 'weight' => 700, 'italic' => false, 'tracking' => 'normal']);
+});
+
+it('stores font style in profiles and restores it on apply', function (): void {
+    $media = presentationMediaUser();
+    $font = presentationTypographyFont();
+
+    $response = $this->actingAs($media)
+        ->postJson(route('media.kawalan.presentation.profiles.store'), [
+            'name' => 'Majlis Pagi',
+            'config' => presentationConfigPayload([
+                'typography' => ['tempoh' => ['font_id' => $font->id, 'weight' => 600, 'italic' => true, 'tracking' => 'wide']],
+            ]),
+        ])
+        ->assertOk();
+
+    expect($response->json('profile.form_values.typo_tempoh_font'))->toBe($font->id);
+
+    $profile = PresentationProfile::query()->where('name', 'Majlis Pagi')->sole();
+    $this->actingAs($media)
+        ->postJson(route('media.kawalan.presentation.profiles.apply', $profile))
+        ->assertOk()
+        ->assertJsonPath('form_values.typo_tempoh_font', $font->id)
+        ->assertJsonPath('form_values.typo_tempoh_italic', true)
+        ->assertJsonPath('form_values.typo_tempoh_tracking', 'wide');
+});
+
+it('keeps the active profile when the saved font style still matches it', function (): void {
+    $media = presentationMediaUser();
+    $font = presentationTypographyFont();
+    $config = presentationConfigPayload([
+        'typography' => ['jawatan' => ['font_id' => $font->id, 'weight' => 700, 'italic' => true, 'tracking' => 'wide']],
+    ]);
+    $profile = PresentationProfile::query()->create([
+        'name' => 'Sepadan',
+        'config' => app(PresentationDisplayConfigService::class)->normalize($config),
+    ]);
+    $this->actingAs($media)->postJson(route('media.kawalan.presentation.profiles.apply', $profile))->assertOk();
+
+    $this->actingAs($media)
+        ->putJson(route('media.kawalan.presentation.fields.update'), [
+            'fields' => app(PresentationDisplayConfigService::class)->live()['fields'],
+            'hide_empty' => true,
+        ])
+        ->assertOk()
+        ->assertJsonPath('active_profile_id', $profile->id);
+});
+
+it('applies the font style to the presentation screen', function (): void {
+    $font = presentationTypographyFont();
+    $unused = presentationTypographyFont('Lato');
+    app(SettingsService::class)->set(PresentationDisplayConfigService::LIVE_SETTINGS_KEY, presentationConfigPayload([
+        'typography' => ['jawatan' => ['font_id' => $font->id, 'weight' => 800, 'italic' => true, 'tracking' => 'wide']],
+    ]));
+
+    $this->actingAs(presentationMediaUser())
+        ->get(route('media.senarai.present'))
+        ->assertOk()
+        ->assertSee('@font-face{font-family:"apcfont-'.$font->id.'"', false)
+        ->assertDontSee('apcfont-'.$unused->id, false)
+        ->assertSee('--officer-jawatan-font-family: "apcfont-'.$font->id.'", \'Inter Variable\'', false)
+        ->assertSee('--officer-jawatan-font-weight: 800;', false)
+        ->assertSee('--officer-jawatan-font-style: italic;', false)
+        ->assertSee('--officer-jawatan-letter-spacing: 0.04em;', false)
+        ->assertSee('--officer-name-font-weight: 700;', false)
+        ->assertSee('font-family: var(--officer-jawatan-font-family, inherit);', false);
+});
+
+it('renders the font style tab with every slide part and the library fonts', function (): void {
+    $font = presentationTypographyFont('Poppins Tajuk');
+
+    $this->actingAs(presentationMediaUser())
+        ->get(route('media.kawalan.presentation.index'))
+        ->assertOk()
+        ->assertSee('id="tab-fonstyle"', false)
+        ->assertSee('id="tabpanel-fonstyle"', false)
+        ->assertSee('id="typo_name_font"', false)
+        ->assertSee('id="typo_tempoh_weight"', false)
+        ->assertSee('<option value="'.$font->id.'">Poppins Tajuk</option>', false)
+        ->assertSee('font-family:"apcfont-'.$font->id.'"', false);
 });

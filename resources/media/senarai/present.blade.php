@@ -10,6 +10,9 @@
     <style>
         .transition-content { transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
 
+        /* Uploaded fonts (Pustaka Fon) — rules are built from font ids and route URLs only. */
+        {!! $fontFaceCss !!}
+
         /*
          * Officer name — set any size in px (e.g. 50px). Edit only the numbers below.
          * - default: phones / narrow
@@ -44,6 +47,12 @@
             --officer-mt-sm: {{ $displaySettings['position']['mt_sm'] }};
             --officer-mt-md: {{ $displaySettings['position']['mt_md'] }};
             --officer-translate-y: {{ $displaySettings['position']['translate_y'] }};
+            /*
+             * Per-part font style (Kawalan Presentasi > Gaya Fon).
+             */
+            @foreach ($typographyVars as $var => $value)
+            {{ $var }}: {!! $value !!};
+            @endforeach
         }
 
         /* Slide text is shown in capitals regardless of how names were imported. */
@@ -53,38 +62,59 @@
 
         #officer-name {
             font-size: var(--officer-name-font-size);
-            font-weight: 700;
+            font-family: var(--officer-name-font-family, inherit);
+            font-weight: var(--officer-name-font-weight, 700);
+            font-style: var(--officer-name-font-style, normal);
+            letter-spacing: var(--officer-name-letter-spacing, normal);
             color: #fff;
             line-height: 1.1;
         }
 
         #officer-jawatan {
             font-size: var(--officer-jawatan-font-size);
-            font-weight: 500;
+            font-family: var(--officer-jawatan-font-family, inherit);
+            font-weight: var(--officer-jawatan-font-weight, 500);
+            font-style: var(--officer-jawatan-font-style, normal);
+            letter-spacing: var(--officer-jawatan-letter-spacing, normal);
             color: rgba(255, 255, 255, 0.9);
             line-height: 1.2;
         }
 
         .officer-line {
-            font-weight: 500;
             color: #fff;
             line-height: 1.2;
         }
 
         #officer-ptj {
             font-size: var(--officer-ptj-font-size);
+            font-family: var(--officer-ptj-font-family, inherit);
+            font-weight: var(--officer-ptj-font-weight, 500);
+            font-style: var(--officer-ptj-font-style, normal);
+            letter-spacing: var(--officer-ptj-letter-spacing, normal);
         }
 
         #officer-tarikh {
             font-size: var(--officer-tarikh-font-size);
+            font-family: var(--officer-tarikh-font-family, inherit);
+            font-weight: var(--officer-tarikh-font-weight, 500);
+            font-style: var(--officer-tarikh-font-style, normal);
+            letter-spacing: var(--officer-tarikh-letter-spacing, normal);
         }
 
         #officer-bersara {
             font-size: var(--officer-bersara-font-size);
+            font-family: var(--officer-bersara-font-family, inherit);
+            font-weight: var(--officer-bersara-font-weight, 500);
+            font-style: var(--officer-bersara-font-style, normal);
+            letter-spacing: var(--officer-bersara-letter-spacing, normal);
         }
 
         #officer-tempoh {
             font-size: var(--officer-tempoh-font-size);
+            font-family: var(--officer-tempoh-font-family, inherit);
+            font-weight: var(--officer-tempoh-font-weight, 500);
+            font-style: var(--officer-tempoh-font-style, normal);
+            letter-spacing: var(--officer-tempoh-letter-spacing, normal);
         }
 
         .officer-display-wrap {

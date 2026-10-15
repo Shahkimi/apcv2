@@ -11,48 +11,71 @@
     padding-right: var(--officer-px);
 }
 
+/* Slide text is shown in capitals, same as the slideshow */
+.presentation-preview-stage .officer-display {
+    text-transform: uppercase;
+}
+
 .presentation-preview-stage .officer-display > * + * {
     margin-top: var(--officer-gap);
 }
 
 .presentation-preview-stage .officer-name {
     font-size: var(--officer-name-font-size);
-    font-weight: 700;
+    font-family: var(--officer-name-font-family, inherit);
+    font-weight: var(--officer-name-font-weight, 700);
+    font-style: var(--officer-name-font-style, normal);
+    letter-spacing: var(--officer-name-letter-spacing, normal);
     color: #fff;
     line-height: 1.1;
 }
 
 .presentation-preview-stage .officer-jawatan {
     font-size: var(--officer-jawatan-font-size);
-    font-weight: 500;
+    font-family: var(--officer-jawatan-font-family, inherit);
+    font-weight: var(--officer-jawatan-font-weight, 500);
+    font-style: var(--officer-jawatan-font-style, normal);
+    letter-spacing: var(--officer-jawatan-letter-spacing, normal);
     color: rgba(255, 255, 255, 0.9);
     line-height: 1.2;
 }
 
 .presentation-preview-stage .officer-ptj {
     font-size: var(--officer-ptj-font-size);
-    font-weight: 500;
+    font-family: var(--officer-ptj-font-family, inherit);
+    font-weight: var(--officer-ptj-font-weight, 500);
+    font-style: var(--officer-ptj-font-style, normal);
+    letter-spacing: var(--officer-ptj-letter-spacing, normal);
     color: #fff;
     line-height: 1.2;
 }
 
 .presentation-preview-stage .officer-tarikh {
     font-size: var(--officer-tarikh-font-size);
-    font-weight: 500;
+    font-family: var(--officer-tarikh-font-family, inherit);
+    font-weight: var(--officer-tarikh-font-weight, 500);
+    font-style: var(--officer-tarikh-font-style, normal);
+    letter-spacing: var(--officer-tarikh-letter-spacing, normal);
     color: #fff;
     line-height: 1.2;
 }
 
 .presentation-preview-stage .officer-bersara {
     font-size: var(--officer-bersara-font-size);
-    font-weight: 500;
+    font-family: var(--officer-bersara-font-family, inherit);
+    font-weight: var(--officer-bersara-font-weight, 500);
+    font-style: var(--officer-bersara-font-style, normal);
+    letter-spacing: var(--officer-bersara-letter-spacing, normal);
     color: #fff;
     line-height: 1.2;
 }
 
 .presentation-preview-stage .officer-tempoh {
     font-size: var(--officer-tempoh-font-size);
-    font-weight: 500;
+    font-family: var(--officer-tempoh-font-family, inherit);
+    font-weight: var(--officer-tempoh-font-weight, 500);
+    font-style: var(--officer-tempoh-font-style, normal);
+    letter-spacing: var(--officer-tempoh-letter-spacing, normal);
     color: #fff;
     line-height: 1.2;
 }

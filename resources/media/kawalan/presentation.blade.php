@@ -36,6 +36,7 @@
                 'data' => ['label' => __('Data Dipaparkan'), 'icon' => 'ri-list-check-2', 'dirty' => null],
                 'kedudukan' => ['label' => __('Kedudukan Teks'), 'icon' => 'ri-align-top', 'dirty' => 'position_'],
                 'fon' => ['label' => __('Saiz Fon'), 'icon' => 'ri-font-size', 'dirty' => 'fonts_'],
+                'fonstyle' => ['label' => __('Gaya Fon'), 'icon' => 'ri-font-family', 'dirty' => 'typo_'],
             ];
             $modeTabs = ['apc' => 'APC', 'jasamu' => 'Jasamu'];
             $fontRows = [
@@ -54,6 +55,9 @@
             $mtRow = ['icon' => 'ri-align-top', 'label' => __('Margin atas'), 'key' => 'position_mt', 'name' => 'position[mt_%s]', 'min' => 0, 'max' => 2000];
         @endphp
 
+        {{-- Every library font, so the preview can switch fonts instantly (built from ids/route URLs only). --}}
+        <style>{!! $fontFaceCss !!}</style>
+
         <div
             x-data="presentationSettings(@js([
                 'formValues' => $formValues,
@@ -67,6 +71,11 @@
                 'currentMode' => $currentMode,
                 'previewOfficer' => $previewOfficer,
                 'sampleName' => __('Nama Pegawai Contoh'),
+                'typo' => [
+                    'parts' => array_keys($typoParts),
+                    'tracking' => $trackingCss,
+                    'defaultStack' => $defaultFontStack,
+                ],
                 'routes' => [
                     'update' => route('media.kawalan.presentation.update'),
                     'fieldsUpdate' => route('media.kawalan.presentation.fields.update'),
@@ -208,7 +217,7 @@
 
                     {{-- Tabs --}}
                     <div
-                        class="grid grid-cols-3 gap-1 rounded-xl border border-input bg-muted/30 p-1"
+                        class="grid grid-cols-4 gap-1 rounded-xl border border-input bg-muted/30 p-1"
                         role="tablist"
                         aria-label="{{ __('Tetapan paparan') }}"
                         @keydown.arrow-right.prevent="focusTab(1)"
@@ -603,6 +612,120 @@
                             @endforeach
                         </div>
                     </section>
+
+                    {{-- Gaya fon --}}
+                    <section
+                        id="tabpanel-fonstyle"
+                        role="tabpanel"
+                        aria-labelledby="tab-fonstyle"
+                        x-show="tab === 'fonstyle'"
+                        x-cloak
+                        class="space-y-4"
+                    >
+                        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <p class="text-sm text-muted-foreground">
+                                {{ __('Pilih fon, ketebalan, italik dan jarak huruf bagi setiap bahagian slaid. Hanya bahagian yang dipaparkan ditunjukkan.') }}
+                            </p>
+                            <a href="{{ route('media.kawalan.fon.index') }}" class="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-primary hover:underline">
+                                <i class="ri-font-family" aria-hidden="true"></i>{{ __('Urus Pustaka Fon') }}
+                            </a>
+                        </div>
+
+                        @if ($libraryFonts === [])
+                            <div class="flex items-start gap-3 rounded-xl border border-primary/25 bg-primary/5 px-4 py-3 text-sm">
+                                <i class="ri-information-line mt-0.5 text-lg text-primary" aria-hidden="true"></i>
+                                <div>
+                                    <p class="font-medium text-foreground">{{ __('Belum ada fon dimuat naik') }}</p>
+                                    <p class="text-muted-foreground">
+                                        {{ __('Semua bahagian guna fon lalai (Inter). Ketebalan, italik dan jarak huruf tetap boleh diubah.') }}
+                                        <a href="{{ route('media.kawalan.fon.index') }}" class="font-medium text-primary hover:underline">{{ __('Muat naik fon') }}</a>
+                                    </p>
+                                </div>
+                            </div>
+                        @endif
+
+                        @foreach ($typoParts as $part => $partMeta)
+                            <div
+                                class="rounded-xl border border-border/70 bg-card p-4 shadow-sm"
+                                @if ($part !== 'name') x-show="isFieldVisible('{{ $part }}')" @endif
+                            >
+                                <div class="flex flex-wrap items-center justify-between gap-2">
+                                    <div class="flex items-center gap-2 text-sm font-semibold text-foreground">
+                                        <i class="{{ $partMeta['icon'] }} text-muted-foreground" aria-hidden="true"></i>
+                                        {{ $partMeta['label'] }}
+                                    </div>
+                                    <button
+                                        type="button"
+                                        class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                                        @click="applyStyleToAll('{{ $part }}')"
+                                        title="{{ __('Salin gaya ini ke semua bahagian lain') }}"
+                                    >
+                                        <i class="ri-file-copy-line" aria-hidden="true"></i>{{ __('Guna untuk semua') }}
+                                    </button>
+                                </div>
+
+                                {{-- Specimen in the chosen style --}}
+                                <p
+                                    class="mt-3 truncate rounded-lg bg-gradient-to-br from-slate-900 via-indigo-950 to-violet-900 px-4 py-3 text-2xl uppercase leading-tight text-white"
+                                    :style="typoSpecimenStyle('{{ $part }}')"
+                                    x-text="typoSpecimenText('{{ $part }}')"
+                                ></p>
+
+                                <div class="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+                                    <label class="block min-w-0">
+                                        <span class="mb-1 block text-xs font-medium text-muted-foreground">{{ __('Fon') }}</span>
+                                        <select
+                                            id="typo_{{ $part }}_font"
+                                            :value="values.typo_{{ $part }}_font ?? ''"
+                                            @change="setTypoFont('{{ $part }}', $event.target.value)"
+                                            class="h-9 w-full rounded-md border border-input bg-background px-2.5 text-sm"
+                                            :class="errors.typo_{{ $part }}_font ? 'border-destructive' : ''"
+                                        >
+                                            <option value="">{{ __('Lalai (Inter)') }}</option>
+                                            @foreach ($libraryFonts as $font)
+                                                <option value="{{ $font['id'] }}">{{ $font['name'] }}</option>
+                                            @endforeach
+                                        </select>
+                                        <template x-if="errors.typo_{{ $part }}_font">
+                                            <p class="mt-1 text-xs text-destructive" x-text="errors.typo_{{ $part }}_font"></p>
+                                        </template>
+                                    </label>
+                                    <label class="block min-w-0">
+                                        <span class="mb-1 block text-xs font-medium text-muted-foreground">{{ __('Ketebalan') }}</span>
+                                        <select
+                                            id="typo_{{ $part }}_weight"
+                                            x-model.number="values.typo_{{ $part }}_weight"
+                                            class="h-9 w-full rounded-md border border-input bg-background px-2.5 text-sm"
+                                        >
+                                            @foreach ($weightOptions as $weight => $weightLabel)
+                                                <option value="{{ $weight }}">{{ $weightLabel }} ({{ $weight }})</option>
+                                            @endforeach
+                                        </select>
+                                    </label>
+                                </div>
+
+                                <div class="mt-3 flex flex-wrap items-center gap-x-6 gap-y-3">
+                                    <label class="inline-flex cursor-pointer items-center gap-2 text-sm text-foreground">
+                                        <input type="checkbox" class="peer sr-only" x-model="values.typo_{{ $part }}_italic">
+                                        <span class="field-switch" aria-hidden="true"></span>
+                                        <i class="ri-italic text-muted-foreground" aria-hidden="true"></i>{{ __('Italik') }}
+                                    </label>
+                                    <fieldset class="flex min-w-0 items-center gap-2">
+                                        <legend class="sr-only">{{ __('Jarak huruf') }} — {{ $partMeta['label'] }}</legend>
+                                        <span class="text-xs font-medium text-muted-foreground" aria-hidden="true">{{ __('Jarak huruf') }}</span>
+                                        <div class="inline-flex rounded-lg bg-muted/50 p-0.5">
+                                            @foreach ($trackingOptions as $trackingKey => $trackingLabel)
+                                                <label class="cursor-pointer rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground transition hover:text-foreground has-[:checked]:bg-card has-[:checked]:text-foreground has-[:checked]:shadow-sm has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring">
+                                                    <input type="radio" class="sr-only" value="{{ $trackingKey }}" x-model="values.typo_{{ $part }}_tracking">
+                                                    {{ $trackingLabel }}
+                                                </label>
+                                            @endforeach
+                                        </div>
+                                    </fieldset>
+                                </div>
+                            </div>
+                        @endforeach
+                    </section>
                 </div>
 
                 {{-- Sticky action bar — position/font tabs only; Data Dipaparkan auto-saves --}}
@@ -650,7 +773,8 @@
                 fieldMode: init.currentMode,
                 sampleValues: Object.fromEntries(Object.entries(init.fieldDefs).map(([key, def]) => [key, def.sample])),
                 noDataText: @json(__('Tiada data pada pegawai ini')),
-                tabs: ['data', 'kedudukan', 'fon'],
+                tabs: ['data', 'kedudukan', 'fon', 'fonstyle'],
+                typo: init.typo,
                 tab: 'data',
                 fieldSaveState: 'idle',
                 fieldSaving: false,
@@ -749,7 +873,62 @@
                         '--officer-tarikh-font-size': `${n(v.fonts_tarikh_md)}px`,
                         '--officer-bersara-font-size': `${n(v.fonts_bersara_md)}px`,
                         '--officer-tempoh-font-size': `${n(v.fonts_tempoh_md)}px`,
+                        ...this.typoVars(),
                     };
+                },
+
+                // Same variables the slideshow gets from PresentationDisplayConfigService::typographyVars()
+                typoVars() {
+                    const vars = {};
+                    this.typo.parts.forEach((part) => {
+                        const style = this.typoStyle(part);
+                        vars[`--officer-${part}-font-family`] = style.fontFamily;
+                        vars[`--officer-${part}-font-weight`] = String(style.fontWeight);
+                        vars[`--officer-${part}-font-style`] = style.fontStyle;
+                        vars[`--officer-${part}-letter-spacing`] = style.letterSpacing;
+                    });
+
+                    return vars;
+                },
+
+                typoStyle(part) {
+                    const v = this.values;
+                    const fontId = v[`typo_${part}_font`];
+
+                    return {
+                        fontFamily: fontId ? `"apcfont-${Number(fontId)}", ${this.typo.defaultStack}` : this.typo.defaultStack,
+                        fontWeight: Number(v[`typo_${part}_weight`]) || 500,
+                        fontStyle: v[`typo_${part}_italic`] ? 'italic' : 'normal',
+                        letterSpacing: this.typo.tracking[v[`typo_${part}_tracking`]] ?? '0em',
+                    };
+                },
+
+                typoSpecimenStyle(part) {
+                    return this.typoStyle(part);
+                },
+
+                typoSpecimenText(part) {
+                    if (part === 'name') {
+                        return this.previewName();
+                    }
+                    return this.sampleValue(part) ?? this.sampleValues[part] ?? this.defs[part]?.label ?? '';
+                },
+
+                setTypoFont(part, raw) {
+                    this.values[`typo_${part}_font`] = raw === '' ? null : Number(raw);
+                },
+
+                applyStyleToAll(source) {
+                    const props = ['font', 'weight', 'italic', 'tracking'];
+                    this.typo.parts.forEach((part) => {
+                        if (part === source) {
+                            return;
+                        }
+                        props.forEach((prop) => {
+                            this.values[`typo_${part}_${prop}`] = this.values[`typo_${source}_${prop}`];
+                        });
+                    });
+                    this.toast('success', @json(__('Gaya disalin ke semua bahagian. Klik Simpan Tetapan untuk guna.')));
                 },
 
                 usingRealData() {
@@ -992,6 +1171,17 @@
                         fields[mode] = clonePlain(v['fields_' + mode]);
                     });
 
+                    const typography = {};
+                    this.typo.parts.forEach((part) => {
+                        const fontId = v[`typo_${part}_font`];
+                        typography[part] = {
+                            font_id: fontId ? Number(fontId) : null,
+                            weight: Number(v[`typo_${part}_weight`]),
+                            italic: !!v[`typo_${part}_italic`],
+                            tracking: v[`typo_${part}_tracking`],
+                        };
+                    });
+
                     return {
                         position: {
                             mt_base: v.position_mt_base,
@@ -1002,6 +1192,7 @@
                         fonts,
                         fields,
                         hide_empty: !!v.hide_empty,
+                        typography,
                     };
                 },
 
@@ -1215,7 +1406,11 @@
                     if (e.response && e.response.status === 422 && e.response.data.errors) {
                         const flat = {};
                         Object.keys(e.response.data.errors).forEach((key) => {
-                            flat[key.replace('.', '_')] = e.response.data.errors[key][0];
+                            const typo = key.match(/^(?:config\.)?typography\.(\w+)\.(font_id|weight|italic|tracking)$/);
+                            const flatKey = typo
+                                ? `typo_${typo[1]}_${typo[2] === 'font_id' ? 'font' : typo[2]}`
+                                : key.replace('.', '_');
+                            flat[flatKey] = e.response.data.errors[key][0];
                         });
                         this.errors = flat;
                         this.showFirstErrorTab(Object.keys(flat));
@@ -1232,6 +1427,7 @@
 
                     if (first.startsWith('position_')) this.setTab('kedudukan');
                     else if (first.startsWith('fonts_')) this.setTab('fon');
+                    else if (first.startsWith('typo_')) this.setTab('fonstyle');
                 },
 
                 toastFromException(e) {
