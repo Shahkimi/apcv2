@@ -27,6 +27,7 @@ class PegawaiFactory extends Factory
             'jawatan_id' => 1,
             'gred_id' => 1,
             'rsvp' => fake()->boolean(),
+            'is_oku' => false,
             'no_kerusi' => fake()->optional(0.75)->numberBetween(1, 200),
             'is_attend' => fake()->boolean(35),
             'no_meja' => fn (array $attributes): ?int => ! empty($attributes['is_attend'])

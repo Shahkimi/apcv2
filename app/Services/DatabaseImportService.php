@@ -92,6 +92,7 @@ final class DatabaseImportService
         'tempoh_berkhidmat',
         'bersara_id',
         'rsvp',
+        'is_oku',
         'no_kerusi',
         'no_meja',
     ];
@@ -99,6 +100,7 @@ final class DatabaseImportService
     /** @var list<string> */
     public const JASAMU_OPTIONAL_POLICY_FIELDS = [
         'rsvp',
+        'is_oku',
         'no_kerusi',
         'no_meja',
     ];
@@ -413,7 +415,7 @@ final class DatabaseImportService
         if (! $isEmpty) {
             return match ($field) {
                 'sesi_majlis_id' => $this->parseOptionalFkId($raw, 'sesi_majlis_id', $csvLine),
-                'rsvp', 'is_attend', 'is_late' => $this->parseBoolean($raw, $csvLine, $field),
+                'rsvp', 'is_oku', 'is_attend', 'is_late' => $this->parseBoolean($raw, $csvLine, $field),
                 'no_kerusi', 'no_sijil', 'no_meja', 'no_panggilan_lewat' => $this->parseOptionalUInt($raw, $field, $csvLine),
                 's_kehadiran' => $this->parseSKehadiran($raw, $csvLine),
                 default => null,
@@ -424,7 +426,7 @@ final class DatabaseImportService
             // Nullable FK: never store 0 (tiada baris id=0); kosong sentiasa NULL.
             'sesi_majlis_id' => null,
             // NOT NULL boolean defaults — pilihan 0/null pada UI tidak ubah storan (kedua-dua false).
-            'rsvp', 'is_attend', 'is_late' => false,
+            'rsvp', 'is_oku', 'is_attend', 'is_late' => false,
             'no_kerusi', 'no_sijil', 'no_meja', 'no_panggilan_lewat' => $policy === self::POLICY_NULL ? null : 0,
             's_kehadiran' => 0,
             default => null,

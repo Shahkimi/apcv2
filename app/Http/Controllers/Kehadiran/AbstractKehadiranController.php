@@ -115,11 +115,18 @@ abstract class AbstractKehadiranController extends Controller
         $pegawai->loadMissing(['ptj:id,nama_ptj', 'jawatan:id,desc_jawatan', 'sesiMajlis:id,sesi', 'bersara:id,jenis_bersara']);
         $activeSesi = $this->callingService->activeOnAirSesi();
         $previewLateNumber = null;
+        $previewNoKerusi = $pegawai->no_kerusi ?? '-';
         $previewNoMeja = $activeSesi !== null
             ? ($this->callingService->calculateTableNumber($pegawai->no_kerusi, $activeSesi) ?? '-')
             : ($pegawai->no_meja ?? '-');
         if (! $pegawai->rsvp && ! $pegawai->is_attend && $activeSesi !== null) {
             $previewLateNumber = $this->callingService->previewNextLateCallingNumber($activeSesi);
+
+            // Jasamu walk-in will sit at the seat matching their late number.
+            if ($previewLateNumber !== null && $this->eventMode->isJasamu()) {
+                $previewNoKerusi = $previewLateNumber;
+                $previewNoMeja = $this->callingService->calculateTableNumber($previewLateNumber, $activeSesi) ?? '-';
+            }
         }
 
         return [
@@ -137,7 +144,7 @@ abstract class AbstractKehadiranController extends Controller
                 'sesi_name' => $pegawai->sesiMajlis?->sesi ?? '—',
                 'ptj_name' => $pegawai->ptj?->nama_ptj ?? '-',
                 'jawatan_name' => $pegawai->jawatan?->desc_jawatan ?? '-',
-                'no_kerusi' => $pegawai->no_kerusi ?? '-',
+                'no_kerusi' => $previewNoKerusi,
                 'no_meja' => $previewNoMeja,
                 'no_panggilan_lewat' => $this->jsonNoPanggilanLewatForDetails($pegawai->no_panggilan_lewat, $previewLateNumber),
                 'is_attend' => (bool) $pegawai->is_attend,
@@ -201,6 +208,9 @@ abstract class AbstractKehadiranController extends Controller
                         $locked->no_kerusi = null;
                         $locked->no_meja = null;
                         $this->callingService->assignLateCallingNumberIfApplicable($locked, $activeSesi);
+                        if ($this->eventMode->isJasamu()) {
+                            $this->callingService->assignWalkInSeat($locked, $activeSesi);
+                        }
                     } else {
                         $locked->no_meja = $this->callingService->calculateTableNumber($locked->no_kerusi, $activeSesi);
                         if ($activeSesi->is_late) {
@@ -212,6 +222,11 @@ abstract class AbstractKehadiranController extends Controller
                     }
                 } else {
                     $this->callingService->clearLateCallingOnCancel($locked);
+                    // Jasamu walk-in seat comes from the late number, so release it with that number.
+                    if (! $locked->rsvp && $this->eventMode->isJasamu()) {
+                        $locked->no_kerusi = null;
+                        $locked->no_meja = null;
+                    }
                 }
 
                 $locked->save();
@@ -235,6 +250,7 @@ abstract class AbstractKehadiranController extends Controller
         return response()->json([
             'success' => true,
             'is_attend' => (bool) $pegawai->is_attend,
+            'no_kerusi' => $pegawai->no_kerusi,
             'no_meja' => $pegawai->no_meja,
             'no_panggilan_lewat' => $this->jsonNoPanggilanLewat($pegawai->no_panggilan_lewat),
             'message' => $pegawai->is_attend ? __('Kehadiran disahkan.') : __('Kehadiran dibatalkan.'),

@@ -15,6 +15,7 @@
         'gred_id' => __('Gred (ID)'),
         'sesi_majlis_id' => __('Sesi majlis (ID)'),
         'rsvp' => __('RSVP'),
+        'is_oku' => __('OKU (0/1)'),
         'no_kerusi' => __('No. kerusi'),
         'no_sijil' => __('No. sijil'),
         'no_meja' => __('No. meja'),
@@ -341,7 +342,7 @@
                                             <p class="mt-1 text-xs text-muted-foreground">
                                                 @if ($field === 'sesi_majlis_id')
                                                     {{ __('FK: kosong sentiasa NULL. Boolean: kedua-dua pilihan disimpan sebagai tidak aktif.') }}
-                                                @elseif (in_array($field, ['rsvp', 'is_attend', 'is_late'], true))
+                                                @elseif (in_array($field, ['rsvp', 'is_oku', 'is_attend', 'is_late'], true))
                                                     {{ __('Boolean NOT NULL — nilai kosong disimpan sebagai tidak (0).') }}
                                                 @elseif ($field === 's_kehadiran')
                                                     {{ __('NOT NULL — lalai 0 (pagi).') }}

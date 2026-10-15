@@ -97,6 +97,23 @@
                 });
             }
         } else {
+            // Jasamu walk-in sits at the seat matching their late number.
+            if (isJasamu) {
+                cards.push({
+                    tint: 'emerald',
+                    icon: 'ri-armchair-line',
+                    label: '{{ __('No. Kerusi') }}',
+                    value: pegawai.no_kerusi,
+                });
+                if (showTableNumber) {
+                    cards.push({
+                        tint: 'indigo',
+                        icon: 'ri-table-line',
+                        label: '{{ __('No. Meja') }}',
+                        value: pegawai.no_meja,
+                    });
+                }
+            }
             cards.push({
                 tint: 'amber',
                 icon: 'ri-phone-line',

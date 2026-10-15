@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'gred_id',
     'sesi_majlis_id',
     'rsvp',
+    'is_oku',
     'no_kerusi',
     'no_sijil',
     'no_meja',
@@ -43,6 +44,7 @@ class Pegawai extends Model
     {
         return [
             'rsvp' => 'boolean',
+            'is_oku' => 'boolean',
             'is_attend' => 'boolean',
             'is_late' => 'boolean',
             'hadir_at' => 'datetime',

@@ -278,7 +278,7 @@
                         { is_attend: 1 },
                         { headers: { Accept: 'application/json' } },
                     );
-                    this.receipt = { no_meja: data.no_meja, no_panggilan_lewat: data.no_panggilan_lewat };
+                    this.receipt = { no_kerusi: data.no_kerusi, no_meja: data.no_meja, no_panggilan_lewat: data.no_panggilan_lewat };
                     this.show('success', 8);
                     this.sound('success');
                     this.announce(officer.nama + '. ' + L.successTitle);
@@ -526,6 +526,14 @@
                         cards.push({ key: 'lewat', ...tones.amber, icon: 'ri-megaphone-line', label: L.call, value: lewat });
                     }
                 } else {
+                    // Jasamu walk-in sits at the seat matching their late number.
+                    if (this.result.event_mode === 'jasamu') {
+                        const kerusi = this.receipt ? this.receipt.no_kerusi : o.no_kerusi;
+                        cards.push({ key: 'kerusi', ...tones.emerald, icon: 'ri-armchair-line', label: L.seat, value: isBlank(kerusi) ? '-' : kerusi });
+                        if (this.result.show_table_number) {
+                            cards.push({ key: 'meja', ...tones.indigo, icon: 'ri-table-line', label: L.table, value: isBlank(meja) ? '-' : meja });
+                        }
+                    }
                     cards.push({ key: 'lewat', ...tones.amber, icon: 'ri-megaphone-line', label: L.call, value: hasLate ? lewat : '-' });
                 }
 

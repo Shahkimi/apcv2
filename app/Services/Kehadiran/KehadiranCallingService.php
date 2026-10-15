@@ -110,9 +110,18 @@ final class KehadiranCallingService
     }
 
     /**
+     * Jasamu senarai hierarchy: RSVP hadir, then walk-ins (rsvp=0), then OKU last (RSVP before walk-in).
+     */
+    public function applyJasamuSenaraiGroupOrder(Builder $query): void
+    {
+        $query->orderByRaw('CASE WHEN COALESCE(is_oku, 0) = 1 THEN 1 ELSE 0 END')
+            ->orderByRaw('CASE WHEN COALESCE(rsvp, 0) = 1 THEN 0 ELSE 1 END');
+    }
+
+    /**
      * @return Collection<int, Pegawai>
      */
-    public function attendedPegawaiForDisplay(?int $sesiId = null): Collection
+    public function attendedPegawaiForDisplay(?int $sesiId = null, bool $jasamuHierarchy = false): Collection
     {
         $query = Pegawai::query()
             ->with(['ptj', 'sesiMajlis', 'jawatan', 'bersara'])
@@ -120,6 +129,10 @@ final class KehadiranCallingService
 
         if ($sesiId !== null) {
             $query->where('sesi_majlis_id', $sesiId);
+        }
+
+        if ($jasamuHierarchy) {
+            $this->applyJasamuSenaraiGroupOrder($query);
         }
 
         $this->applyPaparanDisplayOrder($query);
@@ -205,6 +218,21 @@ final class KehadiranCallingService
         $nextNumber = max($startNumber, $max + 1);
         $pegawai->no_panggilan_lewat = $nextNumber;
         $pegawai->is_late = true;
+    }
+
+    /**
+     * Jasamu Dikenang: a walk-in (rsvp=0) sits at the seat matching their late calling number,
+     * and their table follows the usual seat → table calculation.
+     */
+    public function assignWalkInSeat(Pegawai $pegawai, SesiMajlis $sesi): void
+    {
+        $number = (int) ($pegawai->no_panggilan_lewat ?? 0);
+        if ($number < 1) {
+            return;
+        }
+
+        $pegawai->no_kerusi = $number;
+        $pegawai->no_meja = $this->calculateTableNumber($number, $sesi);
     }
 
     public function previewNextLateCallingNumber(?SesiMajlis $activeSesi): ?int

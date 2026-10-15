@@ -225,10 +225,10 @@ it('offers only the jasamu dikenang fields for mapping in jasamu mode', function
 
     expect(DatabaseImportService::fillableFieldsFor(EventModeService::MODE_JASAMU))->toBe([
         'nama', 'no_kp', 'ptj_id', 'jawatan_id', 'gred_id', 'tarikh_bersara',
-        'tempoh_berkhidmat', 'bersara_id', 'rsvp', 'no_kerusi', 'no_meja',
+        'tempoh_berkhidmat', 'bersara_id', 'rsvp', 'is_oku', 'no_kerusi', 'no_meja',
     ]);
     expect(DatabaseImportService::optionalPolicyFieldsFor(EventModeService::MODE_JASAMU))
-        ->toBe(['rsvp', 'no_kerusi', 'no_meja']);
+        ->toBe(['rsvp', 'is_oku', 'no_kerusi', 'no_meja']);
 
     $response = $this->actingAs(adminUser())
         ->get(route('admin.kawalan.database.index'))
@@ -260,7 +260,7 @@ it('imports free-text tempoh_berkhidmat and leaves hidden columns at their defau
     $mapping = [
         'nama' => 'Nama', 'no_kp' => 'KP', 'ptj_id' => 'PTJ', 'jawatan_id' => 'Jawatan', 'gred_id' => 'Gred',
         'tarikh_bersara' => 'TarikhBersara', 'tempoh_berkhidmat' => 'Tempoh', 'bersara_id' => 'BersaraId',
-        'rsvp' => 'RSVP', 'no_kerusi' => 'Kerusi', 'no_meja' => 'Meja',
+        'rsvp' => 'RSVP', 'is_oku' => '', 'no_kerusi' => 'Kerusi', 'no_meja' => 'Meja',
     ];
     $emptyPolicy = array_fill_keys(DatabaseImportService::JASAMU_OPTIONAL_POLICY_FIELDS, DatabaseImportService::POLICY_NULL);
 
@@ -272,6 +272,7 @@ it('imports free-text tempoh_berkhidmat and leaves hidden columns at their defau
     $pegawai = Pegawai::query()->where('no_kp', '800101011111')->firstOrFail();
     expect($pegawai->tempoh_berkhidmat)->toBe('25 tahun 3 bulan')
         ->and($pegawai->rsvp)->toBeTrue()
+        ->and($pegawai->is_oku)->toBeFalse()
         ->and($pegawai->no_kerusi)->toBe(7)
         ->and($pegawai->no_meja)->toBe(2)
         ->and($pegawai->is_attend)->toBeFalse()
