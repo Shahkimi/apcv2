@@ -739,6 +739,8 @@ it('renders the font style tab with every slide part and the library fonts', fun
         ->assertSee('id="tabpanel-fonstyle"', false)
         ->assertSee('id="typo_name_font"', false)
         ->assertSee('id="typo_tempoh_weight"', false)
-        ->assertSee('<option value="'.$font->id.'">Poppins Tajuk</option>', false)
+        ->assertSee('Poppins Tajuk')
+        ->assertSee('id="apc-library-font-faces"', false)
+        ->assertSee('id="typo-part-jawatan"', false)
         ->assertSee('font-family:"apcfont-'.$font->id.'"', false);
 });

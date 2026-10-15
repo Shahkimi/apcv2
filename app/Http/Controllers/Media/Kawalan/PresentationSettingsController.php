@@ -69,6 +69,7 @@ class PresentationSettingsController extends Controller
                 ->all(),
             'fontFaceCss' => $this->fonts->fontFaceCss($libraryFonts),
             'typoParts' => $this->displayConfig->typographyParts(),
+            'typoDefaults' => $this->displayConfig->typographyDefaults(),
             'weightOptions' => [
                 400 => __('Biasa'),
                 500 => __('Sederhana'),

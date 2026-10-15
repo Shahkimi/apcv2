@@ -56,7 +56,7 @@
         @endphp
 
         {{-- Every library font, so the preview can switch fonts instantly (built from ids/route URLs only). --}}
-        <style>{!! $fontFaceCss !!}</style>
+        <style id="apc-library-font-faces">{!! $fontFaceCss !!}</style>
 
         <div
             x-data="presentationSettings(@js([
@@ -73,9 +73,15 @@
                 'sampleName' => __('Nama Pegawai Contoh'),
                 'typo' => [
                     'parts' => array_keys($typoParts),
+                    'labels' => collect($typoParts)->map(fn (array $meta) => $meta['label'])->all(),
+                    'defaults' => $typoDefaults,
                     'tracking' => $trackingCss,
+                    'trackingLabels' => $trackingOptions,
+                    'weightLabels' => $weightOptions,
+                    'modeLabels' => $modeTabs,
                     'defaultStack' => $defaultFontStack,
                 ],
+                'libraryFonts' => $libraryFonts,
                 'routes' => [
                     'update' => route('media.kawalan.presentation.update'),
                     'fieldsUpdate' => route('media.kawalan.presentation.fields.update'),
@@ -83,6 +89,7 @@
                     'profilesUpdate' => route('media.kawalan.presentation.profiles.update', ['presentationProfile' => '__ID__']),
                     'profilesDestroy' => route('media.kawalan.presentation.profiles.destroy', ['presentationProfile' => '__ID__']),
                     'profilesApply' => route('media.kawalan.presentation.profiles.apply', ['presentationProfile' => '__ID__']),
+                    'fontList' => route('media.kawalan.fon.list'),
                 ],
             ]))"
         >
@@ -121,9 +128,9 @@
                                 >
                                     <div class="officer-display-wrap w-full max-w-6xl text-center">
                                         <div class="officer-display">
-                                            <div class="officer-name" x-text="previewName()"></div>
+                                            <div class="officer-name" :class="previewPartClass('name')" x-text="previewName()" @click="pickPreviewPart('name')"></div>
                                             <template x-for="line in previewLines()" :key="line.key">
-                                                <div :class="'officer-' + line.key" x-text="line.text"></div>
+                                                <div :class="['officer-' + line.key, previewPartClass(line.key)]" x-text="line.text" @click="pickPreviewPart(line.key)"></div>
                                             </template>
                                         </div>
                                     </div>
@@ -217,7 +224,7 @@
 
                     {{-- Tabs --}}
                     <div
-                        class="grid grid-cols-4 gap-1 rounded-xl border border-input bg-muted/30 p-1"
+                        class="grid grid-cols-2 gap-1 rounded-xl border border-input bg-muted/30 p-1 sm:grid-cols-4"
                         role="tablist"
                         aria-label="{{ __('Tetapan paparan') }}"
                         @keydown.arrow-right.prevent="focusTab(1)"
@@ -233,12 +240,12 @@
                                 aria-controls="tabpanel-{{ $tabKey }}"
                                 :aria-selected="tab === '{{ $tabKey }}'"
                                 :tabindex="tab === '{{ $tabKey }}' ? 0 : -1"
-                                class="relative inline-flex flex-col items-center justify-center gap-1 rounded-lg px-2 py-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex-row sm:gap-2 sm:px-3 sm:text-sm"
+                                class="relative inline-flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-1.5 py-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:text-[13px]"
                                 :class="tab === '{{ $tabKey }}' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
                                 @click="setTab('{{ $tabKey }}')"
                             >
-                                <i class="{{ $tabMeta['icon'] }}" aria-hidden="true"></i>
-                                <span class="text-center leading-tight">{{ $tabMeta['label'] }}</span>
+                                <i class="{{ $tabMeta['icon'] }} text-base leading-none" aria-hidden="true"></i>
+                                <span class="max-w-full truncate text-center leading-tight">{{ $tabMeta['label'] }}</span>
                                 @if ($tabKey === 'data')
                                     <i
                                         x-show="fieldSaveState !== 'idle'"
@@ -622,109 +629,344 @@
                         x-cloak
                         class="space-y-4"
                     >
-                        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                            <p class="text-sm text-muted-foreground">
-                                {{ __('Pilih fon, ketebalan, italik dan jarak huruf bagi setiap bahagian slaid. Hanya bahagian yang dipaparkan ditunjukkan.') }}
-                            </p>
-                            <a href="{{ route('media.kawalan.fon.index') }}" class="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-primary hover:underline">
-                                <i class="ri-font-family" aria-hidden="true"></i>{{ __('Urus Pustaka Fon') }}
-                            </a>
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <div class="min-w-0 space-y-2">
+                                <p class="text-sm text-muted-foreground">
+                                    {{ __('Pilih bahagian untuk ubah fon, ketebalan, gaya dan jarak huruf. Klik teks pada pratonton untuk terus ke bahagian itu.') }}
+                                </p>
+                                <div class="flex flex-wrap items-center gap-1.5 text-[11px] font-medium">
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
+                                        <i class="ri-font-family" aria-hidden="true"></i>
+                                        <span x-text="libraryCountText()"></span>
+                                    </span>
+                                    <span
+                                        x-show="customisedParts().length > 0"
+                                        x-cloak
+                                        class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-primary"
+                                    >
+                                        <i class="ri-brush-line" aria-hidden="true"></i>
+                                        <span x-text="customisedText()"></span>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="flex shrink-0 items-center gap-1.5">
+                                <button
+                                    type="button"
+                                    class="btn btn-ghost btn-sm gap-1.5"
+                                    :disabled="customisedParts().length === 0"
+                                    @click="resetAllTypo()"
+                                >
+                                    <i class="ri-restart-line" aria-hidden="true"></i>
+                                    {{ __('Set semula semua') }}
+                                </button>
+                                <a
+                                    href="{{ route('media.kawalan.fon.index') }}"
+                                    target="_blank"
+                                    rel="noopener"
+                                    class="btn btn-outline btn-sm gap-1.5"
+                                    title="{{ __('Dibuka dalam tab baharu. Senarai fon di sini dikemas kini sendiri apabila anda kembali.') }}"
+                                >
+                                    <i class="ri-upload-2-line" aria-hidden="true"></i>
+                                    {{ __('Pustaka Fon') }}
+                                    <i class="ri-external-link-line text-xs opacity-60" aria-hidden="true"></i>
+                                </a>
+                            </div>
                         </div>
 
-                        @if ($libraryFonts === [])
-                            <div class="flex items-start gap-3 rounded-xl border border-primary/25 bg-primary/5 px-4 py-3 text-sm">
-                                <i class="ri-information-line mt-0.5 text-lg text-primary" aria-hidden="true"></i>
-                                <div>
-                                    <p class="font-medium text-foreground">{{ __('Belum ada fon dimuat naik') }}</p>
-                                    <p class="text-muted-foreground">
-                                        {{ __('Semua bahagian guna fon lalai (Inter). Ketebalan, italik dan jarak huruf tetap boleh diubah.') }}
-                                        <a href="{{ route('media.kawalan.fon.index') }}" class="font-medium text-primary hover:underline">{{ __('Muat naik fon') }}</a>
-                                    </p>
-                                </div>
-                            </div>
-                        @endif
+                        {{-- Undo for bulk changes (copy to all / reset all / reset one) --}}
+                        <div
+                            x-show="typoUndo"
+                            x-transition.opacity
+                            x-cloak
+                            role="status"
+                            aria-live="polite"
+                            class="flex items-center justify-between gap-3 rounded-lg border border-border/70 bg-muted/40 px-3 py-2 text-sm"
+                        >
+                            <span class="flex min-w-0 items-center gap-2">
+                                <i class="ri-checkbox-circle-line shrink-0 text-emerald-600" aria-hidden="true"></i>
+                                <span class="truncate" x-text="typoUndo?.message"></span>
+                            </span>
+                            <span class="flex shrink-0 items-center gap-1">
+                                <button type="button" class="rounded-md px-2 py-1 text-sm font-medium text-primary hover:bg-primary/10" @click="undoTypo()">
+                                    {{ __('Buat asal') }}
+                                </button>
+                                <button
+                                    type="button"
+                                    class="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                    @click="dismissTypoUndo()"
+                                    aria-label="{{ __('Tutup') }}"
+                                >
+                                    <i class="ri-close-line" aria-hidden="true"></i>
+                                </button>
+                            </span>
+                        </div>
 
-                        @foreach ($typoParts as $part => $partMeta)
-                            <div
-                                class="rounded-xl border border-border/70 bg-card p-4 shadow-sm"
-                                @if ($part !== 'name') x-show="isFieldVisible('{{ $part }}')" @endif
-                            >
-                                <div class="flex flex-wrap items-center justify-between gap-2">
-                                    <div class="flex items-center gap-2 text-sm font-semibold text-foreground">
-                                        <i class="{{ $partMeta['icon'] }} text-muted-foreground" aria-hidden="true"></i>
-                                        {{ $partMeta['label'] }}
-                                    </div>
+                        <div
+                            x-show="libraryFonts.length === 0"
+                            x-cloak
+                            class="flex items-start gap-3 rounded-xl border border-dashed border-primary/30 bg-primary/5 px-4 py-3 text-sm"
+                        >
+                            <i class="ri-font-family mt-0.5 text-lg text-primary" aria-hidden="true"></i>
+                            <div>
+                                <p class="font-medium text-foreground">{{ __('Belum ada fon dimuat naik') }}</p>
+                                <p class="text-muted-foreground">
+                                    {{ __('Semua bahagian guna fon lalai (Inter). Ketebalan, gaya dan jarak huruf tetap boleh diubah.') }}
+                                    <a href="{{ route('media.kawalan.fon.index') }}" target="_blank" rel="noopener" class="font-medium text-primary hover:underline">{{ __('Muat naik fon') }}</a>
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-2.5">
+                            @foreach ($typoParts as $part => $partMeta)
+                                <div
+                                    id="typo-part-{{ $part }}"
+                                    class="scroll-mt-6 overflow-hidden rounded-xl border bg-card shadow-sm transition-colors"
+                                    :class="openPart === '{{ $part }}' ? 'border-primary/40 ring-1 ring-primary/15' : 'border-border/70 hover:border-border'"
+                                    x-show="isTypoPartShown('{{ $part }}')"
+                                    @mouseenter="hoverPart = '{{ $part }}'"
+                                    @mouseleave="hoverPart = null"
+                                >
                                     <button
                                         type="button"
-                                        class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                                        @click="applyStyleToAll('{{ $part }}')"
-                                        title="{{ __('Salin gaya ini ke semua bahagian lain') }}"
+                                        class="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                                        :aria-expanded="openPart === '{{ $part }}'"
+                                        aria-controls="typo-body-{{ $part }}"
+                                        @click="togglePart('{{ $part }}')"
                                     >
-                                        <i class="ri-file-copy-line" aria-hidden="true"></i>{{ __('Guna untuk semua') }}
+                                        <span
+                                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors"
+                                            :class="openPart === '{{ $part }}' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'"
+                                        >
+                                            <i class="{{ $partMeta['icon'] }}" aria-hidden="true"></i>
+                                        </span>
+                                        <span class="min-w-0 flex-1">
+                                            <span class="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-foreground">
+                                                {{ $partMeta['label'] }}
+                                                <span
+                                                    x-show="isPartCustomised('{{ $part }}')"
+                                                    x-cloak
+                                                    class="rounded-full bg-primary/10 px-1.5 py-px text-[10px] font-medium text-primary"
+                                                >{{ __('Diubah suai') }}</span>
+                                                @if ($part !== 'name')
+                                                    <span
+                                                        x-show="!isFieldVisible('{{ $part }}')"
+                                                        x-cloak
+                                                        class="inline-flex items-center gap-1 rounded-full bg-muted px-1.5 py-px text-[10px] font-medium text-muted-foreground"
+                                                    ><i class="ri-eye-off-line" aria-hidden="true"></i>{{ __('Tidak dipaparkan') }}</span>
+                                                @endif
+                                                <span
+                                                    x-show="isPartDirty('{{ $part }}')"
+                                                    x-cloak
+                                                    class="h-1.5 w-1.5 rounded-full bg-amber-500"
+                                                    title="{{ __('Perubahan belum disimpan') }}"
+                                                ></span>
+                                            </span>
+                                            <span class="mt-0.5 block truncate text-xs text-muted-foreground" x-text="partSummary('{{ $part }}')"></span>
+                                        </span>
+                                        <span
+                                            x-show="openPart !== '{{ $part }}'"
+                                            class="hidden max-w-[40%] truncate text-lg uppercase leading-tight text-foreground sm:block"
+                                            :style="typoStyle('{{ $part }}')"
+                                            x-text="typoSpecimenText('{{ $part }}')"
+                                            aria-hidden="true"
+                                        ></span>
+                                        <i
+                                            class="ri-arrow-down-s-line shrink-0 text-lg text-muted-foreground transition-transform duration-200"
+                                            :class="openPart === '{{ $part }}' ? 'rotate-180' : ''"
+                                            aria-hidden="true"
+                                        ></i>
                                     </button>
-                                </div>
 
-                                {{-- Specimen in the chosen style --}}
-                                <p
-                                    class="mt-3 truncate rounded-lg bg-gradient-to-br from-slate-900 via-indigo-950 to-violet-900 px-4 py-3 text-2xl uppercase leading-tight text-white"
-                                    :style="typoSpecimenStyle('{{ $part }}')"
-                                    x-text="typoSpecimenText('{{ $part }}')"
-                                ></p>
+                                    <div id="typo-body-{{ $part }}" x-show="openPart === '{{ $part }}'" x-collapse x-cloak>
+                                        <div class="space-y-5 border-t border-border/60 px-4 pb-4 pt-4">
+                                            {{-- Specimen on the slide background --}}
+                                            <div class="relative overflow-hidden rounded-lg bg-cover bg-center" :style="specimenBackdropStyle()">
+                                                <div class="absolute inset-0 bg-black/25" aria-hidden="true"></div>
+                                                <p
+                                                    class="relative break-words px-5 py-7 text-center text-3xl uppercase leading-tight text-white [text-shadow:0_1px_8px_rgb(0_0_0/0.35)]"
+                                                    :style="typoStyle('{{ $part }}')"
+                                                    x-text="typoSpecimenText('{{ $part }}')"
+                                                ></p>
+                                            </div>
 
-                                <div class="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-                                    <label class="block min-w-0">
-                                        <span class="mb-1 block text-xs font-medium text-muted-foreground">{{ __('Fon') }}</span>
-                                        <select
-                                            id="typo_{{ $part }}_font"
-                                            :value="values.typo_{{ $part }}_font ?? ''"
-                                            @change="setTypoFont('{{ $part }}', $event.target.value)"
-                                            class="h-9 w-full rounded-md border border-input bg-background px-2.5 text-sm"
-                                            :class="errors.typo_{{ $part }}_font ? 'border-destructive' : ''"
-                                        >
-                                            <option value="">{{ __('Lalai (Inter)') }}</option>
-                                            @foreach ($libraryFonts as $font)
-                                                <option value="{{ $font['id'] }}">{{ $font['name'] }}</option>
-                                            @endforeach
-                                        </select>
-                                        <template x-if="errors.typo_{{ $part }}_font">
-                                            <p class="mt-1 text-xs text-destructive" x-text="errors.typo_{{ $part }}_font"></p>
-                                        </template>
-                                    </label>
-                                    <label class="block min-w-0">
-                                        <span class="mb-1 block text-xs font-medium text-muted-foreground">{{ __('Ketebalan') }}</span>
-                                        <select
-                                            id="typo_{{ $part }}_weight"
-                                            x-model.number="values.typo_{{ $part }}_weight"
-                                            class="h-9 w-full rounded-md border border-input bg-background px-2.5 text-sm"
-                                        >
-                                            @foreach ($weightOptions as $weight => $weightLabel)
-                                                <option value="{{ $weight }}">{{ $weightLabel }} ({{ $weight }})</option>
-                                            @endforeach
-                                        </select>
-                                    </label>
-                                </div>
+                                            {{-- Font --}}
+                                            <fieldset id="typo_{{ $part }}_font">
+                                                <legend class="mb-2 flex w-full items-center justify-between gap-2 text-xs font-medium text-muted-foreground">
+                                                    <span>{{ __('Fon') }}</span>
+                                                    <span class="truncate text-foreground" x-text="fontName(values.typo_{{ $part }}_font)"></span>
+                                                </legend>
+                                                <div class="grid max-h-60 grid-cols-3 gap-2 overflow-y-auto p-0.5 sm:grid-cols-4">
+                                                    <label class="font-tile group">
+                                                        <input
+                                                            type="radio"
+                                                            class="sr-only"
+                                                            name="typo-{{ $part }}-font"
+                                                            value=""
+                                                            :checked="values.typo_{{ $part }}_font === null"
+                                                            @change="setTypoFont('{{ $part }}', null)"
+                                                        >
+                                                        <span class="text-2xl leading-none" :style="{ fontFamily: typo.defaultStack }">Aa</span>
+                                                        <span class="w-full truncate text-[11px]">{{ __('Lalai (Inter)') }}</span>
+                                                        <i class="ri-checkbox-circle-fill font-tile-check" aria-hidden="true"></i>
+                                                    </label>
+                                                    <template x-for="font in libraryFonts" :key="font.id">
+                                                        <label class="font-tile group" :title="font.name">
+                                                            <input
+                                                                type="radio"
+                                                                class="sr-only"
+                                                                name="typo-{{ $part }}-font"
+                                                                :value="font.id"
+                                                                :checked="values.typo_{{ $part }}_font === font.id"
+                                                                @change="setTypoFont('{{ $part }}', font.id)"
+                                                            >
+                                                            <span class="text-2xl leading-none" :style="{ fontFamily: fontFamily(font.id) }">Aa</span>
+                                                            <span class="w-full truncate text-[11px]" x-text="font.name"></span>
+                                                            <i class="ri-checkbox-circle-fill font-tile-check" aria-hidden="true"></i>
+                                                        </label>
+                                                    </template>
+                                                    <a
+                                                        href="{{ route('media.kawalan.fon.index') }}"
+                                                        target="_blank"
+                                                        rel="noopener"
+                                                        class="flex min-h-[4.5rem] flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border px-2 py-2 text-muted-foreground transition-colors hover:border-primary/50 hover:bg-primary/5 hover:text-primary"
+                                                    >
+                                                        <i class="ri-add-line text-xl leading-none" aria-hidden="true"></i>
+                                                        <span class="text-[11px] font-medium">{{ __('Tambah fon') }}</span>
+                                                    </a>
+                                                </div>
+                                                <template x-if="errors.typo_{{ $part }}_font">
+                                                    <p class="mt-1.5 text-xs text-destructive" x-text="errors.typo_{{ $part }}_font"></p>
+                                                </template>
+                                            </fieldset>
 
-                                <div class="mt-3 flex flex-wrap items-center gap-x-6 gap-y-3">
-                                    <label class="inline-flex cursor-pointer items-center gap-2 text-sm text-foreground">
-                                        <input type="checkbox" class="peer sr-only" x-model="values.typo_{{ $part }}_italic">
-                                        <span class="field-switch" aria-hidden="true"></span>
-                                        <i class="ri-italic text-muted-foreground" aria-hidden="true"></i>{{ __('Italik') }}
-                                    </label>
-                                    <fieldset class="flex min-w-0 items-center gap-2">
-                                        <legend class="sr-only">{{ __('Jarak huruf') }} — {{ $partMeta['label'] }}</legend>
-                                        <span class="text-xs font-medium text-muted-foreground" aria-hidden="true">{{ __('Jarak huruf') }}</span>
-                                        <div class="inline-flex rounded-lg bg-muted/50 p-0.5">
-                                            @foreach ($trackingOptions as $trackingKey => $trackingLabel)
-                                                <label class="cursor-pointer rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground transition hover:text-foreground has-[:checked]:bg-card has-[:checked]:text-foreground has-[:checked]:shadow-sm has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring">
-                                                    <input type="radio" class="sr-only" value="{{ $trackingKey }}" x-model="values.typo_{{ $part }}_tracking">
-                                                    {{ $trackingLabel }}
-                                                </label>
-                                            @endforeach
+                                            {{-- Weight --}}
+                                            <fieldset id="typo_{{ $part }}_weight">
+                                                <legend class="mb-2 flex w-full items-center justify-between gap-2 text-xs font-medium text-muted-foreground">
+                                                    <span>{{ __('Ketebalan') }}</span>
+                                                    <span class="text-foreground" x-text="weightLabel(values.typo_{{ $part }}_weight)"></span>
+                                                </legend>
+                                                <div class="grid grid-cols-5 gap-1 rounded-lg bg-muted/50 p-1">
+                                                    @foreach ($weightOptions as $weight => $weightLabel)
+                                                        <label class="segment-option flex-col py-1.5" title="{{ $weightLabel }}">
+                                                            <input
+                                                                type="radio"
+                                                                class="sr-only"
+                                                                name="typo-{{ $part }}-weight"
+                                                                value="{{ $weight }}"
+                                                                x-model.number="values.typo_{{ $part }}_weight"
+                                                            >
+                                                            <span
+                                                                class="text-lg leading-none"
+                                                                :style="{ fontFamily: typoStyle('{{ $part }}').fontFamily, fontWeight: {{ $weight }} }"
+                                                                aria-hidden="true"
+                                                            >Aa</span>
+                                                            <span class="mt-1 text-[10px] tabular-nums">{{ $weight }}</span>
+                                                            <span class="sr-only">{{ $weightLabel }}</span>
+                                                        </label>
+                                                    @endforeach
+                                                </div>
+                                                <p
+                                                    x-show="values.typo_{{ $part }}_font !== null"
+                                                    x-cloak
+                                                    class="mt-1.5 flex items-start gap-1.5 text-[11px] text-muted-foreground"
+                                                >
+                                                    <i class="ri-information-line mt-px" aria-hidden="true"></i>
+                                                    {{ __('Kebanyakan fail fon hanya ada satu ketebalan; ketebalan lain dijana oleh pelayar. Muat naik fail Bold berasingan untuk hasil terbaik.') }}
+                                                </p>
+                                            </fieldset>
+
+                                            <div class="grid gap-5 sm:grid-cols-[auto_minmax(0,1fr)]">
+                                                {{-- Italic --}}
+                                                <fieldset>
+                                                    <legend class="mb-2 text-xs font-medium text-muted-foreground">{{ __('Gaya') }}</legend>
+                                                    <div class="grid grid-cols-2 gap-1 rounded-lg bg-muted/50 p-1">
+                                                        @foreach ([false => __('Tegak'), true => __('Italik')] as $isItalic => $styleLabel)
+                                                            <label class="segment-option flex-col px-4 py-1.5">
+                                                                <input
+                                                                    type="radio"
+                                                                    class="sr-only"
+                                                                    name="typo-{{ $part }}-italic"
+                                                                    :checked="{{ $isItalic ? '' : '!' }}values.typo_{{ $part }}_italic"
+                                                                    @change="values.typo_{{ $part }}_italic = {{ $isItalic ? 'true' : 'false' }}"
+                                                                >
+                                                                <span
+                                                                    class="text-lg leading-none"
+                                                                    :style="{ fontFamily: typoStyle('{{ $part }}').fontFamily, fontStyle: '{{ $isItalic ? 'italic' : 'normal' }}' }"
+                                                                    aria-hidden="true"
+                                                                >Aa</span>
+                                                                <span class="mt-1 text-[10px]">{{ $styleLabel }}</span>
+                                                            </label>
+                                                        @endforeach
+                                                    </div>
+                                                </fieldset>
+
+                                                {{-- Letter spacing --}}
+                                                <fieldset class="min-w-0">
+                                                    <legend class="mb-2 text-xs font-medium text-muted-foreground">{{ __('Jarak huruf') }}</legend>
+                                                    <div class="grid grid-cols-4 gap-1 rounded-lg bg-muted/50 p-1">
+                                                        @foreach ($trackingOptions as $trackingKey => $trackingLabel)
+                                                            <label class="segment-option flex-col px-1 py-1.5" title="{{ $trackingLabel }}">
+                                                                <input
+                                                                    type="radio"
+                                                                    class="sr-only"
+                                                                    name="typo-{{ $part }}-tracking"
+                                                                    value="{{ $trackingKey }}"
+                                                                    x-model="values.typo_{{ $part }}_tracking"
+                                                                >
+                                                                <span
+                                                                    class="text-lg leading-none"
+                                                                    :style="{ fontFamily: typoStyle('{{ $part }}').fontFamily, letterSpacing: '{{ $trackingCss[$trackingKey] }}' }"
+                                                                    aria-hidden="true"
+                                                                >ABC</span>
+                                                                <span class="mt-1 max-w-full truncate text-[10px]">{{ $trackingLabel }}</span>
+                                                            </label>
+                                                        @endforeach
+                                                    </div>
+                                                </fieldset>
+                                            </div>
+
+                                            <div class="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-3">
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-ghost btn-sm gap-1.5"
+                                                    :disabled="!isPartCustomised('{{ $part }}')"
+                                                    @click="resetPart('{{ $part }}')"
+                                                >
+                                                    <i class="ri-restart-line" aria-hidden="true"></i>
+                                                    {{ __('Set semula ke lalai') }}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-outline btn-sm gap-1.5"
+                                                    @click="applyStyleToAll('{{ $part }}')"
+                                                >
+                                                    <i class="ri-file-copy-line" aria-hidden="true"></i>
+                                                    {{ __('Salin ke semua bahagian') }}
+                                                </button>
+                                            </div>
                                         </div>
-                                    </fieldset>
+                                    </div>
                                 </div>
-                            </div>
-                        @endforeach
+                            @endforeach
+                        </div>
+
+                        {{-- Parts not on the slide for the selected mode --}}
+                        <div
+                            x-show="hiddenTypoParts().length > 0"
+                            x-cloak
+                            class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-dashed border-border px-3 py-2 text-xs text-muted-foreground"
+                        >
+                            <span class="flex min-w-0 items-center gap-1.5">
+                                <i class="ri-eye-off-line shrink-0" aria-hidden="true"></i>
+                                <span x-text="hiddenPartsText()"></span>
+                            </span>
+                            <button
+                                type="button"
+                                class="shrink-0 rounded-md px-2 py-1 font-medium text-primary hover:bg-primary/10"
+                                @click="showHiddenTypo = !showHiddenTypo"
+                                x-text="showHiddenTypo ? @js(__('Sembunyikan')) : @js(__('Tunjuk juga'))"
+                            ></button>
+                        </div>
                     </section>
                 </div>
 
@@ -775,6 +1017,12 @@
                 noDataText: @json(__('Tiada data pada pegawai ini')),
                 tabs: ['data', 'kedudukan', 'fon', 'fonstyle'],
                 typo: init.typo,
+                libraryFonts: init.libraryFonts,
+                openPart: 'name',
+                hoverPart: null,
+                showHiddenTypo: false,
+                typoUndo: null,
+                typoUndoTimer: null,
                 tab: 'data',
                 fieldSaveState: 'idle',
                 fieldSaving: false,
@@ -803,6 +1051,13 @@
                     if (this.tabs.includes(hashTab)) {
                         this.tab = hashTab;
                     }
+
+                    // Fonts may be uploaded/deleted in the Pustaka Fon tab — pick them up on return
+                    document.addEventListener('visibilitychange', () => {
+                        if (document.visibilityState === 'visible') {
+                            this.refreshLibrary();
+                        }
+                    });
 
                     window.addEventListener('keydown', (e) => {
                         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
@@ -896,39 +1151,225 @@
                     const fontId = v[`typo_${part}_font`];
 
                     return {
-                        fontFamily: fontId ? `"apcfont-${Number(fontId)}", ${this.typo.defaultStack}` : this.typo.defaultStack,
+                        fontFamily: this.fontFamily(fontId),
                         fontWeight: Number(v[`typo_${part}_weight`]) || 500,
                         fontStyle: v[`typo_${part}_italic`] ? 'italic' : 'normal',
                         letterSpacing: this.typo.tracking[v[`typo_${part}_tracking`]] ?? '0em',
                     };
                 },
 
-                typoSpecimenStyle(part) {
-                    return this.typoStyle(part);
-                },
-
                 typoSpecimenText(part) {
                     if (part === 'name') {
                         return this.previewName();
                     }
+
                     return this.sampleValue(part) ?? this.sampleValues[part] ?? this.defs[part]?.label ?? '';
                 },
 
-                setTypoFont(part, raw) {
-                    this.values[`typo_${part}_font`] = raw === '' ? null : Number(raw);
+                fontFamily(fontId) {
+                    return fontId ? `"apcfont-${Number(fontId)}", ${this.typo.defaultStack}` : this.typo.defaultStack;
+                },
+
+                fontName(fontId) {
+                    if (fontId === null || fontId === undefined) {
+                        return @json(__('Lalai (Inter)'));
+                    }
+
+                    return this.libraryFonts.find((font) => font.id === fontId)?.name ?? @json(__('Fon tidak ditemui'));
+                },
+
+                weightLabel(weight) {
+                    return `${this.typo.weightLabels[weight] ?? ''} (${weight})`;
+                },
+
+                setTypoFont(part, fontId) {
+                    this.values[`typo_${part}_font`] = fontId === null ? null : Number(fontId);
+                },
+
+                // "Jawatan: Georgia · Tebal · Italik · Renggang"
+                partSummary(part) {
+                    const v = this.values;
+                    const bits = [
+                        this.fontName(v[`typo_${part}_font`]),
+                        this.typo.weightLabels[v[`typo_${part}_weight`]] ?? v[`typo_${part}_weight`],
+                    ];
+                    if (v[`typo_${part}_italic`]) {
+                        bits.push(@json(__('Italik')));
+                    }
+                    if (v[`typo_${part}_tracking`] !== 'normal') {
+                        bits.push(this.typo.trackingLabels[v[`typo_${part}_tracking`]]);
+                    }
+
+                    return bits.join(' · ');
+                },
+
+                partStyle(part, source = this.values) {
+                    return {
+                        font: source[`typo_${part}_font`] ?? null,
+                        weight: Number(source[`typo_${part}_weight`]),
+                        italic: !!source[`typo_${part}_italic`],
+                        tracking: source[`typo_${part}_tracking`],
+                    };
+                },
+
+                defaultPartStyle(part) {
+                    const d = this.typo.defaults[part];
+
+                    return { font: d.font_id, weight: d.weight, italic: d.italic, tracking: d.tracking };
+                },
+
+                setPartStyle(part, style) {
+                    this.values[`typo_${part}_font`] = style.font;
+                    this.values[`typo_${part}_weight`] = style.weight;
+                    this.values[`typo_${part}_italic`] = style.italic;
+                    this.values[`typo_${part}_tracking`] = style.tracking;
+                },
+
+                isPartCustomised(part) {
+                    return JSON.stringify(this.partStyle(part)) !== JSON.stringify(this.defaultPartStyle(part));
+                },
+
+                isPartDirty(part) {
+                    return JSON.stringify(this.partStyle(part)) !== JSON.stringify(this.partStyle(part, this.saved));
+                },
+
+                customisedParts() {
+                    return this.typo.parts.filter((part) => this.isPartCustomised(part));
+                },
+
+                customisedText() {
+                    const count = this.customisedParts().length;
+
+                    return count + ' ' + @json(__('bahagian diubah suai'));
+                },
+
+                libraryCountText() {
+                    const count = this.libraryFonts.length;
+
+                    return count === 0 ? @json(__('Tiada fon dalam pustaka')) : count + ' ' + @json(__('fon dalam pustaka'));
+                },
+
+                isTypoPartShown(part) {
+                    return part === 'name' || this.showHiddenTypo || this.isFieldVisible(part);
+                },
+
+                hiddenTypoParts() {
+                    return this.typo.parts.filter((part) => part !== 'name' && !this.isFieldVisible(part));
+                },
+
+                hiddenPartsText() {
+                    const parts = this.hiddenTypoParts().map((part) => this.typo.labels[part]);
+                    const mode = this.typo.modeLabels[this.fieldMode] ?? this.fieldMode;
+
+                    return @json(__('Tidak dipaparkan dalam mod')) + ` ${mode}: ${parts.join(', ')}`;
+                },
+
+                togglePart(part) {
+                    this.openPart = this.openPart === part ? null : part;
+                },
+
+                // Clicking a line in the preview opens that part (Gaya Fon tab only)
+                pickPreviewPart(part) {
+                    if (this.tab !== 'fonstyle' || !this.typo.parts.includes(part)) {
+                        return;
+                    }
+                    this.openPart = part;
+                    this.$nextTick(() => {
+                        document.getElementById('typo-part-' + part)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    });
+                },
+
+                previewPartClass(part) {
+                    if (this.tab !== 'fonstyle') {
+                        return '';
+                    }
+
+                    return (this.hoverPart ?? this.openPart) === part ? 'typo-target is-active' : 'typo-target';
+                },
+
+                specimenBackdropStyle() {
+                    return {
+                        backgroundImage: this.backdropUrl
+                            ? `url("${this.backdropUrl}")`
+                            : 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
+                    };
+                },
+
+                // Bulk edits keep a snapshot so they can be undone from the inline bar
+                rememberTypo(message, change) {
+                    const snapshot = Object.fromEntries(this.typo.parts.map((part) => [part, this.partStyle(part)]));
+                    change();
+                    clearTimeout(this.typoUndoTimer);
+                    this.typoUndo = { message, snapshot };
+                    this.typoUndoTimer = setTimeout(() => this.dismissTypoUndo(), 10000);
+                },
+
+                undoTypo() {
+                    if (!this.typoUndo) {
+                        return;
+                    }
+                    Object.entries(this.typoUndo.snapshot).forEach(([part, style]) => this.setPartStyle(part, style));
+                    this.dismissTypoUndo();
+                },
+
+                dismissTypoUndo() {
+                    clearTimeout(this.typoUndoTimer);
+                    this.typoUndo = null;
                 },
 
                 applyStyleToAll(source) {
-                    const props = ['font', 'weight', 'italic', 'tracking'];
-                    this.typo.parts.forEach((part) => {
-                        if (part === source) {
-                            return;
-                        }
-                        props.forEach((prop) => {
-                            this.values[`typo_${part}_${prop}`] = this.values[`typo_${source}_${prop}`];
-                        });
+                    const style = this.partStyle(source);
+                    const targets = this.typo.parts.filter((part) => part !== source);
+                    const message = @json(__('Gaya :part disalin ke :count bahagian lain.'))
+                        .replace(':part', this.typo.labels[source])
+                        .replace(':count', targets.length);
+
+                    this.rememberTypo(message, () => targets.forEach((part) => this.setPartStyle(part, { ...style })));
+                },
+
+                resetPart(part) {
+                    const message = @json(__('Gaya :part diset semula ke lalai.')).replace(':part', this.typo.labels[part]);
+
+                    this.rememberTypo(message, () => this.setPartStyle(part, this.defaultPartStyle(part)));
+                },
+
+                resetAllTypo() {
+                    this.rememberTypo(@json(__('Semua bahagian diset semula ke fon lalai.')), () => {
+                        this.typo.parts.forEach((part) => this.setPartStyle(part, this.defaultPartStyle(part)));
                     });
-                    this.toast('success', @json(__('Gaya disalin ke semua bahagian. Klik Simpan Tetapan untuk guna.')));
+                },
+
+                async refreshLibrary() {
+                    try {
+                        const { data } = await window.axios.get(this.routes.fontList);
+                        const before = new Set(this.libraryFonts.map((font) => font.id));
+                        const fonts = data.fonts.map((font) => ({ id: font.id, name: font.name, family: font.family }));
+                        const ids = new Set(fonts.map((font) => font.id));
+
+                        const style = document.getElementById('apc-library-font-faces');
+                        if (style) {
+                            style.textContent = data.font_face_css;
+                        }
+                        this.libraryFonts = fonts;
+
+                        // A deleted font was already reset to the default on the server (live + profiles)
+                        const scrub = (state) => this.typo.parts.forEach((part) => {
+                            const key = `typo_${part}_font`;
+                            if (state[key] !== null && !ids.has(state[key])) {
+                                state[key] = null;
+                            }
+                        });
+                        scrub(this.values);
+                        scrub(this.saved);
+                        this.profiles.forEach((profile) => scrub(profile.form_values));
+
+                        const added = fonts.filter((font) => !before.has(font.id));
+                        if (added.length > 0) {
+                            this.toast('success', @json(__('Fon baharu tersedia')) + ': ' + added.map((font) => font.name).join(', '));
+                        }
+                    } catch (e) {
+                        // Keep the current list; the next return to this tab retries.
+                    }
                 },
 
                 usingRealData() {
@@ -1427,7 +1868,10 @@
 
                     if (first.startsWith('position_')) this.setTab('kedudukan');
                     else if (first.startsWith('fonts_')) this.setTab('fon');
-                    else if (first.startsWith('typo_')) this.setTab('fonstyle');
+                    else if (first.startsWith('typo_')) {
+                        this.setTab('fonstyle');
+                        this.openPart = first.split('_')[1];
+                    }
                 },
 
                 toastFromException(e) {
