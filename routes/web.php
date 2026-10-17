@@ -18,6 +18,7 @@ use App\Http\Controllers\Admin\Kawalan\UserManagementController as KawalanUserMa
 use App\Http\Controllers\Admin\KehadiranController as AdminKehadiranController;
 use App\Http\Controllers\Admin\PaparanController as AdminPaparanController;
 use App\Http\Controllers\Admin\ReportController as AdminReportController;
+use App\Http\Controllers\Admin\RsvpController as AdminRsvpController;
 use App\Http\Controllers\Admin\SenaraiAnalyticsController as AdminSenaraiAnalyticsController;
 use App\Http\Controllers\Admin\SidebarStatusController;
 use App\Http\Controllers\Media\DashboardController as MediaDashboardController;
@@ -136,6 +137,13 @@ Route::middleware('auth')->group(function () {
                 Route::get('/stats', [AdminKehadiranController::class, 'stats'])->name('stats');
                 Route::get('/{pegawai}/details', [AdminKehadiranController::class, 'getDetails'])->name('details');
                 Route::put('/{pegawai}/verify', [AdminKehadiranController::class, 'verify'])->name('verify');
+            });
+
+            Route::prefix('rsvp')->name('rsvp.')->group(function () {
+                Route::get('/', [AdminRsvpController::class, 'index'])->name('index');
+                Route::get('/datatable', [AdminRsvpController::class, 'datatable'])->name('datatable');
+                Route::get('/{pegawai}', [AdminRsvpController::class, 'show'])->name('show');
+                Route::put('/{pegawai}', [AdminRsvpController::class, 'update'])->name('update');
             });
 
             Route::get('paparan', [AdminPaparanController::class, 'index'])->name('paparan.index');

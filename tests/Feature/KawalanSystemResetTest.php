@@ -77,12 +77,34 @@ it('resets all pegawai attendance fields for admin', function (): void {
     $pegawai->refresh();
 
     expect($pegawai->sesi_majlis_id)->toBeNull()
+        ->and($pegawai->no_kerusi)->toBe(10)
         ->and($pegawai->no_meja)->toBe(0)
         ->and($pegawai->no_panggilan_lewat)->toBe(0)
         ->and($pegawai->is_attend)->toBeFalse()
         ->and($pegawai->is_late)->toBeFalse()
         ->and($pegawai->hadir_at)->toBeNull()
         ->and(AnnouncedOfficer::query()->count())->toBe(0);
+});
+
+it('resets walk-in seats to 0 and keeps rsvp seats', function (): void {
+    $ptj = Ptj::query()->create(['nama_ptj' => 'PTJ Sistem']);
+    $jawatan = Jawatan::query()->create(['desc_jawatan' => 'Jawatan Sistem']);
+    $gred = Gred::query()->create(['desc_gred' => 'Gred Sistem']);
+    $base = ['ptj_id' => $ptj->id, 'jawatan_id' => $jawatan->id, 'gred_id' => $gred->id, 's_kehadiran' => Pegawai::S_KEHADIRAN_PAGI];
+
+    $rsvp = Pegawai::query()->create($base + ['nama' => 'Pegawai RSVP', 'no_kp' => '880101011111', 'rsvp' => true, 'no_kerusi' => 10]);
+    $walkIn = Pegawai::query()->create($base + ['nama' => 'Pegawai Walk-in', 'no_kp' => '880101012222', 'rsvp' => false, 'no_kerusi' => 501, 'is_attend' => true]);
+    $stale = Pegawai::query()->create($base + ['nama' => 'Pegawai Lama', 'no_kp' => '880101013333', 'rsvp' => false, 'no_kerusi' => 37]);
+
+    $this->actingAs(adminUser())
+        ->postJson(route('admin.kawalan.system.reset'))
+        ->assertOk()
+        ->assertJsonPath('affected', 3)
+        ->assertJsonPath('overview.kerusi', 0);
+
+    expect($rsvp->fresh()->no_kerusi)->toBe(10)
+        ->and($walkIn->fresh()->no_kerusi)->toBe(0)
+        ->and($stale->fresh()->no_kerusi)->toBe(0);
 });
 
 it('allows admin to view system page', function (): void {

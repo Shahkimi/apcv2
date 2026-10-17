@@ -16,6 +16,7 @@
                     ['label' => __('Debug paparan'), 'route' => 'admin.paparan.index', 'icon' => 'ri-bug-line'],
                     ['label' => __('Analitik Senarai'), 'route' => 'admin.senarai.analytics', 'icon' => 'ri-bar-chart-line'],
                     ['label' => __('Laporan'), 'route' => 'admin.report.index', 'icon' => 'ri-file-pdf-line', 'active' => 'admin.report.*'],
+                    ['label' => __('Kemas kini RSVP'), 'route' => 'admin.rsvp.index', 'icon' => 'ri-user-settings-line', 'active' => 'admin.rsvp.*'],
                 ],
             ],
             [

@@ -25,6 +25,7 @@
                 'resetPegawai' => __('Rekod pegawai dikemas kini'),
                 'resetHadir' => __('Status hadir dikosongkan'),
                 'resetLewat' => __('Status lewat dikosongkan'),
+                'resetKerusi' => __('No. kerusi walk-in dikosongkan'),
                 'resetAnnounced' => __('Senarai diumumkan dikosongkan'),
                 'pick' => __('Pilih data yang hendak dipadam.'),
                 'nothing' => __('Tiada rekod untuk dipadam dalam pilihan ini.'),
@@ -36,19 +37,59 @@
         ];
     @endphp
 
-    <div class="mx-auto max-w-4xl" x-data="systemPage(@js($pageInit))" @keydown.escape.window="closeModal()">
-        <div class="space-y-8">
-            {{-- Danger zone --}}
-            <section aria-labelledby="system-danger-title">
-                <div class="mb-3">
-                    <h2 id="system-danger-title" class="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-destructive">
-                        <i class="ri-alarm-warning-line text-base" aria-hidden="true"></i>
-                        {{ __('Zon bahaya') }}
-                    </h2>
-                    <p class="mt-1 text-sm text-muted-foreground">{{ __('Tindakan di bawah memberi kesan kepada semua rekod dan tidak boleh diundur.') }}</p>
-                </div>
+    @php
+        $tabClass = 'flex h-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-center text-xs font-medium leading-snug transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:text-sm';
+    @endphp
 
-                <div class="divide-y divide-border overflow-hidden rounded-xl border border-red-200 bg-card shadow-sm dark:border-red-900">
+    <div class="mx-auto max-w-4xl" x-data="systemPage(@js($pageInit))" @keydown.escape.window="closeModal()">
+        <div class="space-y-6">
+            <div>
+                <h2 class="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-destructive">
+                    <i class="ri-alarm-warning-line text-base" aria-hidden="true"></i>
+                    {{ __('Zon bahaya') }}
+                </h2>
+                <p class="mt-1 text-sm text-muted-foreground">{{ __('Tindakan di bawah memberi kesan kepada semua rekod dan tidak boleh diundur.') }}</p>
+            </div>
+
+            <div
+                role="tablist"
+                aria-label="{{ __('Tindakan sistem') }}"
+                class="grid grid-cols-2 gap-1 rounded-xl bg-muted/40 p-1"
+                @keydown.arrow-right.prevent="setTab(tab === 'reset' ? 'wipe' : 'reset', true)"
+                @keydown.arrow-left.prevent="setTab(tab === 'reset' ? 'wipe' : 'reset', true)"
+            >
+                <button
+                    type="button"
+                    id="system-tab-reset"
+                    role="tab"
+                    aria-controls="system-panel-reset"
+                    :aria-selected="tab === 'reset' ? 'true' : 'false'"
+                    :tabindex="tab === 'reset' ? 0 : -1"
+                    @click="setTab('reset')"
+                    :class="tab === 'reset' ? 'bg-card text-foreground shadow-sm ring-1 ring-border/60' : 'text-muted-foreground hover:text-foreground'"
+                    class="{{ $tabClass }}"
+                >
+                    <i class="ri-restart-line text-base" aria-hidden="true"></i>
+                    <span>{{ __('Tetap Semula Kehadiran') }}</span>
+                </button>
+                <button
+                    type="button"
+                    id="system-tab-wipe"
+                    role="tab"
+                    aria-controls="system-panel-wipe"
+                    :aria-selected="tab === 'wipe' ? 'true' : 'false'"
+                    :tabindex="tab === 'wipe' ? 0 : -1"
+                    @click="setTab('wipe')"
+                    :class="tab === 'wipe' ? 'bg-card text-foreground shadow-sm ring-1 ring-border/60' : 'text-muted-foreground hover:text-foreground'"
+                    class="{{ $tabClass }}"
+                >
+                    <i class="ri-delete-bin-6-line text-base" aria-hidden="true"></i>
+                    <span>{{ __('Padam data pegawai dan maklumat rujukan') }}</span>
+                </button>
+            </div>
+
+            <section id="system-panel-reset" role="tabpanel" aria-labelledby="system-tab-reset" x-show="tab === 'reset'" x-cloak>
+                <div class="overflow-hidden rounded-xl border border-red-200 bg-card shadow-sm dark:border-red-900">
                     {{-- Reset attendance --}}
                     <div class="flex flex-col gap-4 p-5 md:flex-row md:items-start md:justify-between">
                         <div class="flex min-w-0 gap-4">
@@ -70,6 +111,10 @@
                                         <span><b class="font-semibold text-foreground" x-text="fmt(stats.lewat)">{{ number_format($overview['lewat']) }}</b> {{ __('lewat') }}</span>
                                     </span>
                                     <span class="inline-flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-muted-foreground">
+                                        <i class="ri-hashtag" aria-hidden="true"></i>
+                                        <span><b class="font-semibold text-foreground" x-text="fmt(stats.kerusi)">{{ number_format($overview['kerusi']) }}</b> {{ __('kerusi walk-in') }}</span>
+                                    </span>
+                                    <span class="inline-flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-muted-foreground">
                                         <i class="ri-megaphone-line" aria-hidden="true"></i>
                                         <span><b class="font-semibold text-foreground" x-text="fmt(stats.diumumkan)">{{ number_format($overview['diumumkan']) }}</b> {{ __('diumumkan') }}</span>
                                     </span>
@@ -82,6 +127,7 @@
                                     <ul class="mt-2 list-disc space-y-1 pl-9 text-xs text-muted-foreground">
                                         <li>{{ __('Pautan sesi majlis pegawai dikosongkan.') }}</li>
                                         <li>{{ __('No. meja dan no. panggilan lewat ditetapkan kepada 0.') }}</li>
+                                        <li>{{ __('No. kerusi pegawai RSVP Tidak Hadir ditetapkan kepada 0 (pegawai RSVP Hadir kekal).') }}</li>
                                         <li>{{ __('Status hadir, status lewat dan masa hadir dikosongkan.') }}</li>
                                         <li>{{ __('Senarai pegawai yang telah diumumkan dikosongkan.') }}</li>
                                     </ul>
@@ -98,7 +144,11 @@
                             {{ __('Tetap semula') }}
                         </button>
                     </div>
+                </div>
+            </section>
 
+            <section id="system-panel-wipe" role="tabpanel" aria-labelledby="system-tab-wipe" x-show="tab === 'wipe'" x-cloak>
+                <div class="overflow-hidden rounded-xl border border-red-200 bg-card shadow-sm dark:border-red-900">
                     {{-- Wipe data --}}
                     <div class="p-5">
                         <div class="flex gap-4">
@@ -106,7 +156,7 @@
                                 <i class="ri-delete-bin-6-line text-xl" aria-hidden="true"></i>
                             </span>
                             <div class="min-w-0">
-                                <h3 class="font-semibold text-foreground">{{ __('Padam data pegawai & rujukan') }}</h3>
+                                <h3 class="font-semibold text-foreground">{{ __('Padam data pegawai dan maklumat rujukan') }}</h3>
                                 <p class="mt-1 text-sm text-muted-foreground">
                                     {{ __('Kosongkan jadual yang dipilih untuk majlis baharu. ID bermula semula dari 1. PTJ, Bersara, sesi majlis dan tetapan tidak terjejas.') }}
                                 </p>
@@ -282,10 +332,22 @@
                     stats: init.overview,
                     urls: init.urls,
                     L: init.labels,
+                    tab: 'reset',
                     modal: null,
                     busy: false,
                     selected: [],
                     toast: { text: '', ok: true },
+
+                    init() {
+                        if (location.hash === '#padam-data') this.tab = 'wipe';
+                    },
+
+                    // Hash keeps the open tab across reloads.
+                    setTab(tab, focus = false) {
+                        this.tab = tab;
+                        history.replaceState(null, '', tab === 'wipe' ? '#padam-data' : '#tetap-semula');
+                        if (focus) this.$nextTick(() => document.getElementById('system-tab-' + tab)?.focus());
+                    },
 
                     fmt(n) {
                         return Number(n ?? 0).toLocaleString('ms-MY');
@@ -335,6 +397,7 @@
                                 { key: 'pegawai', label: this.L.resetPegawai, value: this.fmt(this.stats.pegawai) },
                                 { key: 'hadir', label: this.L.resetHadir, value: this.fmt(this.stats.hadir) },
                                 { key: 'lewat', label: this.L.resetLewat, value: this.fmt(this.stats.lewat) },
+                                { key: 'kerusi', label: this.L.resetKerusi, value: this.fmt(this.stats.kerusi) },
                                 { key: 'diumumkan', label: this.L.resetAnnounced, value: this.fmt(this.stats.diumumkan) },
                             ];
                         }

@@ -133,9 +133,11 @@ it('shows the wipe card and active session note to admin', function (): void {
     $this->actingAs(adminUser())
         ->get(route('admin.kawalan.system.index'))
         ->assertOk()
-        ->assertSee('Padam data pegawai &amp; rujukan', false)
+        ->assertSee('Tetap Semula Kehadiran')
+        ->assertSee('Padam data pegawai dan maklumat rujukan')
+        ->assertSee('role="tablist"', false)
         ->assertSee('x-data="systemPage(', false)
-        ->assertViewHas('overview', ['pegawai' => 1, 'jawatan' => 2, 'gred' => 1, 'hadir' => 1, 'lewat' => 0, 'diumumkan' => 1])
+        ->assertViewHas('overview', ['pegawai' => 1, 'jawatan' => 2, 'gred' => 1, 'hadir' => 1, 'lewat' => 0, 'kerusi' => 0, 'diumumkan' => 1])
         ->assertViewHas('activeSesi', 'Sesi Padam')
         ->assertSee('Sesi &quot;Sesi Padam&quot; sedang aktif', false);
 });

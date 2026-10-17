@@ -29,6 +29,8 @@ final class SystemService
             AnnouncedOfficer::query()->delete();
 
             return Pegawai::query()->update([
+                // Walk-ins only hold a seat from check-in (Jasamu) or stale test data; RSVP seats come from import.
+                'no_kerusi' => DB::raw('CASE WHEN rsvp = 1 THEN no_kerusi ELSE 0 END'),
                 'sesi_majlis_id' => null,
                 'no_meja' => 0,
                 'no_panggilan_lewat' => 0,
@@ -53,13 +55,14 @@ final class SystemService
     /**
      * Page overview: wipeable table counts plus the attendance state a reset clears.
      *
-     * @return array{pegawai: int, jawatan: int, gred: int, hadir: int, lewat: int, diumumkan: int}
+     * @return array{pegawai: int, jawatan: int, gred: int, hadir: int, lewat: int, kerusi: int, diumumkan: int}
      */
     public function overview(): array
     {
         return $this->counts() + [
             'hadir' => Pegawai::query()->where('is_attend', true)->count(),
             'lewat' => Pegawai::query()->where('is_late', true)->count(),
+            'kerusi' => Pegawai::query()->where('rsvp', false)->where('no_kerusi', '>', 0)->count(),
             'diumumkan' => AnnouncedOfficer::query()->count(),
         ];
     }
