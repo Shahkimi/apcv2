@@ -9,6 +9,7 @@ use App\Models\SesiMajlis;
 use App\Services\Kehadiran\CallingPriorityService;
 use App\Services\Kehadiran\KehadiranCallingService;
 use App\Services\Kehadiran\SenaraiProgressService;
+use App\Services\Kehadiran\SenaraiQueueService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
@@ -25,6 +26,7 @@ final class ReportPreviewTableService
         private readonly CallingPriorityService $callingPriority,
         private readonly KehadiranCallingService $callingService,
         private readonly SenaraiProgressService $senaraiProgress,
+        private readonly SenaraiQueueService $senaraiQueue,
     ) {}
 
     /**
@@ -91,7 +93,7 @@ final class ReportPreviewTableService
      */
     public function mcList(SesiMajlis $sesi): Collection
     {
-        return $this->callingService->attendedPegawaiForDisplay((int) $sesi->id);
+        return $this->senaraiQueue->officers((int) $sesi->id);
     }
 
     /**

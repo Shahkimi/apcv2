@@ -27,6 +27,8 @@ final class SystemService
     {
         return (int) DB::transaction(function (): int {
             AnnouncedOfficer::query()->delete();
+            // A stale slide index would make the late-arrival queue treat early slots as already passed.
+            DB::table('senarai_progress')->update(['current_index' => 0, 'announced_officers' => null]);
 
             return Pegawai::query()->update([
                 // Walk-ins only hold a seat from check-in (Jasamu) or stale test data; RSVP seats come from import.

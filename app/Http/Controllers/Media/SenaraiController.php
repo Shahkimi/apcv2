@@ -8,9 +8,12 @@ use App\Http\Controllers\Controller;
 use App\Models\Backdrop;
 use App\Services\EventModeService;
 use App\Services\Kehadiran\PaparanViewDataBuilder;
+use App\Services\Kehadiran\SenaraiQueueService;
 use App\Services\Presentation\PresentationDisplayConfigService;
 use App\Services\Presentation\PresentationFontService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class SenaraiController extends Controller
@@ -20,6 +23,7 @@ class SenaraiController extends Controller
         private readonly PresentationDisplayConfigService $displayConfig,
         private readonly EventModeService $eventMode,
         private readonly PresentationFontService $fonts,
+        private readonly SenaraiQueueService $queue,
     ) {}
 
     public function index(Request $request): View
@@ -42,19 +46,17 @@ class SenaraiController extends Controller
             ->first();
 
         $pegawais = $viewData['pegawais'];
+        $sesiId = $viewData['selectedSesi']?->id;
         $displaySettings = $this->displayConfig->live();
 
         return view('media::senarai.present', [
             'pegawais' => $pegawais,
-            'officerSlides' => $pegawais->map(fn ($o) => [
-                'id' => $o->id,
-                'nama' => $o->nama,
-                ...$this->displayConfig->fieldValues($o),
-            ])->values(),
+            'officerSlides' => $this->officerSlides($pegawais),
+            'listVersion' => $this->queue->version($sesiId),
             'visibleFields' => $this->displayConfig->visibleFields($displaySettings, $this->eventMode->current()),
             'hideEmpty' => $displaySettings['hide_empty'],
             'backdrop' => $backdrop,
-            'sesiId' => $viewData['selectedSesi']?->id,
+            'sesiId' => $sesiId,
             'displaySettings' => $this->displayConfig->withPx($displaySettings),
             // Only the fonts this screen actually uses are loaded.
             'fontFaceCss' => $this->fonts->fontFaceCss(
@@ -62,5 +64,33 @@ class SenaraiController extends Controller
             ),
             'typographyVars' => $this->displayConfig->typographyVars($displaySettings),
         ]);
+    }
+
+    /**
+     * Live queue for a running presentation: late arrivals show up without a reload.
+     */
+    public function slides(Request $request): JsonResponse
+    {
+        $sesiId = $request->filled('sesi_id') ? $request->integer('sesi_id') : null;
+        $version = $this->queue->version($sesiId);
+        $payload = ['changed' => $request->query('version') !== $version, 'version' => $version];
+
+        if ($payload['changed']) {
+            $payload['officers'] = $this->officerSlides($this->queue->officers($sesiId));
+        }
+
+        return response()->json($payload)->header('Cache-Control', 'no-store, private');
+    }
+
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function officerSlides(Collection $pegawais): Collection
+    {
+        return $pegawais->map(fn ($o) => [
+            'id' => $o->id,
+            'nama' => $o->nama,
+            ...$this->displayConfig->fieldValues($o),
+        ])->values();
     }
 }

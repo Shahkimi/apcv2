@@ -13,6 +13,7 @@ class PaparanViewDataBuilder
 {
     public function __construct(
         private readonly KehadiranCallingService $callingService,
+        private readonly SenaraiQueueService $senaraiQueue,
     ) {}
 
     /**
@@ -43,7 +44,7 @@ class PaparanViewDataBuilder
             }
         }
 
-        $pegawais = $this->callingService->attendedPegawaiForDisplay($selectedSesiId);
+        $pegawais = $this->senaraiQueue->officers($selectedSesiId);
         $ontimeCount = $pegawais->where('is_late', false)->count();
         $lateCount = $pegawais->where('is_late', true)->count();
 

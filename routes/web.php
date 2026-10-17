@@ -86,6 +86,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/paparan/datatable', [MediaPaparanController::class, 'datatable'])->name('paparan.datatable');
             Route::get('/paparan/stats', [MediaPaparanController::class, 'stats'])->name('paparan.stats');
             Route::get('/senarai/present', [MediaSenaraiController::class, 'present'])->name('senarai.present');
+            Route::get('/senarai/slides', [MediaSenaraiController::class, 'slides'])->name('senarai.slides');
             Route::get('/senarai', [MediaSenaraiController::class, 'index'])->name('senarai.index');
             Route::get('/senarai/analytics', [MediaSenaraiAnalyticsController::class, 'index'])->name('senarai.analytics');
             Route::get('/senarai/progress', [MediaSenaraiProgressController::class, 'show'])->name('senarai.progress.show');

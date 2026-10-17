@@ -68,6 +68,20 @@ class SenaraiProgressService
         return AnnouncedOfficer::query()->where('scope_key', $this->scopeKey($sesiId));
     }
 
+    /**
+     * Announced officer ids in first-announcement order (row id, so same-second announcements keep their order).
+     *
+     * @return list<int>
+     */
+    public function announcedPegawaiIds(?int $sesiId): array
+    {
+        return $this->announcedOfficersQuery($sesiId)
+            ->orderBy('id')
+            ->pluck('pegawai_id')
+            ->map(fn ($id): int => (int) $id)
+            ->all();
+    }
+
     public function getAnnouncedOfficers(?int $sesiId): Collection
     {
         $scopeKey = $this->scopeKey($sesiId);

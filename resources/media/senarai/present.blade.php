@@ -199,8 +199,10 @@
     </div>
 
     <script>
-        const officers = @json($officerSlides);
+        let officers = @json($officerSlides);
+        let listVersion = @json($listVersion);
         const setupUrl = @json(route('media.senarai.index'));
+        const slidesUrl = @json(route('media.senarai.slides'));
         const progressReadUrl = @json(route('media.senarai.progress.show'));
         const progressUpdateUrl = @json(route('media.senarai.progress.update'));
         const sesiId = @json($sesiId);
@@ -221,7 +223,8 @@
         let saveChain = Promise.resolve();
         let syncInFlight = false;
         let lastWriteUpdatedAt = null;
-        const totalOfficers = officers.length;
+        let listInFlight = false;
+        let totalOfficers = officers.length;
 
         if (totalOfficers === 0) {
             window.location.href = setupUrl;
@@ -425,10 +428,60 @@
                 showOfficer(0, { persist: false, animate: false });
             }
 
-            const serverData = await syncFromServer({ force: true });
+            await syncFromServer({ force: true });
 
-            if (!serverData || !serverData.last_updated_at) {
-                saveProgress(currentIndex);
+            // Always record the officer on screen as announced: the late-arrival queue relies on it.
+            saveProgress(currentIndex);
+        }
+
+        // Late arrivals join the running queue without a reload; stay on the officer now on screen.
+        async function refreshList() {
+            if (listInFlight || pendingSaves > 0 || document.hidden) {
+                return;
+            }
+
+            listInFlight = true;
+
+            const params = new URLSearchParams({ version: listVersion });
+            if (sesiId != null) {
+                params.set('sesi_id', String(sesiId));
+            }
+
+            try {
+                const response = await fetch(`${slidesUrl}?${params}`, {
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                });
+                if (!response.ok) {
+                    return;
+                }
+
+                const data = await response.json();
+                if (!data.changed) {
+                    return;
+                }
+                if (!Array.isArray(data.officers) || data.officers.length === 0) {
+                    return;
+                }
+
+                const currentId = officers[currentIndex]?.id;
+                officers = data.officers;
+                totalOfficers = officers.length;
+                listVersion = data.version;
+
+                const index = officers.findIndex((officer) => officer.id === currentId);
+                if (index === -1) {
+                    /* officer on screen left the queue (attendance cancelled): show whoever took the slot */
+                    showOfficer(currentIndex, { animate: true });
+                } else if (index !== currentIndex) {
+                    currentIndex = index;
+                    saveProgress(currentIndex);
+                }
+            } catch (err) {
+                /* keep the current list when network fails */
+            } finally {
+                listInFlight = false;
             }
         }
 
@@ -569,6 +622,7 @@
         });
 
         setInterval(syncFromServer, 5000);
+        setInterval(refreshList, 5000);
         loadInitialPosition();
     </script>
 </body>
